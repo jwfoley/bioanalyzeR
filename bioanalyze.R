@@ -42,6 +42,29 @@ get.sample <- function(data.file, ...) {
 	], ...))
 }
 
-fit.standard.curve <- function(ladder, ...) loess(ladder[,"Size [bp]"] ~ ladder[,"Aligned Migration Time [s]"], ...) # returns an object of type "loess"; use it e.g. with predict()
+fit.standard.curve <- function(ladder, ...) loess(log10(ladder$Size) ~ 1 / ladder$`Aligned Migration Time [s]`, ...) # returns an object of type "loess"; use it e.g. with predict() but make sure to take 10^predict()
+# (1 / migration time) is proportional to velocity, which is what should be logarithmic with molecule size
 
+time.to.bp <- function(standard.curve, time, ...) 10 ^ predict(standard.curve, time, ...)
+
+plot.raw <- function(sample.data, ...) qplot(sample.data$Time, sample.data$Value) + geom_line()
+
+plot.bp <- function(sample.data, standard.curve, ...) qplot(10 ^ predict(standard.curve, sample.data$Time), sample.data$Value) + geom_line()
+
+normalize.fluorescence <- function(ladder) ladder$Area / ladder$`Size [bp]` / ladder$`Aligned Migration Time [s]` # gets a value that is proportional to molarity
+# because area under the peak is total fluorescence during a time window, so we normalize by the size to get to molecules instead of mass, and normalize by migration time because it is proportional to velocity (to account for the time the molecule spends in the detector)
+
+get.fluorescence.coefficient <- function(ladder, ...) lm(ladder$`Molarity [pmol/l]` ~ normalize.fluorescence(ladder) - 1)$coefficients # finds the coefficient to convert normalize.fluorescence to molarity (over an area) by fitting a linear model to the standards of known molarities
+
+convert.to.molarity <- function(ladder, sample.data, ...) {
+	std.crv <- fit.standard.curve(ladder)
+	bp <- time.to.bp(std.crv, sample.data$Time)
+	fluorescence.coefficient <- get.fluorescence.coefficient(ladder)
+	std.crv.deriv <- diff(bp) / diff(sample.data$Time) 
+	molarity <- sample.data$Value * fluorescence.coefficient / sample.data$Time / c(NA, std.crv.deriv) / bp
+	# fluorescence times coefficient isn't corrected for area
+	# divide by time to compensate for time spent in detector
+	# divide by derivative of standard curve because we're converting from an area of the fluorescence vs. time graph to an area of the fluorescence vs. bp graph
+	molarity
+}
 
