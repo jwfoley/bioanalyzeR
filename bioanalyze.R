@@ -47,9 +47,9 @@ fit.standard.curve <- function(ladder, ...) loess(log10(ladder$Size) ~ 1 / ladde
 
 time.to.bp <- function(standard.curve, time, ...) 10 ^ predict(standard.curve, time, ...)
 
-plot.raw <- function(sample.data, ...) qplot(sample.data$Time, sample.data$Value) + geom_line()
+plot.raw <- function(sample.data, ...) qplot(sample.data$Time, sample.data$Value, geom = "line", ...)
 
-plot.bp <- function(sample.data, standard.curve, ...) qplot(10 ^ predict(standard.curve, sample.data$Time), sample.data$Value) + geom_line()
+plot.bp <- function(sample.data, standard.curve, ...) qplot(10 ^ predict(standard.curve, sample.data$Time), sample.data$Value, geom = "line", ...)
 
 normalize.fluorescence <- function(ladder) ladder$Area / ladder$`Size [bp]` / ladder$`Aligned Migration Time [s]` # gets a value that is proportional to molarity
 # because area under the peak is total fluorescence during a time window, so we normalize by the size to get to molecules instead of mass, and normalize by migration time because it is proportional to velocity (to account for the time the molecule spends in the detector)
