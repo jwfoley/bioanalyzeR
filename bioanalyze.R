@@ -1,70 +1,50 @@
-get.ladder <- function(results.file, ...) {
+library(XML)
+library(openssl)
+
+read.bioanalyzer <- function(xml.file, fit = "linear") {
+	stopifnot(fit %in% c("linear", "spline"))
+
+	xml.root <- xmlRoot(xmlParse(xml.file))
 	
-	# assume file contains something in the form:
-	#Sample Name,Ladder
-	#   
-	#Peak Table
-	#[headers]
-	#[data]
-	#[data]
-	#...
-	# 
-	# and then returns it as a data frame
-	
-	file.lines <- readLines(results.file)
-	
-	# find the ladder table
-	which.ladder <- which(file.lines == "Sample Name,Ladder")
-	stopifnot(
-		length(which.ladder) == 1 &&
-		file.lines[which.ladder + 1] == " " &&
-		file.lines[which.ladder + 2] == "Peak Table"
-	)
-	which.breaks <- which(file.lines == " ")
-	
-	return(read.csv(text = 
-		gsub("\"(\\d+),([\\d.]+)\"", "\\1\\2", file.lines[ 	# sanitize the ladder table (remove thousands separators and the quotation marks around them)
-			(which.ladder + 3):
-			(min(which.breaks[which.breaks > which.ladder + 1]) - 1)
-		], perl = T),  check.names = F, ...)
-	)
-}
+	# extract ladder specifications
+	ladder <- data.frame(t(xmlSApply(xml.root[["Chips"]][["Chip"]][["AssayBody"]][["DAAssaySetpoints"]][["DAMAssayInfoMolecular"]][["LadderPeaks"]], function(standard) c(as.numeric(xmlValue(standard[["Size"]])), as.numeric(xmlValue(standard[["Concentration"]]))))), row.names = NULL)
+	names(ladder) <- c("length", "concentration")
+	ladder$molarity <- ladder$concentration / ladder$length / 0.00066 # magic number computed from Agilent standard curves
 
-get.sample <- function(data.file, ...) {
-
-	# assume the fluorescence vs. time data are in the last block
-
-	file.lines = readLines(data.file)
-	which.breaks <- which(file.lines == " ")
-	return(read.csv(text = file.lines[(
-		which.breaks[length(which.breaks) - 1] + 1):
-		(which.breaks[length(which.breaks)] - 1)
-	], ...))
-}
-
-fit.standard.curve <- function(ladder, ...) loess(log10(ladder$Size) ~ 1 / ladder$`Aligned Migration Time [s]`, ...) # returns an object of type "loess"; use it e.g. with predict() but make sure to take 10^predict()
-# (1 / migration time) is proportional to velocity, which is what should be logarithmic with molecule size
-
-time.to.bp <- function(standard.curve, time, ...) 10 ^ predict(standard.curve, time, ...)
-
-plot.raw <- function(sample.data, ...) qplot(sample.data$Time, sample.data$Value, geom = "line", ...)
-
-plot.bp <- function(sample.data, standard.curve, ...) qplot(10 ^ predict(standard.curve, sample.data$Time), sample.data$Value, geom = "line", ...)
-
-normalize.fluorescence <- function(ladder) ladder$Area / ladder$`Size [bp]` / ladder$`Aligned Migration Time [s]` # gets a value that is proportional to molarity
-# because area under the peak is total fluorescence during a time window, so we normalize by the size to get to molecules instead of mass, and normalize by migration time because it is proportional to velocity (to account for the time the molecule spends in the detector)
-
-get.fluorescence.coefficient <- function(ladder, ...) lm(ladder$`Molarity [pmol/l]` ~ normalize.fluorescence(ladder) - 1)$coefficients # finds the coefficient to convert normalize.fluorescence to molarity (over an area) by fitting a linear model to the standards of known molarities
-
-convert.to.molarity <- function(ladder, sample.data, ...) {
-	std.crv <- fit.standard.curve(ladder)
-	bp <- time.to.bp(std.crv, sample.data$Time)
-	fluorescence.coefficient <- get.fluorescence.coefficient(ladder)
-	std.crv.deriv <- diff(bp) / diff(sample.data$Time) 
-	molarity <- sample.data$Value * fluorescence.coefficient / sample.data$Time / c(NA, std.crv.deriv) / bp
-	# fluorescence times coefficient isn't corrected for area
-	# divide by time to compensate for time spent in detector
-	# divide by derivative of standard curve because we're converting from an area of the fluorescence vs. time graph to an area of the fluorescence vs. bp graph
-	molarity
+	# extract samples
+	samples <- xml.root[["Chips"]][["Chip"]][["Files"]][["File"]][["Samples"]]
+	do.call(rbind, xmlApply(samples, function(sample) {
+		signal.data <- sample[["DASignals"]][["DetectorChannels"]][[1]][["SignalData"]]
+		n.values <- as.integer(xmlValue(signal.data[["NumberOfSamples"]]))
+		result <- data.frame(
+			index = as.integer(xmlValue(sample[["Index"]])),
+			name = xmlValue(sample[["Name"]]),
+			time = as.numeric(xmlValue(signal.data[["XStart"]])) + as.numeric(xmlValue(signal.data[["XStep"]])) * (1:n.values - 1),
+			fluorescence = readBin(base64_decode(xmlValue(signal.data[["ProcessedSignal"]])), "numeric", size = 4, n = n.values, endian = "little"),
+			stringsAsFactors = F
+		)
+		
+		# fit standard curve for molecule length (done once per sample because that's how the results are provided, even though it should be the same standard curve for every sample)
+		ladder.peaks <- sample[["DAResultStructures"]][["DARStandardCurve"]][[1]][["LadderPeaks"]]
+		stopifnot(all.equal(xmlSApply(ladder.peaks, function(peak) as.numeric(xmlValue(peak[["FragmentSize"]]))), ladder$length, check.names = F)) # verify it matches the known ladder
+		this.ladder <- cbind(ladder, data.frame(t(xmlSApply(ladder.peaks, function(peak) c(as.numeric(xmlValue(peak[["MigrationTime"]])), as.numeric(xmlValue(peak[["Area"]]))))), row.names = NULL))
+		names(this.ladder)[ncol(ladder) + 1:2] <- c("time", "area")
+		
+		if (fit == "linear") {
+			standard.curve.function <- approxfun(this.ladder$time, this.ladder$length)		
+		} else if (fit == "spline") {
+			standard.curve.function <- splinefun(this.ladder$time, this.ladder$length, method = "natural")
+		}
+		result$length <- standard.curve.function(result$time)
+		
+		# convert to molarity
+		this.ladder$normalized.fluorescence <- this.ladder$area / this.ladder$length / this.ladder$time
+		fluorescence.coefficient <- lm(molarity ~ normalized.fluorescence - 1, this.ladder)$coefficients
+		length.derivative <- diff(result$length) / diff(result$time)
+		result$molarity <- result$fluorescence * fluorescence.coefficient / result$time / c(NA, length.derivative) / result$length
+		
+		
+		result
+	}))
 }
 
