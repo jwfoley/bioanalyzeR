@@ -50,4 +50,8 @@ read.bioanalyzer <- function(xml.file, fit = "linear") {
 	}))
 }
 
-
+plot.bioanalyzer <- function(results) {
+	ggplot(results, aes(time, fluorescence)) +
+	geom_line() +
+	facet_wrap(~ name)
+}
