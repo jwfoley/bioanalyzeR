@@ -61,9 +61,9 @@ plot.bioanalyzer <- function(results, # returns a ggplot object, which can be ex
 	y = "fluorescence",
 	scales = "free_y", # scaling rules for the facets, passed to facet_wrap()
 	geom = geom_line,
-	include_ladder = FALSE
+	include.ladder = FALSE
 ) {
-	if (! include_ladder) results <- subset(results, name != "Ladder")
+	if (! include.ladder) results <- subset(results, name != "Ladder")
 
 	this.plot <- ggplot(results) +
 	aes_string(x, y) +
@@ -71,6 +71,11 @@ plot.bioanalyzer <- function(results, # returns a ggplot object, which can be ex
 	facet_wrap(~ name, scales = scales)
 	
 	if (x == "length") this.plot <- this.plot + scale_x_log10()
+	
+	# set labels
+	if (x == "length") this.plot <- this.plot + xlab("length (bases)")
+	if (x == "time") this.plot <- this.plot + xlab("time (s)")
+	if (y == "molarity") this.plot <- this.plot + ylab("concentration (pM)")
 		
 	this.plot
 }
