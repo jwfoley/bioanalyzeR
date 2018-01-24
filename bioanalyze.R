@@ -14,7 +14,7 @@ read.bioanalyzer <- function(xml.file, fit = "linear") {
 
 	# extract samples
 	samples <- xml.root[["Chips"]][["Chip"]][["Files"]][["File"]][["Samples"]]
-	do.call(rbind, xmlApply(samples, function(this.sample) {
+	results <- do.call(rbind, xmlApply(samples, function(this.sample) {
 		if (xmlValue(this.sample[["HasData"]]) == "false") NULL else {
 			signal.data <- this.sample[["DASignals"]][["DetectorChannels"]][[1]][["SignalData"]]
 			n.values <- as.integer(xmlValue(signal.data[["NumberOfSamples"]]))
@@ -48,10 +48,30 @@ read.bioanalyzer <- function(xml.file, fit = "linear") {
 			result
 		}
 	}))
+	
+	# format output nicely
+	rownames(results) <- NULL
+	results$name <- factor(results$name, levels = unique(results$name)) # make names into a factor that keeps them in the observed order
+	
+	results
 }
 
-plot.bioanalyzer <- function(results) {
-	ggplot(results, aes(time, fluorescence)) +
-	geom_line() +
-	facet_wrap(~ name)
+plot.bioanalyzer <- function(results, # returns a ggplot object, which can be extended by adding more features
+	x = "length",
+	y = "fluorescence",
+	scales = "free_y", # scaling rules for the facets, passed to facet_wrap()
+	geom = geom_line,
+	include_ladder = FALSE
+) {
+	if (! include_ladder) results <- subset(results, name != "Ladder")
+
+	this.plot <- ggplot(results) +
+	aes_string(x, y) +
+	geom() +
+	facet_wrap(~ name, scales = scales)
+	
+	if (x == "length") this.plot <- this.plot + scale_x_log10()
+		
+	this.plot
 }
+
