@@ -1,10 +1,11 @@
+library(XML)
 library(png)
 
 rgb.upper.marker <- c(128, 0, 128) / 255 # upper marker is purple
 rgb.lower.marker <- c(0, 128, 0) / 255 # lower marker is green
 
 
-read.gel.image <- function(gel.image.files) {
+read.tapestation.gel.image <- function(gel.image.files) {
 
 	combined.results <- do.call(rbind, lapply(gel.image.files, function(gel.image.file) {
 
@@ -58,3 +59,36 @@ read.gel.image <- function(gel.image.files) {
 	combined.results
 }
 
+
+read.tapestation.xml <- function(xml.files) {
+	combined.results <- do.call(rbind, lapply(xml.files, function(xml.file) {
+		xml.root <- xmlRoot(xmlParse(xml.file))
+		results <- do.call(rbind, xmlApply(xml.root[["Samples"]], function(sample.xml) {
+			well.number <- xmlValue(sample.xml[["WellNumber"]])
+			sample.name <- sub("[[:space:]]+$", "", xmlValue(sample.xml[["Comment"]]))
+			sample.observations <- sub("[[:space:]]+$", "", xmlValue(sample.xml[["Observations"]]))
+			if (sample.observations == "Marker(s) not detected") {
+				warning(paste(sample.observations, "for well", well.number, sample.name))
+				return(NULL)
+			}
+			reagent.id <- xmlValue(sample.xml[["ScreenTapeID"]])
+			
+			peaks <- do.call(rbind, xmlApply(sample.xml[["Peaks"]], function(peak.xml) data.frame(
+				peak.observations =  sub("[[:space:]]+$", "", xmlValue(peak.xml[["Observations"]])),
+				length =             as.integer(xmlValue(peak.xml[["Size"]])),
+				distance =           as.numeric(xmlValue(peak.xml[["RunDistance"]])),
+				area =               as.numeric(xmlValue(peak.xml[["Area"]])),
+				molarity =           as.numeric(xmlValue(peak.xml[["Molarity"]])
+			))))
+			
+			cbind(well.number, sample.name, reagent.id, sample.observations, peaks)
+		}))
+		
+		cbind(batch = sub("\\.xml$", "", basename(xml.file)), results)
+	}))
+	
+	rownames(combined.results) <- NULL
+	combined.results$batch <- factor(combined.results$batch, levels = unique(combined.results$batch)) # make batches into a factor that keeps them in the observed order
+	
+	combined.results
+}
