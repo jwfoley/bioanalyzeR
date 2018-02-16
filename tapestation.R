@@ -65,8 +65,8 @@ read.tapestation.xml <- function(xml.files) {
 		xml.root <- xmlRoot(xmlParse(xml.file))
 		results <- do.call(rbind, xmlApply(xml.root[["Samples"]], function(sample.xml) {
 			well.number <- xmlValue(sample.xml[["WellNumber"]])
-			sample.name <- sub("[[:space:]]+$", "", xmlValue(sample.xml[["Comment"]]))
-			sample.observations <- sub("[[:space:]]+$", "", xmlValue(sample.xml[["Observations"]]))
+			sample.name <- trimws(xmlValue(sample.xml[["Comment"]]))
+			sample.observations <- trimws(xmlValue(sample.xml[["Observations"]]))
 			if (sample.observations == "Marker(s) not detected") {
 				warning(paste(sample.observations, "for well", well.number, sample.name))
 				return(NULL)
@@ -74,7 +74,7 @@ read.tapestation.xml <- function(xml.files) {
 			reagent.id <- xmlValue(sample.xml[["ScreenTapeID"]])
 			
 			peaks <- do.call(rbind, xmlApply(sample.xml[["Peaks"]], function(peak.xml) data.frame(
-				peak.observations =  sub("[[:space:]]+$", "", xmlValue(peak.xml[["Observations"]])),
+				peak.observations =  trimws(xmlValue(peak.xml[["Observations"]])),
 				length =             as.integer(xmlValue(peak.xml[["Size"]])),
 				distance =           as.numeric(xmlValue(peak.xml[["RunDistance"]])),
 				area =               as.numeric(xmlValue(peak.xml[["Area"]])),
