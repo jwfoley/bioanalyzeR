@@ -35,19 +35,15 @@ read.tapestation.gel.image <- function(gel.image.files) {
 		which.position.not.marker <- apply(gel.image.rgb[,x.gel,], 1:2, function(channels) channels[1] == channels[2] && channels[2] == channels[3])
 
 		# now finally extract the intensities!
-		position.intensity <- 1 - gel.image.rgb[,x.gel,1] # only get red intensity because all channels are equal in the places we care about; subtract from 1 because it's a negative
+		position.fluorescence <- 1 - gel.image.rgb[,x.gel,1] # only get red fluorescence because all channels are equal in the places we care about; subtract from 1 because it's a negative
 		results <- do.call(rbind, lapply(1:length(x.gel), function(lane) {
 			positions.to.use <- which(
-				1:nrow(position.intensity) < center.lower.marker[lane] &
-				1:nrow(position.intensity) > center.upper.marker[lane] &
+				1:nrow(position.fluorescence) < center.lower.marker[lane] &
+				1:nrow(position.fluorescence) > center.upper.marker[lane] &
 				which.position.not.marker[,lane]
 			)
-			distance <- (positions.to.use - center.lower.marker[lane]) / (center.upper.marker[lane] - center.lower.marker[lane])
-			data.frame(
-				lane = lane,
-				distance = distance,
-				intensity = position.intensity[positions.to.use, lane]
-			)	
+			relative.distance <- (center.upper.marker[lane] - positions.to.use) / (center.upper.marker[lane] - center.lower.marker[lane])
+			data.frame(lane, relative.distance, fluorescence = position.fluorescence[positions.to.use, lane])	
 		}))
 		
 		cbind(batch = sub("\\.png$", "", basename(gel.image.file)), results)
@@ -92,3 +88,48 @@ read.tapestation.xml <- function(xml.files) {
 	
 	combined.results
 }
+
+
+read.tapestation <- function(xml.file, gel.image.file, fit = "regression") {
+	stopifnot(fit %in% c("linear", "spline", "regression"))
+	
+	peaks <- read.tapestation.xml(xml.file)
+	result <- read.tapestation.gel.image(gel.image.file)
+	stopifnot(length(unique(result$lane)) == length(unique(peaks$well.number)))
+	
+	# convert relative distances to absolute
+	marker.distances <- data.frame(
+		lower = subset(peaks, peak.observations == "Lower Marker")$distance,
+		upper = subset(peaks, peak.observations == "Upper Marker")$distance,
+		row.names = unique(peaks$well.number)
+	)
+	result$distance <- marker.distances$upper[result$lane] + result$relative.distance * (marker.distances$lower[result$lane] - marker.distances$upper[result$lane])
+	
+	# fit standard curve for molecule length
+	# do this in relative-distance space so it's effectively recalibrated for each sample's markers
+	which.well.is.ladder <- unique(subset(peaks, sample.observations == "Ladder")$well.number)
+	stopifnot(length(which.well.is.ladder) == 1)
+	peaks.ladder <- subset(peaks, well.number == which.well.is.ladder)
+	peaks.ladder$relative.distance <- (peaks.ladder$distance - subset(peaks.ladder, peak.observations == "Upper Marker")$distance) / (subset(peaks.ladder, peak.observations == "Lower Marker")$distance - subset(peaks.ladder, peak.observations == "Upper Marker")$distance)
+	if (fit == "linear") {
+		warning("linear interpolation gives ugly results for molarity estimation")
+		standard.curve.function <- approxfun(peaks.ladder$relative.distance, peaks.ladder$length)
+	} else if (fit == "spline") {
+		standard.curve.function <- splinefun(peaks.ladder$relative.distance, peaks.ladder$length, method = "natural")
+	} else if (fit == "regression") {
+		mobility.model <- lm(relative.distance ~ log(length), peaks.ladder)
+		standard.curve.function <- function(distance) exp((distance - mobility.model$coefficients[1]) / mobility.model$coefficients[2])
+	}
+	result$length <- standard.curve.function(result$relative.distance)
+	
+	# convert to molarity
+	fluorescence.coefficient <- 1 / lm(area ~ length : molarity - 1, peaks.ladder)$coefficients
+	result$molarity <- unlist(lapply(unique(result$lane), function(this.lane) {
+		this.result <- subset(result, lane == this.lane)
+		length.derivative <- diff(this.result$length) / diff(this.result$relative.distance)
+		this.result$fluorescence * fluorescence.coefficient / this.result$relative.distance / c(NA, -length.derivative)
+	}))
+	
+	result
+}
+
