@@ -21,7 +21,7 @@ read.tapestation.gel.image <- function(gel.image.files) {
 		stopifnot(which.x.upper.marker == which.x.lower.marker)
 
 		# isolate a single representative x-value (the first one from the left) for each gel lane
-		x.gel <- which(diff(which.x.upper.marker) == 1) + 1
+		x.gel <- which(diff(c(FALSE, which.x.upper.marker)) == 1) # add this FALSE so that column 1 will test positive if necessary, and this also offsets all the indices correctly
 		which.position.upper.marker <- which.pixel.upper.marker[,x.gel]
 		which.position.lower.marker <- which.pixel.lower.marker[,x.gel]
 		stopifnot(apply(which.position.upper.marker, 2, any))
