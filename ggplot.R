@@ -19,6 +19,7 @@ plot.electropherogram <- function(results, # returns a ggplot object, which can 
 	# set labels
 	if (x == "length") this.plot <- this.plot + xlab("length (bases)")
 	if (x == "time") this.plot <- this.plot + xlab("time (s)")
+	if (x == "distance") this.plot <- this.plot + xlab("distance migrated") + scale_x_reverse()
 	if (y == "molarity") this.plot <- this.plot + ylab("concentration (pM)")
 		
 	this.plot

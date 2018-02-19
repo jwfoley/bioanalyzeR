@@ -36,14 +36,14 @@ read.tapestation.gel.image <- function(gel.image.files) {
 
 		# now finally extract the intensities!
 		position.fluorescence <- 1 - gel.image.rgb[,x.gel,1] # only get red fluorescence because all channels are equal in the places we care about; subtract from 1 because it's a negative
-		results <- do.call(rbind, lapply(1:length(x.gel), function(lane) {
+		results <- do.call(rbind, lapply(1:length(x.gel), function(gel.lane) {
 			positions.to.use <- which(
-				1:nrow(position.fluorescence) < center.lower.marker[lane] &
-				1:nrow(position.fluorescence) > center.upper.marker[lane] &
-				which.position.not.marker[,lane]
+				1:nrow(position.fluorescence) < center.lower.marker[gel.lane] &
+				1:nrow(position.fluorescence) > center.upper.marker[gel.lane] &
+				which.position.not.marker[,gel.lane]
 			)
-			relative.distance <- (center.upper.marker[lane] - positions.to.use) / (center.upper.marker[lane] - center.lower.marker[lane])
-			data.frame(well.number = lane, relative.distance, fluorescence = position.fluorescence[positions.to.use, lane])	
+			relative.distance <- (center.upper.marker[gel.lane] - positions.to.use) / (center.upper.marker[gel.lane] - center.lower.marker[gel.lane])
+			data.frame(gel.lane, relative.distance, fluorescence = position.fluorescence[positions.to.use, gel.lane])	
 		}))
 		
 		cbind(batch = sub("\\.png$", "", basename(gel.image.file)), results)
@@ -61,12 +61,15 @@ read.tapestation.xml <- function(xml.files) {
 		xml.root <- xmlRoot(xmlParse(xml.file))
 		results <- do.call(rbind, xmlApply(xml.root[["Samples"]], function(sample.xml) {
 			well.number <- xmlValue(sample.xml[["WellNumber"]])
-			sample.name <- trimws(xmlValue(sample.xml[["Comment"]]))
+			name <- trimws(xmlValue(sample.xml[["Comment"]]))
 			sample.observations <- trimws(xmlValue(sample.xml[["Observations"]]))
 			if (sample.observations == "Marker(s) not detected") {
-				warning(paste(sample.observations, "for well", well.number, sample.name))
+				warning(paste(sample.observations, "for well", well.number, name))
 				return(NULL)
 			}
+			well.row <- gsub("[^A-H]", "", well.number) # assumes all row names are in A through H!
+			well.col <- as.integer(gsub("[^[:digit:]]", "", well.number)) # assumes all column names are numbers!
+			
 			reagent.id <- xmlValue(sample.xml[["ScreenTapeID"]])
 			
 			peaks <- do.call(rbind, xmlApply(sample.xml[["Peaks"]], function(peak.xml) data.frame(
@@ -77,7 +80,7 @@ read.tapestation.xml <- function(xml.files) {
 				molarity =           as.numeric(xmlValue(peak.xml[["Molarity"]])
 			))))
 			
-			cbind(well.number, sample.name, reagent.id, sample.observations, peaks)
+			cbind(well.number, well.row, well.col, name, reagent.id, sample.observations, peaks)
 		}))
 		
 		cbind(batch = sub("\\.xml$", "", basename(xml.file)), results)
@@ -95,7 +98,7 @@ read.tapestation <- function(xml.file, gel.image.file, fit = "regression") {
 	
 	peaks <- read.tapestation.xml(xml.file)
 	result <- read.tapestation.gel.image(gel.image.file)
-	stopifnot(length(unique(result$well.number)) == length(unique(peaks$well.number)))
+	stopifnot(length(unique(result$gel.lane)) == length(unique(peaks$well.number)))
 	
 	# convert relative distances to absolute
 	marker.distances <- data.frame(
@@ -103,7 +106,7 @@ read.tapestation <- function(xml.file, gel.image.file, fit = "regression") {
 		upper = subset(peaks, peak.observations == "Upper Marker")$distance,
 		row.names = unique(peaks$well.number)
 	)
-	result$distance <- marker.distances$upper[result$well.number] + result$relative.distance * (marker.distances$lower[result$well.number] - marker.distances$upper[result$well.number])
+	result$distance <- marker.distances$upper[result$gel.lane] + result$relative.distance * (marker.distances$lower[result$gel.lane] - marker.distances$upper[result$gel.lane])
 	
 	# fit standard curve for molecule length
 	# do this in relative-distance space so it's effectively recalibrated for each sample's markers
@@ -124,19 +127,19 @@ read.tapestation <- function(xml.file, gel.image.file, fit = "regression") {
 	
 	# convert to molarity
 	fluorescence.coefficient <- 1 / lm(area ~ length : molarity - 1, peaks.ladder)$coefficients
-	result$molarity <- unlist(lapply(unique(result$well.number), function(this.well) {
-		this.result <- subset(result, well.number == this.well)
+	result$molarity <- unlist(lapply(unique(result$gel.lane), function(this.well) {
+		this.result <- subset(result, gel.lane == this.well)
 		length.derivative <- diff(this.result$length) / diff(this.result$relative.distance)
 		this.result$fluorescence * fluorescence.coefficient / this.result$relative.distance / c(NA, -length.derivative)
 	}))
 	
 	# get sample names (might not be unique but we assume well numbers are)
-	result$well.number <- factor(unique(peaks$well.number)[result$well.number]) # change index numbers to A1, A2, etc.
-	sample.names <- sapply(unique(peaks$well.number), function(this.well) {
-		this.name <- unique(subset(peaks, well.number == this.well)$sample.name)
-		stopifnot(length(this.name) == 1)
-		this.name
-	})
-	cbind(name = unique(peaks$sample.name)[result$well.number], well.number <- result)
+	sample.table <- unique(peaks[,c("batch", "name", "well.number", "well.row", "well.col")])
+	stopifnot(nrow(sample.table) == length(unique(result$gel.lane)))
+	
+	result <- cbind(sample.table[result$gel.lane,], subset(result, select = -batch))
+	rownames(result) <- NULL # clean up row names again
+	
+	result
 }
 
