@@ -43,7 +43,7 @@ read.tapestation.gel.image <- function(gel.image.files) {
 				which.position.not.marker[,lane]
 			)
 			relative.distance <- (center.upper.marker[lane] - positions.to.use) / (center.upper.marker[lane] - center.lower.marker[lane])
-			data.frame(lane, relative.distance, fluorescence = position.fluorescence[positions.to.use, lane])	
+			data.frame(well.number = lane, relative.distance, fluorescence = position.fluorescence[positions.to.use, lane])	
 		}))
 		
 		cbind(batch = sub("\\.png$", "", basename(gel.image.file)), results)
@@ -95,7 +95,7 @@ read.tapestation <- function(xml.file, gel.image.file, fit = "regression") {
 	
 	peaks <- read.tapestation.xml(xml.file)
 	result <- read.tapestation.gel.image(gel.image.file)
-	stopifnot(length(unique(result$lane)) == length(unique(peaks$well.number)))
+	stopifnot(length(unique(result$well.number)) == length(unique(peaks$well.number)))
 	
 	# convert relative distances to absolute
 	marker.distances <- data.frame(
@@ -103,7 +103,7 @@ read.tapestation <- function(xml.file, gel.image.file, fit = "regression") {
 		upper = subset(peaks, peak.observations == "Upper Marker")$distance,
 		row.names = unique(peaks$well.number)
 	)
-	result$distance <- marker.distances$upper[result$lane] + result$relative.distance * (marker.distances$lower[result$lane] - marker.distances$upper[result$lane])
+	result$distance <- marker.distances$upper[result$well.number] + result$relative.distance * (marker.distances$lower[result$well.number] - marker.distances$upper[result$well.number])
 	
 	# fit standard curve for molecule length
 	# do this in relative-distance space so it's effectively recalibrated for each sample's markers
@@ -124,12 +124,19 @@ read.tapestation <- function(xml.file, gel.image.file, fit = "regression") {
 	
 	# convert to molarity
 	fluorescence.coefficient <- 1 / lm(area ~ length : molarity - 1, peaks.ladder)$coefficients
-	result$molarity <- unlist(lapply(unique(result$lane), function(this.lane) {
-		this.result <- subset(result, lane == this.lane)
+	result$molarity <- unlist(lapply(unique(result$well.number), function(this.well) {
+		this.result <- subset(result, well.number == this.well)
 		length.derivative <- diff(this.result$length) / diff(this.result$relative.distance)
 		this.result$fluorescence * fluorescence.coefficient / this.result$relative.distance / c(NA, -length.derivative)
 	}))
 	
-	result
+	# get sample names (might not be unique but we assume well numbers are)
+	result$well.number <- factor(unique(peaks$well.number)[result$well.number]) # change index numbers to A1, A2, etc.
+	sample.names <- sapply(unique(peaks$well.number), function(this.well) {
+		this.name <- unique(subset(peaks, well.number == this.well)$sample.name)
+		stopifnot(length(this.name) == 1)
+		this.name
+	})
+	cbind(name = unique(peaks$sample.name)[result$well.number], well.number <- result)
 }
 

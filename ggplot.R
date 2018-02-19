@@ -1,6 +1,6 @@
 library(ggplot2)
 
-plot.bioanalyzer <- function(results, # returns a ggplot object, which can be extended by adding more features
+plot.electropherogram <- function(results, # returns a ggplot object, which can be extended by adding more features
 	x = "length",
 	y = "fluorescence",
 	scales = "free_y", # scaling rules for the facets, passed to facet_wrap()
@@ -12,7 +12,7 @@ plot.bioanalyzer <- function(results, # returns a ggplot object, which can be ex
 	this.plot <- ggplot(results) +
 	aes_string(x, y) +
 	geom() +
-	facet_wrap(~ name, scales = scales)
+	facet_wrap(~ well.number, scales = scales)
 	
 	if (x == "length") this.plot <- this.plot + scale_x_log10()
 	
