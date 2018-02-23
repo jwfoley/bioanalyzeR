@@ -1,6 +1,6 @@
 # bioanalyzeR
 
-Simple R functions for importing and graphic electrophoresis data from an Agilent 2100 Bioanalyzer or 2200 TapeStation.
+Simple R functions for importing and graphing electrophoresis data from an Agilent 2100 Bioanalyzer or 2200 TapeStation.
 
 ## `read.bioanalyzer`
 Reads data from one or more Bioanalyzer XML files (see below for how to export those) into a tall data frame containing all useful information. Each row is a single measurement so there are thousands of rows. The columns are:
