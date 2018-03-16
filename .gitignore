@@ -4,3 +4,6 @@
 *.RData
 *.aux
 *.log
+*.tex
+*.pdf
+
