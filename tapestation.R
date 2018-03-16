@@ -94,7 +94,7 @@ read.tapestation.xml <- function(xml.files) {
 
 
 read.tapestation <- function(xml.file, gel.image.file, fit = "regression") {
-	stopifnot(fit %in% c("linear", "spline", "regression"))
+	stopifnot(fit %in% c("interpolate", "spline", "regression"))
 	
 	peaks <- read.tapestation.xml(xml.file)
 	result <- read.tapestation.gel.image(gel.image.file)
@@ -114,7 +114,7 @@ read.tapestation <- function(xml.file, gel.image.file, fit = "regression") {
 	stopifnot(length(which.well.is.ladder) == 1)
 	peaks.ladder <- subset(peaks, well.number == which.well.is.ladder)
 	peaks.ladder$relative.distance <- (peaks.ladder$distance - subset(peaks.ladder, peak.observations == "Upper Marker")$distance) / (subset(peaks.ladder, peak.observations == "Lower Marker")$distance - subset(peaks.ladder, peak.observations == "Upper Marker")$distance)
-	if (fit == "linear") {
+	if (fit == "interpolate") {
 		warning("linear interpolation gives ugly results for molarity estimation")
 		standard.curve.function <- approxfun(peaks.ladder$relative.distance, peaks.ladder$length)
 	} else if (fit == "spline") {
