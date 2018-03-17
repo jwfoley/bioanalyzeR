@@ -79,6 +79,7 @@ read.tapestation.xml <- function(xml.files) {
 				area =               as.numeric(xmlValue(peak.xml[["Area"]])),
 				molarity =           as.numeric(xmlValue(peak.xml[["Molarity"]])
 			))))
+			peaks$relative.distance <- (peaks$distance - min(peaks$distance)) / (max(peaks$distance) - min(peaks$distance))
 			
 			cbind(well.number, well.row, well.col, name, reagent.id, sample.observations, peaks)
 		}))
