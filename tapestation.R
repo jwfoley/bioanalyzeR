@@ -103,6 +103,12 @@ read.tapestation <- function(xml.file, gel.image.file, fit = "spline") {
 	result <- read.tapestation.gel.image(gel.image.file)
 	stopifnot(length(unique(result$gel.lane)) == length(unique(peaks$well.number)))
 	
+	# get sample names (might not be unique but we assume well numbers are)
+	sample.table <- unique(peaks[,c("batch", "name", "well.number", "well.row", "well.col")])
+	stopifnot(nrow(sample.table) == length(unique(result$gel.lane)))
+	
+	result <- cbind(sample.table[result$gel.lane,], subset(result, select = -batch))
+	
 	# convert relative distances to absolute
 	marker.distances <- data.frame(
 		lower = subset(peaks, peak.observations == "Lower Marker")$distance,
@@ -129,18 +135,22 @@ read.tapestation <- function(xml.file, gel.image.file, fit = "spline") {
 	result$length <- standard.curve.function(result$relative.distance)
 	
 	# convert to molarity
-	fluorescence.coefficient <- 1 / lm(area ~ length : molarity - 1, peaks.ladder)$coefficients
-	result$molarity <- unlist(lapply(unique(result$gel.lane), function(this.well) {
-		this.result <- subset(result, gel.lane == this.well)
-		length.derivative <- diff(this.result$length) / diff(this.result$relative.distance)
-		this.result$fluorescence * fluorescence.coefficient / this.result$relative.distance / c(NA, -length.derivative)
-	}))
+	peaks.ladder$mass <- peaks.ladder$length * peaks.ladder$molarity
+	result <- cbind(result, do.call(rbind, lapply(unique(result$well.number), function(this.well) {
+		result.this.well <- subset(result, well.number == this.well)
+		data.frame(
+			delta.distance = c(NA, diff(result.this.well$distance)),
+			delta.fluorescence = c(NA, diff(result.this.well$fluorescence))
+		)
+	})))
+	result$delta.area <- (2 * result$fluorescence - result$delta.fluorescence) / 2 * result$delta.distance
+	peaks.ladder$estimated.area <- c(NA, sapply(2:(nrow(peaks.ladder) - 1), function(i) {
+		sum(subset(result, well.number == which.well.is.ladder & distance >= peaks.ladder$lower.bound[i] & distance <= peaks.ladder$upper.bound[i])$delta.area)
+	}), NA)
+	fluorescence.model <- lm(mass ~ estimated.area - 1, data = peaks.ladder)
+	result$delta.mass <- fluorescence.model$coefficients[1] * result$delta.area
+	result$delta.molarity <- result$delta.mass / result$length
 	
-	# get sample names (might not be unique but we assume well numbers are)
-	sample.table <- unique(peaks[,c("batch", "name", "well.number", "well.row", "well.col")])
-	stopifnot(nrow(sample.table) == length(unique(result$gel.lane)))
-	
-	result <- cbind(sample.table[result$gel.lane,], subset(result, select = -batch))
 	rownames(result) <- NULL # clean up row names again
 	
 	result
