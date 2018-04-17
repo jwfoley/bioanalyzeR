@@ -11,7 +11,8 @@ plot.electropherogram <- function(results, # returns a ggplot object, which can 
 	this.plot <- ggplot(results) +
 		aes_(as.name(x), ~fluorescence) +
 		geom() +
-		facet_wrap(~ well.number, scales = scales)
+		facet_wrap(~ well.number, scales = scales) +
+		ylab("fluorescence")
 	
 	if (x == "length") this.plot <- this.plot + scale_x_log10()
 	
