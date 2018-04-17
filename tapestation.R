@@ -103,8 +103,8 @@ read.tapestation <- function(xml.file, gel.image.file, fit = "spline") {
 	result <- read.tapestation.gel.image(gel.image.file)
 	stopifnot(length(unique(result$gel.lane)) == length(unique(peaks$well.number)))
 	
-	# get sample names (might not be unique but we assume well numbers are)
-	sample.table <- unique(peaks[,c("batch", "name", "well.number", "well.row", "well.col")])
+	# get sample names andand observations (might not be unique but we assume well numbers are)
+	sample.table <- unique(peaks[,c("batch", "name", "sample.observations", "well.number", "well.row", "well.col")])
 	stopifnot(nrow(sample.table) == length(unique(result$gel.lane)))
 	
 	result <- cbind(sample.table[result$gel.lane,], subset(result, select = -batch))

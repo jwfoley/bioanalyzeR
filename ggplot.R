@@ -6,7 +6,8 @@ plot.electropherogram <- function(results, # returns a ggplot object, which can 
 	geom = geom_line,
 	include.ladder = FALSE
 ) {
-	if (! include.ladder) results <- subset(results, name != "Ladder")
+	
+	if (! include.ladder) results <- subset(results, sample.observations != "Ladder")
 
 	this.plot <- ggplot(results) +
 		aes_(as.name(x), ~fluorescence) +
@@ -30,7 +31,8 @@ plot.molarity <- function(results, # returns a ggplot object, which can be exten
 	scales = "free_y",
 	include.ladder = FALSE
 ) {
-	if (! include.ladder) results <- subset(results, name != "Ladder")
+	
+	if (! include.ladder) results <- subset(results, sample.observations != "Ladder")
 	
 	results$xmin <- unlist(lapply(unique(results$well.number), function(well) {
 		results.this.well <- subset(results, well.number == well)
