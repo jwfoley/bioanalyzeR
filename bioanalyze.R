@@ -19,7 +19,7 @@ read.bioanalyzer <- function(xml.files, fit = "spline") {
 				signal.data <- this.sample[["DASignals"]][["DetectorChannels"]][[1]][["SignalData"]]
 				n.values <- as.integer(xmlValue(signal.data[["NumberOfSamples"]]))
 				raw.data <- data.frame(
-					well.number = as.integer(xmlValue(this.sample[["Index"]])),
+					well.number = as.integer(xmlValue(this.sample[["WellNumber"]])),
 					name = xmlValue(this.sample[["Name"]]),
 					time = as.numeric(xmlValue(signal.data[["XStart"]])) + as.numeric(xmlValue(signal.data[["XStep"]])) * (1:n.values - 1),
 					fluorescence = readBin(base64_decode(xmlValue(signal.data[["ProcessedSignal"]])), "numeric", size = 4, n = n.values, endian = "little"),
@@ -47,7 +47,7 @@ read.bioanalyzer <- function(xml.files, fit = "spline") {
 		stopifnot(length(which.ladder) == 1)
 		sample.ladder <- samples[[which.ladder]]
 		stopifnot(xmlValue(sample.ladder[["HasData"]]) == "true")
-		peaks.ladder <- data.frame(t(xmlSApply(sample.ladder[["DAResultStructures"]][["DARIntegrator"]][["Channel"]][["PeaksMolecular"]], function(peak) sapply(c("AlignedMigrationTime", "Area", "FragmentSize", "Molarity", "Concentration", "AlignedStartTime", "AlignedEndTime"), function(field) as.numeric(xmlValue(peak[[field]]))))), row.names = NULL)
+		peaks.ladder <- data.frame(t(xmlSApply(sample.ladder[["DAResultStructures"]][["DARIntegrator"]][["Channel"]][["PeaksMolecular"]], function(peak) sapply(c("AlignedMigrationTime", "Area", "FragmentSize", "Molarity", "Concentration", "StartTime", "EndTime", "AlignedStartTime", "AlignedEndTime"), function(field) as.numeric(xmlValue(peak[[field]]))))), row.names = NULL)
 		stopifnot(all.equal(ladder.definition, peaks.ladder[,c("FragmentSize", "Concentration")], check.names = F))
 		
 		# fit standard curve for molecule length
@@ -63,7 +63,22 @@ read.bioanalyzer <- function(xml.files, fit = "spline") {
 		}
 		result$length <- sapply(result$aligned.time, function(x) if (x < marker.aligned.times[1] || x > marker.aligned.times[2]) NA else  standard.curve.function(x)) # avoid extrapolating
 		
-#		# convert to molarity
+		# convert to molarity
+		peaks.ladder$mass <- peaks.ladder$FragmentSize * peaks.ladder$Molarity
+		peaks.ladder$mass.times.length <- peaks.ladder$mass * peaks.ladder$FragmentSize
+		result <- cbind(result, do.call(rbind, lapply(unique(result$well.number), function(this.well) {
+			result.this.well <- subset(result, well.number == this.well)
+			data.frame(
+				delta.time = c(NA, diff(result.this.well$time)),
+				delta.fluorescence = c(NA, diff(result.this.well$fluorescence))
+			)
+		})))
+		result$delta.area <- (2 * result$fluorescence - result$delta.fluorescence) / 2 * result$delta.time
+		peaks.ladder$estimated.area <- sapply(1:nrow(peaks.ladder), function(i) {
+			sum(subset(result, well.number == which.ladder & time >= peaks.ladder$StartTime[i] & time <= peaks.ladder$EndTime[i])$delta.area)
+		})
+		# problem: these areas don't match the ones in the XML (except the second ladder band) and they're not off by a constant either
+		
 #		
 #	
 #				# fit standard curve for molecule length (done once per sample because that's how the results are provided, even though it should be the same standard curve for every sample)
