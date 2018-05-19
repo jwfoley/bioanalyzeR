@@ -47,7 +47,7 @@ read.bioanalyzer <- function(xml.files, fit = "spline") {
 		stopifnot(length(which.ladder) == 1)
 		sample.ladder <- samples[[which.ladder]]
 		stopifnot(xmlValue(sample.ladder[["HasData"]]) == "true")
-		peaks.ladder <- data.frame(t(xmlSApply(sample.ladder[["DAResultStructures"]][["DARIntegrator"]][["Channel"]][["PeaksMolecular"]], function(peak) sapply(c("AlignedMigrationTime", "Area", "FragmentSize", "Molarity", "Concentration", "StartTime", "EndTime", "AlignedStartTime", "AlignedEndTime"), function(field) as.numeric(xmlValue(peak[[field]]))))), row.names = NULL)
+		peaks.ladder <- data.frame(t(xmlSApply(sample.ladder[["DAResultStructures"]][["DARIntegrator"]][["Channel"]][["PeaksMolecular"]], function(peak) sapply(c("AlignedMigrationTime", "Area", "TimeCorrectedArea", "FragmentSize", "Molarity", "Concentration", "StartTime", "EndTime", "AlignedStartTime", "AlignedEndTime"), function(field) as.numeric(xmlValue(peak[[field]]))))), row.names = NULL)
 		stopifnot(all.equal(ladder.definition, peaks.ladder[,c("FragmentSize", "Concentration")], check.names = F))
 		
 		# fit standard curve for molecule length
@@ -69,15 +69,17 @@ read.bioanalyzer <- function(xml.files, fit = "spline") {
 		result <- cbind(result, do.call(rbind, lapply(unique(result$well.number), function(this.well) {
 			result.this.well <- subset(result, well.number == this.well)
 			data.frame(
-				delta.time = c(NA, diff(result.this.well$time)),
+				delta.aligned.time = c(NA, diff(result.this.well$aligned.time)),
 				delta.fluorescence = c(NA, diff(result.this.well$fluorescence))
 			)
 		})))
-		result$delta.area <- (2 * result$fluorescence - result$delta.fluorescence) / 2 * result$delta.time
-		peaks.ladder$estimated.area <- sapply(1:nrow(peaks.ladder), function(i) {
-			sum(subset(result, well.number == which.ladder & time >= peaks.ladder$StartTime[i] & time <= peaks.ladder$EndTime[i])$delta.area)
-		})
-		# problem: these areas don't match the ones in the XML (except the second ladder band) and they're not off by a constant either
+		result$delta.area <- (2 * result$fluorescence - result$delta.fluorescence) / 2 * result$delta.aligned.time
+		peaks.ladder$estimated.corrected.area <- c(NA, sapply(2:(nrow(peaks.ladder) - 1), function(i) {
+			sum(apply(subset(result, well.number == which.ladder & aligned.time >= peaks.ladder$AlignedStartTime[i] & aligned.time <= peaks.ladder$AlignedEndTime[i]), 1, function(row) as.numeric(row["delta.area"]) / as.numeric(row["aligned.time"]))) # I don't know why they stop being numerics; I'm trying to compute my own TimeCorrectedArea as the sum of delta corrected areas, but that doesn't seem to be how Agilent does it and it's not working well, so maybe don't do that
+		}), NA) # skip lower and upper markers because they're done differently
+		peaks.ladder$uncorrected.area <- peaks.ladder$TimeCorrectedArea * peaks.ladder$AlignedMigrationTime # for some reason ladder peaks don't report Area (it's the same as TimeCorrectedArea, which is Area / AlignedMigrationTime in other samples) so we have to recalculate it
+		
+		
 		
 #		
 #	
