@@ -94,7 +94,6 @@ read.tapestation.xml <- function(xml.files) {
 					molarity =           as.numeric(xmlValue(peak.xml[["Molarity"]])
 				))))
 			)
-			peaks$relative.distance <- (peaks$distance - min(peaks$distance)) / (max(peaks$distance) - min(peaks$distance))
 			
 			cbind(well.number, well.row, well.col, name, reagent.id, sample.observations, peaks)
 		}))
@@ -129,7 +128,8 @@ read.tapestation <- function(xml.file, gel.image.file, fit = "spline") {
 		row.names = unique(peaks$well.number)
 	)
 	marker.distances$range <- marker.distances$lower - marker.distances$upper
-	result$relative.distance <- (result$distance - marker.distances$upper[result$gel.lane]) / marker.distances$range[result$gel.lane]
+	result$relative.distance <- (result$distance - marker.distances$upper[result$well.number]) / marker.distances$range[result$well.number]
+	peaks$relative.distance <- (peaks$distance - marker.distances$upper[peaks$well.number]) / marker.distances$range[peaks$well.number]
 	
 	# fit standard curve for molecule length
 	# do this in relative-distance space so it's effectively recalibrated for each sample's markers
