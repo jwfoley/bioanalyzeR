@@ -122,13 +122,14 @@ read.tapestation <- function(xml.file, gel.image.file, fit = "spline") {
 	
 	result <- cbind(sample.table[result$gel.lane,], subset(result, select = -batch))
 	
-	# convert relative distances to absolute
+	# calculate relative distances
 	marker.distances <- data.frame(
 		lower = subset(peaks, peak.observations == "Lower Marker")$distance,
 		upper = subset(peaks, peak.observations == "Upper Marker")$distance,
 		row.names = unique(peaks$well.number)
 	)
-	result$distance <- marker.distances$upper[result$gel.lane] + result$relative.distance * (marker.distances$lower[result$gel.lane] - marker.distances$upper[result$gel.lane])
+	marker.distances$range <- marker.distances$lower - marker.distances$upper
+	result$relative.distance <- (result$distance - marker.distances$upper[result$gel.lane]) / marker.distances$range[result$gel.lane]
 	
 	# fit standard curve for molecule length
 	# do this in relative-distance space so it's effectively recalibrated for each sample's markers
