@@ -34,7 +34,7 @@ In the TapeStation Analysis Software, open your data file (`.D1000`, `.HSD1000`,
 ### Metadata XML
 Select "File->Export Data->Export to XML". You do not need to export the gel image or individual EPG images at this point. Select your destination and then click "Export" to save the file.
 
-###Gel image PNG
+### Gel image PNG
 It is important to follow these unusual directions carefully!
 
 1. In the "Home" tab (top), verify that there is a ladder lane ("Electronic Ladder" is okay) and that the markers are correctly identified in every sample (except failed lanes, which are okay).
