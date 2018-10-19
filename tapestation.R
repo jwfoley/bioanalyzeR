@@ -1,8 +1,19 @@
 library(XML)
 library(png)
 
-rgb.upper.marker <- c(128, 0, 128) / 255 # upper marker is purple
-rgb.lower.marker <- c(0, 128, 0) / 255 # lower marker is green
+# hardcoded colors
+RGB.UPPER.MARKER <-  c(128,   0, 128)  # upper marker is purple
+RGB.LOWER.MARKER <-  c(  0, 128,   0)  # lower marker is green
+RGB.HIGHLIGHT <-     c(209, 228, 250)  # highlight around selected lane is light blue
+RGB.GOOD <-          c(138, 208, 160)  # label for high RIN is green
+RGB.MEDIUM <-        c(255, 237, 101)  # label for medium RIN is yellow
+RGB.BAD <-           c(255, 106,  71)  # label for low RIN is red
+
+# find all pixels in an RGB array from readPNG, with values in [0,1], that match a given RGB trio, with values in [0, 255]
+find.matching.pixels <- function(rgb.image, rgb.values) {
+	rgb.fractions <- rgb.values / 255
+	return(rgb.image[,,1] == rgb.fractions[1] & rgb.image[,,2] == rgb.fractions[2] & rgb.image[,,3] == rgb.fractions[3])
+}
 
 
 read.tapestation.gel.image <- function(gel.image.files) {
@@ -10,43 +21,40 @@ read.tapestation.gel.image <- function(gel.image.files) {
 	combined.results <- do.call(rbind, lapply(gel.image.files, function(gel.image.file) {
 
 		gel.image.rgb <- readPNG(gel.image.file) # this is in the form (y, x, channel); [1,1,] is the upper left corner
-
-		# find marker bands
-		which.pixel.upper.marker <- gel.image.rgb[,,1] == rgb.upper.marker[1] & gel.image.rgb[,,2] == rgb.upper.marker[2] & gel.image.rgb[,,3] == rgb.upper.marker[3]
-		which.pixel.lower.marker <- gel.image.rgb[,,1] == rgb.lower.marker[1] & gel.image.rgb[,,2] == rgb.lower.marker[2] & gel.image.rgb[,,3] == rgb.lower.marker[3]
-
-		# use marker bands to identify gel lanes
-		which.x.upper.marker <- apply(which.pixel.upper.marker, 2, any)
-		which.x.lower.marker <- apply(which.pixel.lower.marker, 2, any)
-		stopifnot(which.x.upper.marker == which.x.lower.marker)
-
-		# isolate a single representative x-value (the first one from the left) for each gel lane
-		x.gel <- which(diff(c(FALSE, which.x.upper.marker)) == 1) # add this FALSE so that column 1 will test positive if necessary, and this also offsets all the indices correctly
-		which.position.upper.marker <- which.pixel.upper.marker[,x.gel]
-		which.position.lower.marker <- which.pixel.lower.marker[,x.gel]
-		stopifnot(apply(which.position.upper.marker, 2, any))
-		stopifnot(apply(which.position.lower.marker, 2, any))
-
-		# find the center y-value of the marker in each gel lane (the lanes might not be aligned perfectly at both ends)
-		center.upper.marker <- apply(which.position.upper.marker, 2, function(lane) mean(which(lane)))
-		center.lower.marker <- apply(which.position.lower.marker, 2, function(lane) mean(which(lane)))
-
-		# find which positions safely contain no residual color from the markers (the edges are blurred and we won't try to deconvolve the color from the signal)
-		which.position.not.marker <- apply(gel.image.rgb[,x.gel,], 1:2, function(channels) channels[1] == channels[2] && channels[2] == channels[3])
+		
+		# find lower marker
+		pixel.is.lower.marker <- find.matching.pixels(gel.image.rgb, RGB.LOWER.MARKER)
+		x.is.lower.marker <- apply(pixel.is.lower.marker, 2, any)
+		
+		# use lower marker bands to identify a single representative x-value for each gel lane
+		x.gel <- which(diff(c(FALSE, x.is.lower.marker)) == 1) # add this FALSE so that column 1 will test positive if necessary, and this also offsets all the indices correctly
+		gel.image.rgb.reduced <- gel.image.rgb[,x.gel,]
+		position.is.lower.marker <- pixel.is.lower.marker[,x.gel]
+		
+		# find upper marker
+		position.is.upper.marker <- find.matching.pixels(gel.image.rgb.reduced, RGB.UPPER.MARKER)
+		has.upper.markers <- any(position.is.upper.marker)
+				
+		# find gel boundaries
+		position.is.border <- find.matching.pixels(gel.image.rgb.reduced, RGB.HIGHLIGHT) |
+			find.matching.pixels(gel.image.rgb.reduced, RGB.GOOD) |
+			find.matching.pixels(gel.image.rgb.reduced, RGB.MEDIUM) |
+			find.matching.pixels(gel.image.rgb.reduced, RGB.BAD)
+		lane.with.border <- which(position.is.border[1,]) # assuming there will be a highlight in the top pixel row
+		border.transition <- diff(position.is.border[,lane.with.border])
+		y.gel.start <- which(border.transition == -1)[1] - 1
+		y.gel.end <- which(border.transition == 1)[1] - 1
 
 		# now finally extract the intensities!
-		position.fluorescence <- 1 - gel.image.rgb[,x.gel,1] # only get red fluorescence because all channels are equal in the places we care about; subtract from 1 because it's a negative
-		results <- do.call(rbind, lapply(1:length(x.gel), function(gel.lane) {
-			positions.to.use <- which(
-				1:nrow(position.fluorescence) < center.lower.marker[gel.lane] &
-				1:nrow(position.fluorescence) > center.upper.marker[gel.lane] &
-				which.position.not.marker[,gel.lane]
-			)
-			relative.distance <- (center.upper.marker[gel.lane] - positions.to.use) / (center.upper.marker[gel.lane] - center.lower.marker[gel.lane])
-			data.frame(gel.lane, relative.distance, fluorescence = position.fluorescence[positions.to.use, gel.lane])	
-		}))
-		
-		cbind(batch = sub("\\.png$", "", basename(gel.image.file)), results)
+		gel.data.rgb <- gel.image.rgb.reduced[y.gel.start:y.gel.end,,] # only the actual data values
+		fluorescence.matrix <- 1 - gel.data.rgb[,,3] # only get blue fluorescence because all channels are equal in the places we care about; subtract from 1 because it's a negative
+		fluorescence.matrix[gel.data.rgb[,,1] != gel.data.rgb[,,2]] <- NA # set non-data pixels (obscured by marker band color) to NA; assume red channel always equals green channel, but not necessary blue because protein gels use blue
+		results <- data.frame(
+			batch =              sub("\\.png$", "", basename(gel.image.file)),
+			gel.lane =           rep(1:length(x.gel), each = nrow(fluorescence.matrix)),
+			distance =           1:nrow(fluorescence.matrix) / nrow(fluorescence.matrix),
+			fluorescence =       as.vector(fluorescence.matrix)
+		)
 	}))
 	
 	rownames(combined.results) <- NULL
