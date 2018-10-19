@@ -122,11 +122,28 @@ read.tapestation <- function(xml.file, gel.image.file, fit = "spline") {
 	result <- cbind(sample.table[result$gel.lane,], subset(result, select = -batch))
 	
 	# calculate relative distances
-	marker.distances <- data.frame(
-		lower = subset(peaks, peak.observations == "Lower Marker")$distance,
-		upper = subset(peaks, peak.observations == "Upper Marker")$distance,
-		row.names = unique(peaks$well.number)
-	)
+	lower.marker.peaks <- subset(peaks, peak.observations == "Lower Marker")
+	marker.distances <- data.frame(lower = sapply(unique(peaks$well.number), function(this.well.number) {
+		distance <- subset(lower.marker.peaks, well.number == this.well.number)$distance
+		if (length(distance) == 0) {
+			return(NA)
+		} else if (length(distance) == 1) {
+			return(distance)
+		} else {
+			stop(paste("multiple lower marker peaks for well", this.well.number))
+		}
+	}), row.names = unique(peaks$well.number))
+	upper.marker.peaks <- subset(peaks, peak.observations == "Upper Marker")
+	marker.distances$upper <- sapply(rownames(marker.distances), function(this.well.number) {
+		distance <- subset(upper.marker.peaks, well.number == this.well.number)$distance
+		if (length(distance) == 0) {
+			return(NA)
+		} else if (length(distance) == 1) {
+			return(distance)
+		} else {
+			stop(paste("multiple lower marker peaks for well", this.well.number))
+		}
+	})
 	marker.distances$range <- marker.distances$lower - marker.distances$upper
 	result$relative.distance <- (result$distance - marker.distances$upper[result$well.number]) / marker.distances$range[result$well.number]
 	peaks$relative.distance <- (peaks$distance - marker.distances$upper[peaks$well.number]) / marker.distances$range[peaks$well.number]
