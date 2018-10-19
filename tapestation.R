@@ -108,8 +108,9 @@ read.tapestation.xml <- function(xml.files) {
 }
 
 
-read.tapestation <- function(xml.file, gel.image.file, fit = "spline") {
+read.tapestation <- function(xml.file, gel.image.file = NULL, fit = "spline") {
 	stopifnot(fit %in% c("interpolate", "spline", "regression"))
+	if (is.null(gel.image.file)) gel.image.file <- sub("\\.xml$", ".png", xml.file)
 	
 	peaks <- read.tapestation.xml(xml.file)
 	result <- read.tapestation.gel.image(gel.image.file)
