@@ -30,24 +30,26 @@ read.tapestation.gel.image <- function(gel.image.files) {
 		x.gel <- which(diff(c(FALSE, x.is.lower.marker)) == 1) # add this FALSE so that column 1 will test positive if necessary, and this also offsets all the indices correctly
 		gel.image.rgb.reduced <- gel.image.rgb[,x.gel,]
 		position.is.lower.marker <- pixel.is.lower.marker[,x.gel]
+		stopifnot(any(position.is.lower.marker)) # need lower marker band to find gel lanes
 		
 		# find upper marker
 		position.is.upper.marker <- find.matching.pixels(gel.image.rgb.reduced, RGB.UPPER.MARKER)
 		has.upper.markers <- any(position.is.upper.marker)
 				
 		# find gel boundaries
-		position.is.border <- find.matching.pixels(gel.image.rgb.reduced, RGB.HIGHLIGHT) |
-			find.matching.pixels(gel.image.rgb.reduced, RGB.GOOD) |
+		position.is.highlight <- find.matching.pixels(gel.image.rgb.reduced, RGB.HIGHLIGHT)
+		lane.with.borders <- which(position.is.highlight[1,]) # assuming there will be a highlight in the top pixel row
+		stopifnot(length(lane.with.borders) == 1) # need one highlighted lane to find gel borders
+		position.is.label <- find.matching.pixels(gel.image.rgb.reduced, RGB.GOOD) |
 			find.matching.pixels(gel.image.rgb.reduced, RGB.MEDIUM) |
 			find.matching.pixels(gel.image.rgb.reduced, RGB.BAD)
-		lane.with.border <- which(position.is.border[1,]) # assuming there will be a highlight in the top pixel row
-		border.transition <- diff(position.is.border[,lane.with.border])
+		border.transition <- diff((position.is.highlight | position.is.label)[,lane.with.borders])
 		y.gel.start <- which(border.transition == -1)[1] - 1
 		y.gel.end <- which(border.transition == 1)[1] - 1
 
 		# now finally extract the intensities!
 		gel.data.rgb <- gel.image.rgb.reduced[y.gel.start:y.gel.end,,] # only the actual data values
-		fluorescence.matrix <- 1 - gel.data.rgb[,,3] # only get blue fluorescence because all channels are equal in the places we care about; subtract from 1 because it's a negative
+		fluorescence.matrix <- 1 - gel.data.rgb[,,1] # only get red fluorescence because all channels are equal in the places we care about; subtract from 1 because it's a negative (red decreases in the protein gels too even though they're blue instead of black)
 		fluorescence.matrix[gel.data.rgb[,,1] != gel.data.rgb[,,2]] <- NA # set non-data pixels (obscured by marker band color) to NA; assume red channel always equals green channel, but not necessary blue because protein gels use blue
 		results <- data.frame(
 			batch =              sub("\\.png$", "", basename(gel.image.file)),
