@@ -85,9 +85,9 @@ read.tapestation.xml <- function(xml.files) {
 			peaks <- do.call(rbind, xmlApply(sample.xml[["Peaks"]], function(peak.xml) data.frame(
 				peak.observations =  trimws(xmlValue(peak.xml[["Observations"]])),
 				length =             as.integer(xmlValue(peak.xml[["Size"]])),
-				distance =           as.numeric(xmlValue(peak.xml[["RunDistance"]])),
-				lower.bound =        as.numeric(xmlValue(peak.xml[["FromPercent"]])),
-				upper.bound =        as.numeric(xmlValue(peak.xml[["ToPercent"]])), 
+				distance =           as.numeric(xmlValue(peak.xml[["RunDistance"]])) / 100,
+				lower.bound =        as.numeric(xmlValue(peak.xml[["FromPercent"]])) / 100,
+				upper.bound =        as.numeric(xmlValue(peak.xml[["ToPercent"]])) / 100, 
 				area =               as.numeric(xmlValue(peak.xml[["Area"]])),
 				molarity =           as.numeric(xmlValue(peak.xml[["Molarity"]])
 			))))
