@@ -166,6 +166,7 @@ read.tapestation <- function(xml.file, gel.image.file, fit = "spline") {
 	result$delta.molarity <- result$delta.mass / result$length
 	
 	rownames(result) <- NULL # clean up row names again
+	attr(result, "peaks") <- peaks
 	
 	result
 }
