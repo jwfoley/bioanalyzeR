@@ -134,16 +134,20 @@ read.tapestation <- function(xml.file, gel.image.file, fit = "spline") {
 		}
 	}), row.names = unique(peaks$well.number))
 	upper.marker.peaks <- subset(peaks, peak.observations == "Upper Marker")
-	marker.distances$upper <- sapply(rownames(marker.distances), function(this.well.number) {
-		distance <- subset(upper.marker.peaks, well.number == this.well.number)$distance
-		if (length(distance) == 0) {
-			return(NA)
-		} else if (length(distance) == 1) {
-			return(distance)
-		} else {
-			stop(paste("multiple lower marker peaks for well", this.well.number))
-		}
-	})
+	if (nrow(upper.marker.peaks) == 0) { # kit lacks upper marker
+		marker.distances$upper <- 0 # effectively normalizes only to lower marker
+	} else {
+		marker.distances$upper <- sapply(rownames(marker.distances), function(this.well.number) {
+			distance <- subset(upper.marker.peaks, well.number == this.well.number)$distance
+			if (length(distance) == 0) {
+				return(NA)
+			} else if (length(distance) == 1) {
+				return(distance)
+			} else {
+				stop(paste("multiple lower marker peaks for well", this.well.number))
+			}
+		})
+	}
 	marker.distances$range <- marker.distances$lower - marker.distances$upper
 	result$relative.distance <- (result$distance - marker.distances$upper[result$well.number]) / marker.distances$range[result$well.number]
 	peaks$relative.distance <- (peaks$distance - marker.distances$upper[peaks$well.number]) / marker.distances$range[peaks$well.number]
@@ -153,7 +157,6 @@ read.tapestation <- function(xml.file, gel.image.file, fit = "spline") {
 	which.well.is.ladder <- unique(subset(peaks, sample.observations == "Ladder")$well.number)
 	stopifnot(length(which.well.is.ladder) == 1)
 	peaks.ladder <- subset(peaks, well.number == which.well.is.ladder)
-	peaks.ladder$relative.distance <- (peaks.ladder$distance - subset(peaks.ladder, peak.observations == "Upper Marker")$distance) / (subset(peaks.ladder, peak.observations == "Lower Marker")$distance - subset(peaks.ladder, peak.observations == "Upper Marker")$distance)
 	if (fit == "interpolate") {
 		warning("linear interpolation gives ugly results for molarity estimation")
 		standard.curve.function <- approxfun(peaks.ladder$relative.distance, peaks.ladder$length)
