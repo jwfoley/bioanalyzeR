@@ -36,12 +36,6 @@ read.tapestation.gel.image <- function(gel.image.files) {
 			x.gel <- x.gel[1] + estimated.lane.width * 1:n.lanes - round(estimated.lane.width / 2) # aim for the centers of the lanes because we might have slight error
 		}
 		gel.image.rgb.reduced <- gel.image.rgb[,x.gel,]
-		position.is.lower.marker <- pixel.is.lower.marker[,x.gel]
-		stopifnot(any(position.is.lower.marker)) # need lower marker band to find gel lanes
-		
-		# find upper marker
-		position.is.upper.marker <- find.matching.pixels(gel.image.rgb.reduced, RGB.UPPER.MARKER)
-		has.upper.markers <- any(position.is.upper.marker)
 				
 		# find gel boundaries
 		position.is.highlight <- find.matching.pixels(gel.image.rgb.reduced, RGB.HIGHLIGHT)
