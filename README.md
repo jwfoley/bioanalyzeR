@@ -31,19 +31,23 @@ In the 2100 Expert software, open your data file (`.xad`) in the "Data" context.
 ## How to export TapeStation data
 In the TapeStation Analysis Software, open your data file (`.D1000`, `.HSD1000`, `.RNA`., `.gDNA`, etc.). You need to export both the metadata (in XML format) and gel image (PNG).
 
-* **Metadata XML:** Select "File->Export Data->Export to XML". You do not need to export the gel image or individual EPG images at this point. Select your destination and then click "Export" to save the file.
-* **Gel image PNG:** It is important to follow these unusual directions carefully!
-	1. In the "Home" tab (top), verify that there is a ladder lane ("Electronic Ladder" is okay) and that the markers are correctly identified in every sample (except failed lanes, which are okay).
-	1. Select the "Gel" context (top left button).
-	1. Select "Show All Lanes" if the button is not grayed out.
-	1. Unselect "Aligned", "Scale to Sample", and "Scale to MW Range" if it is not grayed out.
-	1. Leave the contrast slider in the middle.
-	1. Maximize the window and drag the lower end of the gel image area to make it as tall as possible. At this point you should see all lanes from the run, with the marker bands present but unaligned.
-	1. Right-click on a lane near the left end of the gel (it doesn't matter which) and you will see a context menu.
-	1. Move your cursor over "Snapshot" but **also over a lane to the right of the one you right-clicked on**.
-	1. Left-click "Snapshot". This will copy the gel image to your system clipboard, but you should see also see the newly selected lane become highlighted in light blue.
-	1. Open any image editor (e.g. Paint) and paste the image from your clipboard. You should see one lane highlighted in light blue. If not, try taking the snapshot again.
-	1. Save the gel image as a file in PNG format, preferably with the same name as the XML file (but the `.png` extension).
+### Metadata XML
+Select "File->Export Data->Export to XML". You do not need to export the gel image or individual EPG images at this point. Select your destination and then click "Export" to save the file.
+
+###Gel image PNG
+It is important to follow these unusual directions carefully!
+
+1. In the "Home" tab (top), verify that there is a ladder lane ("Electronic Ladder" is okay) and that the markers are correctly identified in every sample (except failed lanes, which are okay).
+1. Select the "Gel" context (top left button).
+1. Select "Show All Lanes" if the button is not grayed out.
+1. Unselect "Aligned", "Scale to Sample", and "Scale to MW Range" if it is not grayed out.
+1. Leave the contrast slider in the middle.
+1. Maximize the window and drag the lower end of the gel image area to make it as tall as possible. At this point you should see all lanes from the run, with the marker bands present but unaligned.
+1. Right-click on a lane near the left end of the gel (it doesn't matter which) and you will see a context menu.
+1. Move your cursor over "Snapshot" but **also over a lane to the right of the one you right-clicked on**.
+1. Left-click "Snapshot". This will copy the gel image to your system clipboard, but you should see also see the newly selected lane become highlighted in light blue.
+1. Open any image editor (e.g. Paint) and paste the image from your clipboard. You should see one lane highlighted in light blue. If not, try taking the snapshot again.
+1. Save the gel image as a file in PNG format, preferably with the same name as the XML file (but the `.png` extension).
 
 ## Why does `read.tapestation` need a gel image?
 The TapeStation software cannot export the raw fluorescence data in any other format; the XML only contains metadata (sample ID, peak list, etc.). The data would be easily accessible inside the `.D1000`, `.HSD1000`, etc. file formats except they are encrypted. I have asked Agilent about this and they stated that they do not want the data to be accessible to users.
