@@ -27,7 +27,14 @@ read.tapestation.gel.image <- function(gel.image.files) {
 		x.is.lower.marker <- apply(pixel.is.lower.marker, 2, any)
 		
 		# use lower marker bands to identify a single representative x-value for each gel lane
-		x.gel <- which(diff(c(FALSE, x.is.lower.marker)) == 1) # add this FALSE so that column 1 will test positive if necessary, and this also offsets all the indices correctly
+		x.gel <- which(diff(c(FALSE, x.is.lower.marker)) == 1) # guess the start x-positions of the lanes based on where there are gaps between lower markers; add this FALSE so that column 1 will test positive if necessary, and this also offsets all the indices correctly
+		lane.spacings <- diff(x.gel)
+		if (diff(range(lane.spacings)) > 1) { # the guessed lanes are not evenly spaced, even tolerating 1 pixel of antialiasing error
+			lane.spacing.freq <- table(lane.spacings)
+			estimated.lane.width <- as.integer(names(lane.spacing.freq)[which.max(lane.spacing.freq)]) # guess that the most common width is the correct one (assuming there aren't lots of problems in this batch!)
+			n.lanes <- floor((dim(gel.image.rgb)[2] - x.gel[1]) / estimated.lane.width) # assume the first edge is definitely called correctly (should only be whitespace to its left) and any whitespace to the right is narrower than a lane
+			x.gel <- x.gel[1] + estimated.lane.width * 1:n.lanes - round(estimated.lane.width / 2) # aim for the centers of the lanes because we might have slight error
+		}
 		gel.image.rgb.reduced <- gel.image.rgb[,x.gel,]
 		position.is.lower.marker <- pixel.is.lower.marker[,x.gel]
 		stopifnot(any(position.is.lower.marker)) # need lower marker band to find gel lanes
@@ -52,10 +59,10 @@ read.tapestation.gel.image <- function(gel.image.files) {
 		fluorescence.matrix <- 1 - gel.data.rgb[,,1] # only get red fluorescence because all channels are equal in the places we care about; subtract from 1 because it's a negative (red decreases in the protein gels too even though they're blue instead of black)
 		fluorescence.matrix[gel.data.rgb[,,1] != gel.data.rgb[,,2]] <- NA # set non-data pixels (obscured by marker band color) to NA; assume red channel always equals green channel, but not necessary blue because protein gels use blue
 		results <- data.frame(
-			batch =              sub("\\.png$", "", basename(gel.image.file)),
-			gel.lane =           rep(1:length(x.gel), each = nrow(fluorescence.matrix)),
-			distance =           1:nrow(fluorescence.matrix) / nrow(fluorescence.matrix),
-			fluorescence =       as.vector(fluorescence.matrix)
+			batch =         sub("\\.png$", "", basename(gel.image.file)),
+			gel.lane =      rep(1:length(x.gel), each = nrow(fluorescence.matrix)),
+			distance =      1:nrow(fluorescence.matrix) / nrow(fluorescence.matrix),
+			fluorescence =  as.vector(fluorescence.matrix)
 		)
 	}))
 	
