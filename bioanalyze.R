@@ -22,6 +22,8 @@ read.bioanalyzer <- function(xml.files, fit = "linear") {
 				result <- data.frame(
 					well.number = as.integer(xmlValue(this.sample[["Index"]])),
 					name = xmlValue(this.sample[["Name"]]),
+					comment = xmlValue(this.sample[["Comment"]]),
+					category = xmlValue(this.sample[["Category"]]),
 					time = as.numeric(xmlValue(signal.data[["XStart"]])) + as.numeric(xmlValue(signal.data[["XStep"]])) * (1:n.values - 1),
 					fluorescence = readBin(base64_decode(xmlValue(signal.data[["ProcessedSignal"]])), "numeric", size = 4, n = n.values, endian = "little"),
 					stringsAsFactors = F
