@@ -2,6 +2,7 @@ library(XML)
 library(openssl)
 
 read.bioanalyzer <- function(xml.files, fit = "linear") {
+	warning("Bioanalyzer molarity estimation is currently incorrect")
 	stopifnot(fit %in% c("linear", "spline"))
 
 	combined.results <- do.call(rbind, lapply(xml.files, function(xml.file) {
