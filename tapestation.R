@@ -72,10 +72,11 @@ read.tapestation.xml <- function(xml.files) {
 		xml.root <- xmlRoot(xmlParse(xml.file))
 		results <- do.call(rbind, xmlApply(xml.root[["Samples"]], function(sample.xml) {
 			well.number <- xmlValue(sample.xml[["WellNumber"]])
-			name <- trimws(xmlValue(sample.xml[["Comment"]]))
-			sample.observations <- trimws(xmlValue(sample.xml[["Observations"]]))
-			if (sample.observations == "Marker(s) not detected") {
-				warning(paste(sample.observations, "for well", well.number, name))
+			name <- trimws(xmlValue(sample.xml[["Comment"]])) # confusingly, TapeStation XML uses "Comment" for sample name and "Observations" for comments, but we'll disregard that for consistency with Bioanalyzer
+			comment <- trimws(xmlValue(sample.xml[["Observations"]]))
+			category <- if (comment == "Ladder") "Ladder" else "Sample"
+			if (comment == "Marker(s) not detected") {
+				warning(paste(comment, "for well", well.number, name))
 				return(NULL)
 			}
 			well.row <- gsub("[^A-H]", "", well.number) # assumes all row names are in A through H!
@@ -95,7 +96,7 @@ read.tapestation.xml <- function(xml.files) {
 				))))
 			)
 			
-			cbind(well.number, well.row, well.col, name, reagent.id, sample.observations, peaks)
+			cbind(well.number, well.row, well.col, name, comment, category, peaks)
 		}))
 		
 		cbind(batch = sub("\\.xml$", "", basename(xml.file)), results)
@@ -117,7 +118,7 @@ read.tapestation <- function(xml.file, gel.image.file = NULL, fit = "spline") {
 	stopifnot(length(unique(result$gel.lane)) == length(unique(peaks$well.number)))
 	
 	# get sample names andand observations (might not be unique but we assume well numbers are)
-	sample.table <- unique(peaks[,c("batch", "name", "sample.observations", "well.number", "well.row", "well.col")])
+	sample.table <- unique(peaks[,c("batch", "well.number", "well.row", "well.col", "name", "comment", "category")])
 	stopifnot(nrow(sample.table) == length(unique(result$gel.lane)))
 	
 	result <- cbind(sample.table[result$gel.lane,], subset(result, select = -batch))
@@ -155,7 +156,7 @@ read.tapestation <- function(xml.file, gel.image.file = NULL, fit = "spline") {
 	
 	# fit standard curve for molecule length
 	# do this in relative-distance space so it's effectively recalibrated for each sample's markers
-	which.well.is.ladder <- unique(subset(peaks, sample.observations == "Ladder")$well.number)
+	which.well.is.ladder <- unique(subset(peaks, comment == "Ladder")$well.number)
 	stopifnot(length(which.well.is.ladder) == 1)
 	peaks.ladder <- subset(peaks, well.number == which.well.is.ladder)
 	if (fit == "interpolate") {
