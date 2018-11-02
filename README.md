@@ -1,6 +1,6 @@
 # bioanalyzeR
 
-Simple R functions for importing and graphing electrophoresis data from an Agilent 2100 Bioanalyzer or 2200 TapeStation.
+Simple R functions for importing and graphing electrophoresis data from an Agilent 2100 Bioanalyzer or 2200/4150/4200 TapeStation.
 
 ## `read.bioanalyzer`
 Reads data from one or more Bioanalyzer XML files (see below for how to export those) into a tall data frame containing all useful information. Each row is a single measurement so there are thousands of rows. The columns are:
@@ -29,7 +29,7 @@ Each sample is shown in a separate facet, except the ladder is not shown by defa
 In the 2100 Expert software, open your data file (`.xad`) in the "Data" context. Select "File->Export..." from the top menu. Check the "Export to XML" box and no others. Click "Export" and then save the file wherever you like. This will create an XML file that can be read by the `read.bioanalyzer` function.
 
 ## How to export TapeStation data
-In the TapeStation Analysis Software, open your data file (`.D1000`, `.HSD1000`, `.RNA`., `.gDNA`, etc.). You need to export both the metadata (in XML format) and gel image (PNG).
+In the TapeStation Analysis Software, open your data file (`.D1000`, `.HSD1000`, `.RNA`, `.gDNA`, etc.). You need to export both the metadata (in XML format) and gel image (PNG).
 
 ### Metadata XML
 Select "File->Export Data->Export to XML". You do not need to export the gel image or individual EPG images at this point. Select your destination and then click "Export" to save the file.
