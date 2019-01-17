@@ -117,7 +117,7 @@ read.tapestation <- function(xml.file, gel.image.file = NULL, fit = "spline") {
 	stopifnot(length(unique(result$gel.lane)) == length(unique(peaks$well.number)))
 	
 	# get sample names andand observations (might not be unique but we assume well numbers are)
-	sample.table <- unique(peaks[,c("batch", "name", "sample.observations", "well.number", "well.row", "well.col")])
+	sample.table <- unique(peaks[,c("batch", "reagent.id", "name", "sample.observations", "well.number", "well.row", "well.col")])
 	stopifnot(nrow(sample.table) == length(unique(result$gel.lane)))
 	
 	result <- cbind(sample.table[result$gel.lane,], subset(result, select = -batch))
@@ -153,24 +153,8 @@ read.tapestation <- function(xml.file, gel.image.file = NULL, fit = "spline") {
 	result$relative.distance <- (result$distance - marker.distances$upper[result$well.number]) / marker.distances$range[result$well.number]
 	peaks$relative.distance <- (peaks$distance - marker.distances$upper[peaks$well.number]) / marker.distances$range[peaks$well.number]
 	
-	# fit standard curve for molecule length
-	# do this in relative-distance space so it's effectively recalibrated for each sample's markers
-	which.well.is.ladder <- unique(subset(peaks, sample.observations == "Ladder")$well.number)
-	stopifnot(length(which.well.is.ladder) == 1)
-	peaks.ladder <- subset(peaks, well.number == which.well.is.ladder)
-	if (fit == "interpolate") {
-		warning("linear interpolation gives ugly results for molarity estimation")
-		standard.curve.function <- approxfun(peaks.ladder$relative.distance, peaks.ladder$length)
-	} else if (fit == "spline") {
-		standard.curve.function <- splinefun(peaks.ladder$relative.distance, peaks.ladder$length, method = "natural")
-	} else if (fit == "regression") {
-		mobility.model <- lm(relative.distance ~ log(length), peaks.ladder)
-		standard.curve.function <- function(distance) exp((distance - mobility.model$coefficients[1]) / mobility.model$coefficients[2])
-	}
-	result$length <- standard.curve.function(result$relative.distance)
-	
-	# convert to molarity
-	peaks.ladder$mass <- peaks.ladder$length * peaks.ladder$molarity
+	# allocate new variables, which might or might not get populated
+	result$length <- NA
 	result <- cbind(result, do.call(rbind, lapply(unique(result$well.number), function(this.well) {
 		result.this.well <- subset(result, well.number == this.well)
 		data.frame(
@@ -179,12 +163,53 @@ read.tapestation <- function(xml.file, gel.image.file = NULL, fit = "spline") {
 		)
 	})))
 	result$delta.area <- (2 * result$fluorescence - result$delta.fluorescence) / 2 * result$delta.distance
-	peaks.ladder$estimated.area <- c(NA, sapply(2:(nrow(peaks.ladder) - 1), function(i) {
-		sum(subset(result, well.number == which.well.is.ladder & distance >= peaks.ladder$lower.bound[i] & distance <= peaks.ladder$upper.bound[i])$delta.area)
-	}), NA)
-	fluorescence.model <- lm(mass ~ estimated.area - 1, data = peaks.ladder)
-	result$delta.mass <- fluorescence.model$coefficients[1] * result$delta.area
-	result$delta.molarity <- result$delta.mass / result$length
+	result$delta.mass <- NA
+	result$delta.molarity <- NA
+	
+	# determine ladder scheme
+	ladder.wells <- as.character(unique(subset(peaks, sample.observations == "Ladder")$well.number))
+	ladder.rows <- list()
+	if (length(ladder.wells) == 0) { # no ladder
+		warning("warning: no ladder specified so lengths and molarities are not calculated")
+		
+	} else if (length(ladder.wells) == 1) { # only one ladder for the whole run
+		ladder.rows[[ladder.wells]] <- 1:nrow(result) # all rows of the frame are associated with this ladder
+
+	} else if (all.equal(unique(peaks$reagent.id), unique(subset(peaks, well.number %in% ladder.wells)$reagent.id))) { # one ladder per reagent.id (ScreenTape)
+		ladder.rows <- lapply(ladder.wells, function(well) which(result$reagent.id == as.character(unique(subset(peaks, well.number == well)$reagent.id))))
+		names(ladder.rows) <- ladder.wells
+		
+	}	else { # something unexpected
+			warning("warning: unknown ladder scheme so lengths and molarities are not calculated")
+	}
+	
+	for (ladder.well in names(ladder.rows)) { # use names(ladder.rows) because it only exists if we're in a recognized scheme
+		
+		# fit standard curve for molecule length
+		# do this in relative-distance space so it's effectively recalibrated for each sample's markers
+
+		peaks.ladder <- subset(peaks, well.number == ladder.well)
+		which.rows <- ladder.rows[[ladder.well]]
+		if (fit == "interpolate") {
+			warning("linear interpolation gives ugly results for molarity estimation")
+			standard.curve.function <- approxfun(peaks.ladder$relative.distance, peaks.ladder$length)
+		} else if (fit == "spline") {
+			standard.curve.function <- splinefun(peaks.ladder$relative.distance, peaks.ladder$length, method = "natural")
+		} else if (fit == "regression") {
+			mobility.model <- lm(relative.distance ~ log(length), peaks.ladder)
+			standard.curve.function <- function(distance) exp((distance - mobility.model$coefficients[1]) / mobility.model$coefficients[2])
+		}
+		result$length[which.rows] <- standard.curve.function(result$relative.distance[which.rows])
+		
+		# convert to molarity
+		peaks.ladder$mass <- peaks.ladder$length * peaks.ladder$molarity
+		peaks.ladder$estimated.area <- c(NA, sapply(2:(nrow(peaks.ladder) - 1), function(i) {
+			sum(subset(result, well.number == ladder.well & distance >= peaks.ladder$lower.bound[i] & distance <= peaks.ladder$upper.bound[i])$delta.area)
+		}), NA)
+		fluorescence.model <- lm(mass ~ estimated.area - 1, data = peaks.ladder)
+		result$delta.mass[which.rows] <- fluorescence.model$coefficients[1] * result$delta.area[which.rows]
+		result$delta.molarity[which.rows] <- result$delta.mass[which.rows] / result$length[which.rows]
+	}
 	
 	rownames(result) <- NULL # clean up row names again
 	attr(result, "peaks") <- peaks
