@@ -78,7 +78,7 @@ read.tapestation.xml <- function(xml.files) {
 				warning(paste(sample.observations, "for well", well.number, name))
 				return(NULL)
 			}
-			well.row <- gsub("[^A-H]", "", well.number) # assumes all row names are in A through H!
+			well.row <- gsub("[^A-HL]", "", well.number) # assumes all row names are in A through H, or L for ladder
 			well.col <- as.integer(gsub("[^[:digit:]]", "", well.number)) # assumes all column names are numbers!
 			
 			reagent.id <- xmlValue(sample.xml[["ScreenTapeID"]])
