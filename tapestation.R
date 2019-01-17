@@ -123,7 +123,7 @@ read.tapestation <- function(xml.file, gel.image.file = NULL, fit = "spline") {
 	result <- cbind(sample.table[result$gel.lane,], subset(result, select = -batch))
 	
 	# calculate relative distances
-	lower.marker.peaks <- subset(peaks, peak.observations == "Lower Marker")
+	lower.marker.peaks <- subset(peaks, peak.observations %in% c("Lower Marker", "edited Lower Marker"))
 	marker.distances <- data.frame(lower = sapply(unique(peaks$well.number), function(this.well.number) {
 		distance <- subset(lower.marker.peaks, well.number == this.well.number)$distance
 		if (length(distance) == 0) {
@@ -134,7 +134,7 @@ read.tapestation <- function(xml.file, gel.image.file = NULL, fit = "spline") {
 			stop(paste("multiple lower marker peaks for well", this.well.number))
 		}
 	}), row.names = unique(peaks$well.number))
-	upper.marker.peaks <- subset(peaks, peak.observations == "Upper Marker")
+	upper.marker.peaks <- subset(peaks, peak.observations %in% c("Upper Marker", "edited Upper Marker"))
 	if (nrow(upper.marker.peaks) == 0) { # kit lacks upper marker
 		marker.distances$upper <- 0 # effectively normalizes only to lower marker
 	} else {
