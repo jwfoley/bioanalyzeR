@@ -169,17 +169,29 @@ read.tapestation <- function(xml.file, gel.image.file = NULL, fit = "spline") {
 	# determine ladder scheme
 	ladder.wells <- as.character(unique(subset(peaks, sample.observations == "Ladder")$well.number))
 	ladder.rows <- list()
-	if (length(ladder.wells) == 0) { # no ladder
+	
+	# scheme: no ladder	
+	if (length(ladder.wells) == 0) {
 		warning("warning: no ladder specified so lengths and molarities are not calculated")
-		
-	} else if (length(ladder.wells) == 1) { # only one ladder for the whole run
+	
+	# scheme: only one ladder for the whole run
+	} else if (length(ladder.wells) == 1) {
 		ladder.rows[[ladder.wells]] <- 1:nrow(result) # all rows of the frame are associated with this ladder
-
-	} else if (all.equal(unique(peaks$reagent.id), unique(subset(peaks, well.number %in% ladder.wells)$reagent.id))) { # one ladder per reagent.id (ScreenTape)
-		ladder.rows <- lapply(ladder.wells, function(well) which(result$reagent.id == as.character(unique(subset(peaks, well.number == well)$reagent.id))))
-		names(ladder.rows) <- ladder.wells
-		
-	}	else { # something unexpected
+	
+	# scheme: one electronic ladder for the whole run but it's displayed more than once
+	} else if (
+		length(unique(subset(peaks, well.number %in% ladder.wells)$reagent.id)) == 1 &&
+		unique(subset(peaks, well.number %in% ladder.wells)$name) == "Electronic Ladder"
+	) {
+		ladder.rows[[ladder.wells[1]]] <- 1:nrow(result) # all rows of the frame are associated with this ladder
+	
+	# scheme: one ladder per reagent.id (ScreenTape)
+	} else if (all.equal(unique(peaks$reagent.id), unique(subset(peaks, well.number %in% ladder.wells)$reagent.id))) { # 
+			ladder.rows <- lapply(ladder.wells, function(well) which(result$reagent.id == as.character(unique(subset(peaks, well.number == well)$reagent.id))))
+			names(ladder.rows) <- ladder.wells
+	
+	# scheme: something unexpected
+	}	else {
 			warning("warning: unknown ladder scheme so lengths and molarities are not calculated")
 	}
 	
