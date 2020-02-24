@@ -226,6 +226,6 @@ read.tapestation <- function(xml.file, gel.image.file = NULL, fit = "spline") {
 	rownames(result) <- NULL # clean up row names again
 	attr(result, "peaks") <- peaks
 	
-	result
+	structure(list(data = result, peaks = peaks), class = "tapestation")	
 }
 
