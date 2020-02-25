@@ -49,9 +49,9 @@ read.tapestation.gel.image <- function(gel.image.files) {
 		y.gel.end <- which(border.transition == 1)[1] - 1
 
 		# now finally extract the intensities!
-		gel.data.rgb <- gel.image.rgb.reduced[y.gel.start:y.gel.end,,] # only the actual data values
-		fluorescence.matrix <- 1 - gel.data.rgb[,,1] # only get red fluorescence because all channels are equal in the places we care about; subtract from 1 because it's a negative (red decreases in the protein gels too even though they're blue instead of black)
-		fluorescence.matrix[gel.data.rgb[,,1] != gel.data.rgb[,,2]] <- NA # set non-data pixels (obscured by marker band color) to NA; assume red channel always equals green channel, but not necessary blue because protein gels use blue
+		result.rgb <- gel.image.rgb.reduced[y.gel.start:y.gel.end,,] # only the actual data values
+		fluorescence.matrix <- 1 - result.rgb[,,1] # only get red fluorescence because all channels are equal in the places we care about; subtract from 1 because it's a negative (red decreases in the protein gels too even though they're blue instead of black)
+		fluorescence.matrix[result.rgb[,,1] != result.rgb[,,2]] <- NA # set non-data pixels (obscured by marker band color) to NA; assume red channel always equals green channel, but not necessary blue because protein gels use blue
 		results <- data.frame(
 			batch =         sub("\\.png$", "", basename(gel.image.file)),
 			gel.lane =      rep(1:length(x.gel), each = nrow(fluorescence.matrix)),
@@ -67,10 +67,10 @@ read.tapestation.gel.image <- function(gel.image.files) {
 }
 
 
-read.tapestation.xml <- function(xml.files) {
-	combined.results <- do.call(rbind, lapply(xml.files, function(xml.file) {
+read.tapestation.xml <- function(...) {
+	result.list <- do.call(c, lapply(list(...), function(xml.file) {
 		xml.root <- xmlRoot(xmlParse(xml.file))
-		results <- do.call(rbind, xmlApply(xml.root[["Samples"]], function(sample.xml) {
+		xmlApply(xml.root[["Samples"]], function(sample.xml) {
 			well.number <- xmlValue(sample.xml[["WellNumber"]])
 			name <- trimws(xmlValue(sample.xml[["Comment"]]))
 			sample.observations <- trimws(xmlValue(sample.xml[["Observations"]]))
@@ -84,27 +84,44 @@ read.tapestation.xml <- function(xml.files) {
 			reagent.id <- xmlValue(sample.xml[["ScreenTapeID"]])
 			
 			suppressWarnings( # will throw warnings if missing values are coerced to NA but we can live with that
-				peaks <- do.call(rbind, xmlApply(sample.xml[["Peaks"]], function(peak.xml) data.frame(
+				peaks <- if (length(xmlChildren(sample.xml[["Peaks"]])) == 0) NULL else do.call(rbind, c(xmlApply(sample.xml[["Peaks"]], function(peak.xml) data.frame(
 					peak.observations =  trimws(xmlValue(peak.xml[["Observations"]])),
+					peak.comment =       trimws(xmlValue(peak.xml[["Comment"]])),
 					length =             as.integer(xmlValue(peak.xml[["Size"]])),
 					distance =           as.numeric(xmlValue(peak.xml[["RunDistance"]])) / 100,
 					lower.bound =        as.numeric(xmlValue(peak.xml[["FromPercent"]])) / 100,
 					upper.bound =        as.numeric(xmlValue(peak.xml[["ToPercent"]])) / 100, 
 					area =               as.numeric(xmlValue(peak.xml[["Area"]])),
-					molarity =           as.numeric(xmlValue(peak.xml[["Molarity"]])
-				))))
+					molarity =           as.numeric(xmlValue(peak.xml[["Molarity"]]))
+				)), make.row.names = F))
 			)
 			
-			cbind(well.number, well.row, well.col, name, reagent.id, sample.observations, peaks)
-		}))
-		
-		cbind(batch = sub("\\.xml$", "", basename(xml.file)), results)
+			suppressWarnings( # will throw warnings if missing values are coerced to NA but we can live with that
+				regions <- if (length(xmlChildren(sample.xml[["Regions"]])) == 0) NULL else do.call(rbind, c(xmlApply(sample.xml[["Regions"]], function(region.xml) data.frame(
+					peak.comment =         trimws(xmlValue(region.xml[["Comment"]])),
+					lower.bound =          as.integer(xmlValue(region.xml[["From"]])),
+					upper.bound =          as.integer(xmlValue(region.xml[["To"]])),
+					average.length =       as.integer(xmlValue(region.xml[["AverageSize"]])),
+					area =                 as.numeric(xmlValue(region.xml[["Area"]])),
+					concentration =        as.numeric(xmlValue(region.xml[["Concentration"]])),
+					molarity =             as.numeric(xmlValue(region.xml[["Molarity"]])),
+					proportion.of.total =  as.numeric(xmlValue(region.xml[["PercentOfTotal"]])) / 100				
+				)), make.row.names = F))
+			)
+			
+			list(
+				peaks = if (is.null(peaks)) NULL else cbind(batch = sub("\\.xml$", "", basename(xml.file)), well.number, well.row, well.col, name, reagent.id, sample.observations, peaks),
+				regions = if (is.null(regions)) NULL else cbind(batch = sub("\\.xml$", "", basename(xml.file)), well.number, well.row, well.col, name, reagent.id, sample.observations, regions)
+			)
+		})
 	}))
 	
-	rownames(combined.results) <- NULL
-	combined.results$batch <- factor(combined.results$batch, levels = unique(combined.results$batch)) # make batches into a factor that keeps them in the observed order
-	
-	combined.results
+	peaks.list <- lapply(result.list, function(x) x$peaks)
+	regions.list <- lapply(result.list, function(x) x$regions)
+	list(
+		peaks = if (all(unlist(lapply(peaks.list, is.null)))) NULL else do.call(rbind, c(peaks.list, make.row.names = F)),
+		regions = if (all(unlist(lapply(regions.list, is.null)))) NULL else do.call(rbind, c(regions.list, make.row.names = F))
+	)
 }
 
 
@@ -112,7 +129,8 @@ read.tapestation <- function(xml.file, gel.image.file = NULL, fit = "spline") {
 	stopifnot(fit %in% c("interpolate", "spline", "regression"))
 	if (is.null(gel.image.file)) gel.image.file <- sub("\\.xml$", ".png", xml.file)
 	
-	peaks <- read.tapestation.xml(xml.file)
+	parsed.data <- read.tapestation.xml(xml.file)
+	peaks <- parsed.data$peaks
 	result <- read.tapestation.gel.image(gel.image.file)
 	stopifnot(length(unique(result$gel.lane)) == length(unique(peaks$well.number)))
 	
@@ -225,7 +243,8 @@ read.tapestation <- function(xml.file, gel.image.file = NULL, fit = "spline") {
 	
 	rownames(result) <- NULL # clean up row names again
 	attr(result, "peaks") <- peaks
+	attr(result, "regions") <- parsed.data$regions
 	
-	structure(list(data = result, peaks = peaks), class = "tapestation")	
+	result	
 }
 
