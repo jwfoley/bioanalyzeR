@@ -242,9 +242,7 @@ read.tapestation <- function(xml.file, gel.image.file = NULL, fit = "spline") {
 	}
 	
 	rownames(result) <- NULL # clean up row names again
-	attr(result, "peaks") <- peaks
-	attr(result, "regions") <- parsed.data$regions
 	
-	result	
+	structure(list(data = result, peaks = peaks, regions = parsed.data$regions), class = "tapestation")
 }
 
