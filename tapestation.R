@@ -69,8 +69,8 @@ read.tapestation.gel.image <- function(gel.image.files) {
 
 read.tapestation.xml <- function(...) {
 	result.list <- do.call(c, lapply(list(...), function(xml.file) {
-		xml.root <- xmlRoot(xmlParse(xml.file))
-		xmlApply(xml.root[["Samples"]], function(sample.xml) {
+	 	batch <- sub("\\.xml$", "", basename(xml.file))
+		xmlApply(xmlRoot(xmlParse(xml.file))[["Samples"]], function(sample.xml) {
 			well.number <- xmlValue(sample.xml[["WellNumber"]])
 			name <- trimws(xmlValue(sample.xml[["Comment"]]))
 			sample.observations <- trimws(xmlValue(sample.xml[["Observations"]]))
@@ -110,8 +110,9 @@ read.tapestation.xml <- function(...) {
 			)
 			
 			list(
-				peaks = if (is.null(peaks)) NULL else cbind(batch = sub("\\.xml$", "", basename(xml.file)), well.number, well.row, well.col, name, reagent.id, sample.observations, peaks),
-				regions = if (is.null(regions)) NULL else cbind(batch = sub("\\.xml$", "", basename(xml.file)), well.number, well.row, well.col, name, reagent.id, sample.observations, regions)
+				sample.info = data.frame(batch = batch, well.number = well.number, well.row = well.row, well.col = well.col, name = name, reagent.id = reagent.id, sample.observations = sample.observations),
+				peaks = if (is.null(peaks)) NULL else cbind(batch, well.number, well.row, well.col, name, reagent.id, sample.observations, peaks),
+				regions = if (is.null(regions)) NULL else cbind(batch, well.number, well.row, well.col, name, reagent.id, sample.observations, regions)
 			)
 		})
 	}))
@@ -119,6 +120,7 @@ read.tapestation.xml <- function(...) {
 	peaks.list <- lapply(result.list, function(x) x$peaks)
 	regions.list <- lapply(result.list, function(x) x$regions)
 	list(
+		samples = do.call(rbind, c(lapply(result.list, function(x) x$sample.info), make.row.names = F)),
 		peaks = if (all(unlist(lapply(peaks.list, is.null)))) NULL else do.call(rbind, c(peaks.list, make.row.names = F)),
 		regions = if (all(unlist(lapply(regions.list, is.null)))) NULL else do.call(rbind, c(regions.list, make.row.names = F))
 	)
@@ -254,6 +256,6 @@ read.tapestation <- function(xml.file, gel.image.file = NULL, fit = "spline") {
 	
 	rownames(result) <- NULL # clean up row names again
 	
-	structure(list(data = result, peaks = peaks, regions = parsed.data$regions), class = "electrophoresis")
+	structure(list(data = result, samples = parsed.data$samples, peaks = peaks, regions = parsed.data$regions), class = "electrophoresis")
 }
 
