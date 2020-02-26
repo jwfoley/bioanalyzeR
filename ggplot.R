@@ -5,7 +5,7 @@ qplot.electrophoresis <- function(data, # returns a ggplot object, which can be 
 	y = "fluorescence",
 	log = NULL, # which variables to log-transform, as in qplot(); defaults to "x" if x-value is length or none otherwise
 	scales = "fixed", # scaling rules for the facets, passed to facet_wrap()
-	geom = geom_line,
+	geom = geom_line, # another good option is geom_area
 	include.ladder = FALSE,
 	region.alpha = 0.2 # set to NA to stop showing regions
 ) {
@@ -35,7 +35,7 @@ qplot.electrophoresis <- function(data, # returns a ggplot object, which can be 
 	
 	# add regions
 	if (! is.na(region.alpha)) {
-		this.plot <- this.plot + geom_rect(aes(xmin = lower.bound, xmax = upper.bound, ymin = -Inf, ymax = Inf), data = data$regions, alpha = region.alpha)
+		this.plot <- this.plot + geom_rect(aes_(xmin = as.name(paste0("lower.", x)), xmax = as.name(paste0("upper.", x)), ymin = -Inf, ymax = Inf), data = data$regions, alpha = region.alpha)
 	}
 	
 	# finally add the geom
