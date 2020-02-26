@@ -73,6 +73,7 @@ read.tapestation.xml <- function(...) {
 		xmlApply(xmlRoot(xmlParse(xml.file))[["Samples"]], function(sample.xml) {
 			well.number <- xmlValue(sample.xml[["WellNumber"]])
 			name <- trimws(xmlValue(sample.xml[["Comment"]]))
+			if (name == "") name <- well.number
 			sample.observations <- trimws(xmlValue(sample.xml[["Observations"]]))
 			if (sample.observations == "Marker(s) not detected") {
 				warning(paste(sample.observations, "for well", well.number, name))

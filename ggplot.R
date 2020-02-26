@@ -13,8 +13,12 @@ qplot.electrophoresis <- function(data, # returns a ggplot object, which can be 
 	# remove ladders	
 	if (! include.ladder) data$data <- subset(data$data, sample.observations != "Ladder")
 	
+	# create facet labeler
+	well.names <- as.character(data$samples$name)
+	names(well.names) <- data$samples$well.number
+	
 	# create plot but don't add the geom yet (it should be added last to be the front layer)
-	this.plot <- ggplot(data$data) + facet_wrap(~ well.number, scales = scales)
+	this.plot <- ggplot(data$data) + facet_wrap(~ well.number, scales = scales, labeller = as_labeller(well.names))
 	
 	# apply log transformations
 	if (
