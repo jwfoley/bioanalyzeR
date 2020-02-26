@@ -89,8 +89,8 @@ read.tapestation.xml <- function(...) {
 					peak.comment =       trimws(xmlValue(peak.xml[["Comment"]])),
 					length =             as.integer(xmlValue(peak.xml[["Size"]])),
 					distance =           as.numeric(xmlValue(peak.xml[["RunDistance"]])) / 100,
-					lower.bound =        as.numeric(xmlValue(peak.xml[["FromPercent"]])) / 100,
-					upper.bound =        as.numeric(xmlValue(peak.xml[["ToPercent"]])) / 100, 
+					lower.distance =     as.numeric(xmlValue(peak.xml[["FromPercent"]])) / 100,
+					upper.distance =     as.numeric(xmlValue(peak.xml[["ToPercent"]])) / 100, 
 					area =               as.numeric(xmlValue(peak.xml[["Area"]])),
 					molarity =           as.numeric(xmlValue(peak.xml[["Molarity"]]))
 				)), make.row.names = F))
@@ -99,8 +99,8 @@ read.tapestation.xml <- function(...) {
 			suppressWarnings( # will throw warnings if missing values are coerced to NA but we can live with that
 				regions <- if (length(xmlChildren(sample.xml[["Regions"]])) == 0) NULL else do.call(rbind, c(xmlApply(sample.xml[["Regions"]], function(region.xml) data.frame(
 					peak.comment =         trimws(xmlValue(region.xml[["Comment"]])),
-					lower.bound =          as.integer(xmlValue(region.xml[["From"]])),
-					upper.bound =          as.integer(xmlValue(region.xml[["To"]])),
+					lower.length =         as.integer(xmlValue(region.xml[["From"]])),
+					upper.length =         as.integer(xmlValue(region.xml[["To"]])),
 					average.length =       as.integer(xmlValue(region.xml[["AverageSize"]])),
 					area =                 as.numeric(xmlValue(region.xml[["Area"]])),
 					concentration =        as.numeric(xmlValue(region.xml[["Concentration"]])),
@@ -170,6 +170,8 @@ read.tapestation <- function(xml.file, gel.image.file = NULL, fit = "spline") {
 	marker.distances$range <- marker.distances$lower - marker.distances$upper
 	result$relative.distance <- (result$distance - marker.distances$upper[result$well.number]) / marker.distances$range[result$well.number]
 	peaks$relative.distance <- (peaks$distance - marker.distances$upper[peaks$well.number]) / marker.distances$range[peaks$well.number]
+	peaks$lower.relative.distance <- (peaks$lower.distance - marker.distances$upper[peaks$well.number]) / marker.distances$range[peaks$well.number]
+	peaks$upper.relative.distance <- (peaks$upper.distance - marker.distances$upper[peaks$well.number]) / marker.distances$range[peaks$well.number]
 	
 	# allocate new variables, which might or might not get populated
 	result$length <- NA
@@ -186,7 +188,8 @@ read.tapestation <- function(xml.file, gel.image.file = NULL, fit = "spline") {
 	
 	# determine ladder scheme
 	ladder.wells <- as.character(unique(subset(peaks, sample.observations == "Ladder")$well.number))
-	ladder.rows <- list()
+	wells.by.ladder <- list()
+	rows.by.ladder <- list()
 	
 	# scheme: no ladder	
 	if (length(ladder.wells) == 0) {
@@ -194,32 +197,38 @@ read.tapestation <- function(xml.file, gel.image.file = NULL, fit = "spline") {
 	
 	# scheme: only one ladder for the whole run
 	} else if (length(ladder.wells) == 1) {
-		ladder.rows[[ladder.wells]] <- 1:nrow(result) # all rows of the frame are associated with this ladder
+		wells.by.ladder[[ladder.wells]] <- unique(result$well.number)
+		rows.by.ladder[[ladder.wells]] <- 1:nrow(result) # all rows of the frame are associated with this ladder
 	
 	# scheme: one electronic ladder for the whole run but it's displayed more than once
 	} else if (
 		length(unique(subset(peaks, well.number %in% ladder.wells)$reagent.id)) == 1 &&
 		unique(subset(peaks, well.number %in% ladder.wells)$name) == "Electronic Ladder"
 	) {
-		ladder.rows[[ladder.wells[1]]] <- 1:nrow(result) # all rows of the frame are associated with this ladder
+		wells.by.ladder[[ladder.wells[1]]] <- unique(result$well.number)
+		rows.by.ladder[[ladder.wells[1]]] <- 1:nrow(result) # all rows of the frame are associated with this ladder
 	
 	# scheme: one ladder per reagent.id (ScreenTape)
 	} else if (all.equal(unique(peaks$reagent.id), unique(subset(peaks, well.number %in% ladder.wells)$reagent.id))) { # 
-			ladder.rows <- lapply(ladder.wells, function(well) which(result$reagent.id == as.character(unique(subset(peaks, well.number == well)$reagent.id))))
-			names(ladder.rows) <- ladder.wells
+		rows.by.ladder <- lapply(ladder.wells, function(well) which(result$reagent.id == as.character(unique(subset(peaks, well.number == well)$reagent.id))))
+		names(rows.by.ladder) <- ladder.wells
+		wells.by.ladder <- lapply(rows.by.ladder, function(x) unique(x$well.number))
 	
 	# scheme: something unexpected
 	}	else {
-			warning("warning: unknown ladder scheme so lengths and molarities are not calculated")
+		warning("warning: unknown ladder scheme so lengths and molarities are not calculated")
 	}
 	
-	for (ladder.well in names(ladder.rows)) { # use names(ladder.rows) because it only exists if we're in a recognized scheme
+	peaks$lower.length <- NA
+	peaks$upper.length <- NA
+	for (ladder.well in names(rows.by.ladder)) { # use names(rows.by.ladder) because it only exists if we're in a recognized scheme
 		
 		# fit standard curve for molecule length
 		# do this in relative-distance space so it's effectively recalibrated for each sample's markers
 
 		peaks.ladder <- subset(peaks, well.number == ladder.well)
-		which.rows <- ladder.rows[[ladder.well]]
+		which.rows <- rows.by.ladder[[ladder.well]]
+		which.peaks <- which(peaks$well.number %in% wells.by.ladder[[ladder.well]])
 		if (fit == "interpolate") {
 			warning("linear interpolation gives ugly results for molarity estimation")
 			standard.curve.function <- approxfun(peaks.ladder$relative.distance, peaks.ladder$length)
@@ -230,11 +239,13 @@ read.tapestation <- function(xml.file, gel.image.file = NULL, fit = "spline") {
 			standard.curve.function <- function(distance) exp((distance - mobility.model$coefficients[1]) / mobility.model$coefficients[2])
 		}
 		result$length[which.rows] <- standard.curve.function(result$relative.distance[which.rows])
+		peaks$lower.length[which.peaks] <- standard.curve.function(peaks$upper.relative.distance[which.peaks]) # lower & upper reversed because distance is inverse to length
+		peaks$upper.length[which.peaks] <- standard.curve.function(peaks$lower.relative.distance[which.peaks]) # lower & upper reversed because distance is inverse to length
 		
 		# convert to molarity
 		peaks.ladder$mass <- peaks.ladder$length * peaks.ladder$molarity
 		peaks.ladder$estimated.area <- c(NA, sapply(2:(nrow(peaks.ladder) - 1), function(i) {
-			sum(subset(result, well.number == ladder.well & distance >= peaks.ladder$lower.bound[i] & distance <= peaks.ladder$upper.bound[i])$delta.area)
+			sum(subset(result, well.number == ladder.well & distance >= peaks.ladder$lower.distance[i] & distance <= peaks.ladder$upper.distance[i])$delta.area)
 		}), NA)
 		fluorescence.model <- lm(mass ~ estimated.area - 1, data = peaks.ladder)
 		result$delta.mass[which.rows] <- fluorescence.model$coefficients[1] * result$delta.area[which.rows]
