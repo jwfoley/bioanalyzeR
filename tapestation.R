@@ -255,8 +255,13 @@ read.tapestation <- function(xml.file, gel.image.file = NULL, fit = "spline") {
 		result$delta.molarity[which.rows] <- result$delta.mass[which.rows] / result$length[which.rows]
 	}
 	
-	rownames(result) <- NULL # clean up row names again
+	# annotate which peak each data point is in, if any
+	# WARNING: if peaks overlap, this will overwrite and each point will only be mapped to the last-occuring one!
+	# WARNING: if multiple tables are combined later, these will all be wrong!
+	result$peak <- NA
+	for (i in 1:nrow(peaks)) result$peak[result$well.number == peaks$well.number[i] & result$distance >= peaks$lower.distance[i] & result$distance <= peaks$upper.distance[i]] <- i
 	
+	rownames(result) <- NULL # clean up row names again
 	structure(list(data = result, samples = parsed.data$samples, peaks = peaks, regions = parsed.data$regions), class = "electrophoresis")
 }
 
