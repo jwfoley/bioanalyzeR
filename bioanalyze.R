@@ -114,6 +114,6 @@ read.bioanalyzer <- function(xml.files, fit = "spline") {
 	results$batch <- factor(results$batch, levels = unique(results$batch)) # make batches into a factor that keeps them in the observed order
 	results$name <- factor(results$name, levels = unique(results$name)) # make names into a factor that keeps them in the observed order
 	
-	results
+structure(list(data = result, peaks = NULL, regions = NULL), class = "electrophoresis")
 }
 
