@@ -269,6 +269,10 @@ read.tapestation <- function(xml.file, gel.image.file = NULL, fit = "spline") {
 		result$delta.molarity[which.rows] <- result$delta.mass[which.rows] / result$length[which.rows]
 	}
 	
+	# convert inferred relative distances of regions back to raw distances
+	regions$lower.distance <- regions$lower.relative.distance * marker.distances$range[regions$well.number] + marker.distances$upper[regions$well.number]
+	regions$upper.distance <- regions$upper.relative.distance * marker.distances$range[regions$well.number] + marker.distances$upper[regions$well.number]
+	
 	# annotate which peak each data point is in, if any
 	# WARNING: if peaks overlap, this will overwrite and each point will only be mapped to the last-occuring one!
 	# WARNING: if multiple tables are combined later, these will all be wrong!
