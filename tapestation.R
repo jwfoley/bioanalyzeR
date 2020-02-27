@@ -129,7 +129,7 @@ read.tapestation.xml <- function(...) {
 
 
 read.tapestation <- function(xml.file, gel.image.file = NULL, fit = "spline") {
-	stopifnot(fit %in% c("interpolate", "spline", "regression"))
+	stopifnot(fit %in% c("interpolation", "spline", "regression"))
 	if (is.null(gel.image.file)) gel.image.file <- sub("\\.xml$", ".png", xml.file)
 	
 	parsed.data <- read.tapestation.xml(xml.file)
@@ -235,7 +235,7 @@ read.tapestation <- function(xml.file, gel.image.file = NULL, fit = "spline") {
 		
 		# fit standard curve for molecule length vs. migration distance
 		# do this in relative-distance space so it's effectively recalibrated for each sample's markers
-		if (fit == "interpolate") {
+		if (fit == "interpolation") {
 			warning("linear interpolation gives ugly results for molarity estimation")
 			standard.curve.function <- approxfun(peaks.ladder$relative.distance, peaks.ladder$length)
 			standard.curve.inverse <- approxfun(peaks.ladder$length, peaks.ladder$relative.distance)
