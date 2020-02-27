@@ -7,6 +7,7 @@ qplot.electrophoresis <- function(data, # returns a ggplot object, which can be 
 	scales = "fixed", # scaling rules for the facets, passed to facet_wrap()
 	geom = geom_line, # another good option is geom_area
 	include.ladder = FALSE,
+	peak.fill = "darkred", # set to NA to stop showing peaks
 	region.alpha = 0.2 # set to NA to stop showing regions
 ) {
 	
@@ -38,9 +39,10 @@ qplot.electrophoresis <- function(data, # returns a ggplot object, which can be 
 	if (y == "delta.molarity") this.plot <- this.plot + ylab("concentration (pM)")
 	
 	# add regions
-	if (! is.na(region.alpha)) {
-		this.plot <- this.plot + geom_rect(aes_(xmin = as.name(paste0("lower.", x)), xmax = as.name(paste0("upper.", x)), ymin = -Inf, ymax = Inf), data = data$regions, alpha = region.alpha)
-	}
+	if (! is.na(region.alpha)) this.plot <- this.plot + geom_rect(aes_(xmin = as.name(paste0("lower.", x)), xmax = as.name(paste0("upper.", x)), ymin = -Inf, ymax = Inf), data = data$regions, alpha = region.alpha)
+	
+	# add peaks
+	if (! is.na(peak.fill)) this.plot <- this.plot + geom_area(aes_(x = as.name(x), y = as.name(y), group = as.name("peak")), data = subset(data$data, ! is.na(peak)), fill = peak.fill)
 	
 	# finally add the geom
 	this.plot <- this.plot + geom(aes_(x = as.name(x), y = as.name(y)))
