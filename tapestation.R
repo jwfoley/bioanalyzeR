@@ -134,6 +134,7 @@ read.tapestation <- function(xml.file, gel.image.file = NULL, fit = "spline") {
 	
 	parsed.data <- read.tapestation.xml(xml.file)
 	peaks <- parsed.data$peaks
+	regions <- parsed.data$regions
 	result <- read.tapestation.gel.image(gel.image.file)
 	stopifnot(length(unique(result$gel.lane)) == length(unique(peaks$well.number)))
 	
@@ -224,26 +225,39 @@ read.tapestation <- function(xml.file, gel.image.file = NULL, fit = "spline") {
 	
 	peaks$lower.length <- NA
 	peaks$upper.length <- NA
+	regions$lower.relative.distance <- NA
+	regions$upper.relative.distance <- NA
 	for (ladder.well in names(rows.by.ladder)) { # use names(rows.by.ladder) because it only exists if we're in a recognized scheme
-		
-		# fit standard curve for molecule length
-		# do this in relative-distance space so it's effectively recalibrated for each sample's markers
-
 		peaks.ladder <- subset(peaks, well.number == ladder.well)
 		which.rows <- rows.by.ladder[[ladder.well]]
 		which.peaks <- which(peaks$well.number %in% wells.by.ladder[[ladder.well]])
+		which.regions <- which(regions$well.number %in% wells.by.ladder[[ladder.well]])
+		
+		# fit standard curve for molecule length vs. migration distance
+		# do this in relative-distance space so it's effectively recalibrated for each sample's markers
 		if (fit == "interpolate") {
 			warning("linear interpolation gives ugly results for molarity estimation")
 			standard.curve.function <- approxfun(peaks.ladder$relative.distance, peaks.ladder$length)
+			standard.curve.inverse <- approxfun(peaks.ladder$length, peaks.ladder$relative.distance)
 		} else if (fit == "spline") {
 			standard.curve.function <- splinefun(peaks.ladder$relative.distance, peaks.ladder$length, method = "natural")
+			standard.curve.inverse <- splinefun(peaks.ladder$length, peaks.ladder$relative.distance, method = "natural")
 		} else if (fit == "regression") {
 			mobility.model <- lm(relative.distance ~ log(length), peaks.ladder)
-			standard.curve.function <- function(distance) exp((distance - mobility.model$coefficients[1]) / mobility.model$coefficients[2])
+			standard.curve.function <- function(relative.distance) exp((relative.distance - mobility.model$coefficients[1]) / mobility.model$coefficients[2])
+			standard.curve.inverse <- function(length) mobility.model$coefficients[1] + mobility.model$coefficients[2] * log(length)
 		}
+		
+		# apply model to raw data
 		result$length[which.rows] <- standard.curve.function(result$relative.distance[which.rows])
-		peaks$lower.length[which.peaks] <- standard.curve.function(peaks$upper.relative.distance[which.peaks]) # lower & upper reversed because distance is inverse to length
-		peaks$upper.length[which.peaks] <- standard.curve.function(peaks$lower.relative.distance[which.peaks]) # lower & upper reversed because distance is inverse to length
+		
+		# apply model to peaks
+		peaks$lower.length[which.peaks] <- standard.curve.function(peaks$upper.relative.distance[which.peaks])
+		peaks$upper.length[which.peaks] <- standard.curve.function(peaks$lower.relative.distance[which.peaks])
+		
+		# apply inverse model to regions
+		regions$lower.relative.distance[which.regions] <- standard.curve.inverse(regions$upper.length[which.regions])
+		regions$upper.relative.distance[which.regions] <- standard.curve.inverse(regions$lower.length[which.regions])
 		
 		# convert to molarity
 		peaks.ladder$mass <- peaks.ladder$length * peaks.ladder$molarity
@@ -262,6 +276,6 @@ read.tapestation <- function(xml.file, gel.image.file = NULL, fit = "spline") {
 	for (i in 1:nrow(peaks)) result$peak[result$well.number == peaks$well.number[i] & result$distance >= peaks$lower.distance[i] & result$distance <= peaks$upper.distance[i]] <- i
 	
 	rownames(result) <- NULL # clean up row names again
-	structure(list(data = result, samples = parsed.data$samples, peaks = peaks, regions = parsed.data$regions), class = "electrophoresis")
+	structure(list(data = result, samples = parsed.data$samples, peaks = peaks, regions = regions), class = "electrophoresis")
 }
 

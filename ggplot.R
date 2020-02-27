@@ -35,6 +35,8 @@ qplot.electrophoresis <- function(data, # returns a ggplot object, which can be 
 		this.plot <- this.plot + xlab("time (s)")
 	} else if (x == "distance") {
 		this.plot <- this.plot + xlab("distance migrated") + scale_x_reverse()
+	} else if (x == "relative.distance") {
+		this.plot <- this.plot + xlab("distance migrated relative to markers") + scale_x_reverse()
 	}
 	if (y == "delta.molarity") this.plot <- this.plot + ylab("concentration (pM)")
 	
