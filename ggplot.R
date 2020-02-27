@@ -6,7 +6,8 @@ qplot.electrophoresis <- function(data, # returns a ggplot object, which can be 
 	log = NULL, # which variables to log-transform, as in qplot(); defaults to "x" if x-value is length or none otherwise
 	scales = "fixed", # scaling rules for the facets, passed to facet_wrap()
 	geom = geom_line, # another good option is geom_area
-	include.ladder = FALSE,
+	include.ladder = FALSE, # show the ladder wells?
+	between.markers = FALSE, # show only data between the marker peaks (so their signal doesn't ruin the scale)
 	peak.fill = "darkred", # set to NA to stop showing peaks
 	region.alpha = 0.2 # set to NA to stop showing regions
 ) {
@@ -14,11 +15,20 @@ qplot.electrophoresis <- function(data, # returns a ggplot object, which can be 
 	# remove ladders	
 	if (! include.ladder) data$data <- subset(data$data, sample.observations != "Ladder")
 	
+	# remove data outside the space between markers
+	if (between.markers) for (i in 1:nrow(data$peaks)) {
+		if (data$peaks$peak.observations[i] == "Lower Marker") {
+			data$data <- subset(data$data, ! (well.number == data$peaks$well.number[i] & distance >= 0.95 * data$peaks$lower.distance[i]))
+		} else if (data$peaks$peak.observations[i] == "Upper Marker") {
+			data$data <- subset(data$data, ! (well.number == data$peaks$well.number[i] & distance <= 1.05 * data$peaks$upper.distance[i]))
+		}
+	}
+	
 	# create facet labeler
 	well.names <- as.character(data$samples$name)
 	names(well.names) <- data$samples$well.number
 	
-	# create plot but don't add the geom yet (it should be added last to be the front layer)
+	# create plot but don't add the geom yet
 	this.plot <- ggplot(data$data) + facet_wrap(~ well.number, scales = scales, labeller = as_labeller(well.names))
 	
 	# apply log transformations
@@ -43,11 +53,11 @@ qplot.electrophoresis <- function(data, # returns a ggplot object, which can be 
 	# add regions
 	if (! is.na(region.alpha)) this.plot <- this.plot + geom_rect(aes_(xmin = as.name(paste0("lower.", x)), xmax = as.name(paste0("upper.", x)), ymin = -Inf, ymax = Inf), data = data$regions, alpha = region.alpha)
 	
+	# finally add the geom (after the regions so it's in front)
+	this.plot <- this.plot + geom(aes_(x = as.name(x), y = as.name(y)))
+	
 	# add peaks
 	if (! is.na(peak.fill)) this.plot <- this.plot + geom_area(aes_(x = as.name(x), y = as.name(y), group = as.name("peak")), data = subset(data$data, ! is.na(peak)), fill = peak.fill)
-	
-	# finally add the geom
-	this.plot <- this.plot + geom(aes_(x = as.name(x), y = as.name(y)))
 	
 	this.plot
 }
