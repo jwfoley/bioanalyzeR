@@ -73,3 +73,17 @@ qc.mobility <- function(data, line.color = "red") { # returns a ggplot object, w
 		ylab("distance migrated relative to markers") +
 		facet_wrap(~ well.number)
 }
+
+qc.molarity <- function(data) {
+	ladder.data <- subset(data$data, sample.observations == "Ladder" & ! is.na(peak))
+	which.ladder.peaks <- which(data$peaks$sample.observations == "Ladder" & ! (data$peaks$peak.observations %in% c("Lower Marker", "Upper Marker"))) # exclude markers because they have the unreadable gaps
+	ladder.peaks <- data$peaks[which.ladder.peaks,]
+	ladder.peaks$estimated.molarity <- sapply(which.ladder.peaks, function(peak.index) sum(ladder.data$delta.molarity[ladder.data$peak == peak.index]))
+	
+	ggplot(ladder.peaks, aes(molarity, estimated.molarity)) +
+		geom_point() +
+		geom_abline() +
+		xlab("true molarity (pM)") +
+		ylab("estimated molarity (pM)") +
+		facet_wrap(~ well.number)
+}
