@@ -62,3 +62,14 @@ qplot.electrophoresis <- function(data, # returns a ggplot object, which can be 
 	this.plot
 }
 
+qc.mobility <- function(data, line.color = "red") { # returns a ggplot object, which can be extended by adding more features
+	ladder.data <- subset(data$data, sample.observations == "Ladder" & ! is.na(peak))
+	ladder.data$true.length <- data$peaks$length[ladder.data$peak]
+	ggplot(ladder.data, aes(x = true.length, y = relative.distance, color = fluorescence)) +
+		geom_point() + 
+		geom_point(aes(x = length, y = relative.distance), data = subset(data$peaks, sample.observations == "Ladder"), color = line.color) + # overlay the reported peak positions
+		stat_function(fun = data$mobility.inverse, color = line.color) +
+		xlab("true length (bases)") +
+		ylab("distance migrated relative to markers") +
+		facet_wrap(~ well.number)
+}

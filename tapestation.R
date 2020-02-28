@@ -225,8 +225,10 @@ read.tapestation <- function(xml.file, gel.image.file = NULL, fit = "spline") {
 	
 	peaks$lower.length <- NA
 	peaks$upper.length <- NA
-	regions$lower.relative.distance <- NA
-	regions$upper.relative.distance <- NA
+	if (! is.null(regions)) {
+		regions$lower.relative.distance <- NA
+		regions$upper.relative.distance <- NA
+	}
 	for (ladder.well in names(rows.by.ladder)) { # use names(rows.by.ladder) because it only exists if we're in a recognized scheme
 		peaks.ladder <- subset(peaks, well.number == ladder.well)
 		which.rows <- rows.by.ladder[[ladder.well]]
@@ -256,8 +258,10 @@ read.tapestation <- function(xml.file, gel.image.file = NULL, fit = "spline") {
 		peaks$upper.length[which.peaks] <- standard.curve.function(peaks$lower.relative.distance[which.peaks])
 		
 		# apply inverse model to regions
-		regions$lower.relative.distance[which.regions] <- standard.curve.inverse(regions$upper.length[which.regions])
-		regions$upper.relative.distance[which.regions] <- standard.curve.inverse(regions$lower.length[which.regions])
+		if (! is.null(regions)) {
+			regions$lower.relative.distance[which.regions] <- standard.curve.inverse(regions$upper.length[which.regions])
+			regions$upper.relative.distance[which.regions] <- standard.curve.inverse(regions$lower.length[which.regions])
+		}
 		
 		# convert to molarity
 		peaks.ladder$mass <- peaks.ladder$length * peaks.ladder$molarity
@@ -265,13 +269,16 @@ read.tapestation <- function(xml.file, gel.image.file = NULL, fit = "spline") {
 			sum(subset(result, well.number == ladder.well & distance >= peaks.ladder$lower.distance[i] & distance <= peaks.ladder$upper.distance[i])$delta.area)
 		}), NA)
 		fluorescence.model <- lm(mass ~ estimated.area - 1, data = peaks.ladder)
-		result$delta.mass[which.rows] <- fluorescence.model$coefficients[1] * result$delta.area[which.rows]
+		mass.coefficient <- fluorescence.model$coefficients[1]
+		result$delta.mass[which.rows] <- mass.coefficient * result$delta.area[which.rows]
 		result$delta.molarity[which.rows] <- result$delta.mass[which.rows] / result$length[which.rows]
 	}
 	
 	# convert inferred relative distances of regions back to raw distances
-	regions$lower.distance <- regions$lower.relative.distance * marker.distances$range[regions$well.number] + marker.distances$upper[regions$well.number]
-	regions$upper.distance <- regions$upper.relative.distance * marker.distances$range[regions$well.number] + marker.distances$upper[regions$well.number]
+	if (! is.null(regions)) {
+		regions$lower.distance <- regions$lower.relative.distance * marker.distances$range[regions$well.number] + marker.distances$upper[regions$well.number]
+		regions$upper.distance <- regions$upper.relative.distance * marker.distances$range[regions$well.number] + marker.distances$upper[regions$well.number]
+	}
 	
 	# annotate which peak each data point is in, if any
 	# WARNING: if peaks overlap, this will overwrite and each point will only be mapped to the last-occuring one!
@@ -280,6 +287,14 @@ read.tapestation <- function(xml.file, gel.image.file = NULL, fit = "spline") {
 	for (i in 1:nrow(peaks)) result$peak[result$well.number == peaks$well.number[i] & result$distance >= peaks$lower.distance[i] & result$distance <= peaks$upper.distance[i]] <- i
 	
 	rownames(result) <- NULL # clean up row names again
-	structure(list(data = result, samples = parsed.data$samples, peaks = peaks, regions = regions), class = "electrophoresis")
+	structure(list(
+		data = result,
+		samples = parsed.data$samples,
+		peaks = peaks,
+		regions = regions,
+		mobility.function = standard.curve.function,
+		mobility.inverse = standard.curve.inverse,
+		mass.coefficient = mass.coefficient
+	), class = "electrophoresis")
 }
 
