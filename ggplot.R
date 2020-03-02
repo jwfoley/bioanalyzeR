@@ -71,11 +71,12 @@ qc.mobility <- function(data, n.simulate = 100, line.color = "red") { # returns 
 		result <- data.frame(well.number = ladder.well, relative.distance = relative.distance.range[1] + relative.distance.diff * (0:(n.simulate - 1) / (n.simulate - 1)))
 		result$estimated.length <- data$mobility.functions[[ladder.well]](result$relative.distance)
 		result
-	})) 
+	}))
 	ggplot(ladder.data, aes(x = true.length, y = relative.distance, color = fluorescence)) +
 		geom_point() + 
 		geom_point(aes(x = length, y = relative.distance), data = subset(data$peaks, sample.observations == "Ladder"), color = line.color) + # overlay the reported peak positions
-		geom_line(aes(x = estimated.length, y = relative.distance), data = simulated.data, col = line.color) + # overlay the simulated data from the mobility function
+		geom_line(aes(x = estimated.length, y = relative.distance), data = simulated.data, col = line.color) + # overlay the simulated data from the mobility function +
+		scale_y_reverse() +
 		xlab("true length (bases)") +
 		ylab("distance migrated relative to markers") +
 		facet_wrap(~ well.number)
