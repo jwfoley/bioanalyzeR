@@ -138,11 +138,7 @@ read.tapestation <- function(xml.file, gel.image.file = NULL, fit = "spline") {
 	result <- read.tapestation.gel.image(gel.image.file)
 	stopifnot(length(unique(result$gel.lane)) == length(unique(peaks$well.number)))
 	
-	# get sample names and observations (might not be unique but we assume well numbers are)
-	sample.table <- unique(peaks[,c("batch", "reagent.id", "name", "sample.observations", "well.number", "well.row", "well.col")])
-	stopifnot(nrow(sample.table) == length(unique(result$gel.lane)))
-	
-	result <- cbind(sample.table[result$gel.lane,], subset(result, select = -batch))
+	result <- cbind(parsed.data$samples[result$gel.lane,], subset(result, select = -batch))
 	
 	# calculate relative distances
 	lower.marker.peaks <- subset(peaks, peak.observations %in% c("Lower Marker", "edited Lower Marker"))
@@ -191,7 +187,7 @@ read.tapestation <- function(xml.file, gel.image.file = NULL, fit = "spline") {
 	result$delta.molarity <- NA
 	
 	# determine ladder scheme
-	ladder.wells <- as.character(unique(subset(peaks, sample.observations == "Ladder")$well.number))
+	ladder.wells <- as.character(subset(parsed.data$samples, sample.observations == "Ladder")$well.number)
 	wells.by.ladder <- list()
 	rows.by.ladder <- list()
 	
@@ -216,7 +212,7 @@ read.tapestation <- function(xml.file, gel.image.file = NULL, fit = "spline") {
 	} else if (all.equal(unique(peaks$reagent.id), unique(subset(peaks, well.number %in% ladder.wells)$reagent.id))) { # 
 		rows.by.ladder <- lapply(ladder.wells, function(well) which(result$reagent.id == as.character(unique(subset(peaks, well.number == well)$reagent.id))))
 		names(rows.by.ladder) <- ladder.wells
-		wells.by.ladder <- lapply(rows.by.ladder, function(x) unique(x$well.number))
+		wells.by.ladder <- lapply(rows.by.ladder, function(x) unique(result[x,]$well.number))
 	
 	# scheme: something unexpected
 	}	else {
@@ -229,6 +225,9 @@ read.tapestation <- function(xml.file, gel.image.file = NULL, fit = "spline") {
 		regions$lower.relative.distance <- NA
 		regions$upper.relative.distance <- NA
 	}
+	mobility.functions <- list()
+	mobility.inverses <- list()
+	mass.coefficients <- list()
 	for (ladder.well in names(rows.by.ladder)) { # use names(rows.by.ladder) because it only exists if we're in a recognized scheme
 		peaks.ladder <- subset(peaks, well.number == ladder.well)
 		which.rows <- rows.by.ladder[[ladder.well]]
@@ -249,6 +248,8 @@ read.tapestation <- function(xml.file, gel.image.file = NULL, fit = "spline") {
 			standard.curve.function <- function(relative.distance) exp((relative.distance - mobility.model$coefficients[1]) / mobility.model$coefficients[2])
 			standard.curve.inverse <- function(length) mobility.model$coefficients[1] + mobility.model$coefficients[2] * log(length)
 		}
+		mobility.functions[[ladder.well]] <- standard.curve.function
+		mobility.inverses[[ladder.well]] <- standard.curve.inverse
 		
 		# apply model to raw data
 		result$length[which.rows] <- standard.curve.function(result$relative.distance[which.rows])
@@ -266,10 +267,11 @@ read.tapestation <- function(xml.file, gel.image.file = NULL, fit = "spline") {
 		# convert to molarity
 		peaks.ladder$mass <- peaks.ladder$length * peaks.ladder$molarity
 		peaks.ladder$estimated.area <- c(NA, sapply(2:(nrow(peaks.ladder) - 1), function(i) {
-			sum(subset(result, well.number == ladder.well & distance >= peaks.ladder$lower.distance[i] & distance <= peaks.ladder$upper.distance[i])$delta.area)
+			sum(subset(result, ladder.well == ladder.well & distance >= peaks.ladder$lower.distance[i] & distance <= peaks.ladder$upper.distance[i])$delta.area)
 		}), NA)
 		fluorescence.model <- lm(mass ~ estimated.area - 1, data = peaks.ladder)
 		mass.coefficient <- fluorescence.model$coefficients[1]
+		mass.coefficients[[ladder.well]] <- mass.coefficient
 		result$delta.mass[which.rows] <- mass.coefficient * result$delta.area[which.rows]
 		result$delta.molarity[which.rows] <- result$delta.mass[which.rows] / result$length[which.rows]
 	}
@@ -290,11 +292,12 @@ read.tapestation <- function(xml.file, gel.image.file = NULL, fit = "spline") {
 	structure(list(
 		data = result,
 		samples = parsed.data$samples,
+		wells.by.ladder = wells.by.ladder,
 		peaks = peaks,
 		regions = regions,
-		mobility.function = standard.curve.function,
-		mobility.inverse = standard.curve.inverse,
-		mass.coefficient = mass.coefficient
+		mobility.functions = mobility.functions,
+		mobility.inverses = mobility.inverses,
+		mass.coefficients = mass.coefficients
 	), class = "electrophoresis")
 }
 
