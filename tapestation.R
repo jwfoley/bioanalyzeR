@@ -296,7 +296,6 @@ read.tapestation <- function(xml.file, gel.image.file = NULL, fit = "spline") {
 		peaks = peaks,
 		regions = regions,
 		mobility.functions = mobility.functions,
-		mobility.inverses = mobility.inverses,
 		mass.coefficients = mass.coefficients
 	), class = "electrophoresis")
 }
