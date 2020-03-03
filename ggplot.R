@@ -82,7 +82,7 @@ qc.mobility <- function(data, n.simulate = 100, line.color = "red") { # returns 
 		facet_wrap(~ well.number)
 }
 
-qc.molarity <- function(data) {
+qc.molarity <- function(data, log = TRUE) {
 	peaks <- data$peaks
 	peaks$estimated.molarity <- sapply(1:nrow(peaks), function(peak.index) sum(data$data$delta.molarity[which(data$data$peak == peak.index)])) # without the which() you get the NA's too
 	peaks <- subset(peaks, ! is.na(estimated.molarity)) # remove NA's so they don't affect the x-limits and throw a warning
@@ -91,10 +91,14 @@ qc.molarity <- function(data) {
 	well.names <- as.character(data$samples$name)
 	names(well.names) <- data$samples$well.number
 	
-	ggplot(peaks, aes(molarity, estimated.molarity)) +
+	result <- ggplot(peaks, aes(molarity, estimated.molarity)) +
 		geom_point() +
 		geom_abline() +
 		xlab("true molarity (pM)") +
 		ylab("estimated molarity (pM)") +
 		facet_wrap(~ well.number, labeller = as_labeller(well.names))
+	
+	if (log) result <- result + scale_x_log10() + scale_y_log10()
+	
+	result
 }
