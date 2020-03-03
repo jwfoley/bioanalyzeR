@@ -265,10 +265,12 @@ read.tapestation <- function(xml.file, gel.image.file = NULL, fit = "spline") {
 		}
 		
 		# convert to molarity
+		# first solve for a coefficient that relates known masses (known molarities scaled by length) to area under the electropherogram peaks, then apply that coefficient to each individual measurement
+		# this is done by fitting a one-parameter model on the non-marker peaks of the ladder, because the marker peaks in all samples are unreadable (blocked by green and purple bands)
+		# preferably it would be scaled to each sample's own markers, but that's impossible because the markers are unreadable! and we can't even use their Agilent-reported molarity estimates or areas to scale relative to the ladder because those are always normalized to the upper marker! (which is often the one that's contaminated by sample anyway)
+		# so all we can do is normalize to the ladder's non-marker peaks, therefore each sample will be randomly off by some constant scaling factor, but at least molarity comparisons within a sample ought to be accurate
 		peaks.ladder$mass <- peaks.ladder$length * peaks.ladder$molarity
-		peaks.ladder$estimated.area <- c(NA, sapply(2:(nrow(peaks.ladder) - 1), function(i) {
-			sum(subset(result, ladder.well == ladder.well & distance >= peaks.ladder$lower.distance[i] & distance <= peaks.ladder$upper.distance[i])$delta.area)
-		}), NA)
+		peaks.ladder$estimated.area <- sapply(1:nrow(peaks.ladder), function(i) sum(subset(result, well.number == ladder.well & distance >= peaks.ladder$lower.distance[i] & distance <= peaks.ladder$upper.distance[i])$delta.area))
 		fluorescence.model <- lm(mass ~ estimated.area - 1, data = peaks.ladder)
 		mass.coefficient <- fluorescence.model$coefficients[1]
 		mass.coefficients[[ladder.well]] <- mass.coefficient
