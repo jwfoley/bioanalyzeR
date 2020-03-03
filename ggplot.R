@@ -94,6 +94,7 @@ qc.molarity <- function(data, log = TRUE) {
 	result <- ggplot(peaks, aes(molarity, estimated.molarity)) +
 		geom_point() +
 		geom_abline() +
+		geom_smooth(method = "lm") +
 		xlab("true molarity (pM)") +
 		ylab("estimated molarity (pM)") +
 		facet_wrap(~ well.number, labeller = as_labeller(well.names))
