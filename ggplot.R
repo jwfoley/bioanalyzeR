@@ -85,6 +85,7 @@ qc.mobility <- function(data, n.simulate = 100, line.color = "red") { # returns 
 qc.molarity <- function(data) {
 	peaks <- data$peaks
 	peaks$estimated.molarity <- sapply(1:nrow(peaks), function(peak.index) sum(data$data$delta.molarity[which(data$data$peak == peak.index)])) # without the which() you get the NA's too
+	peaks <- subset(peaks, ! is.na(estimated.molarity)) # remove NA's so they don't affect the x-limits and throw a warning
 	
 	# create facet labeler
 	well.names <- as.character(data$samples$name)
