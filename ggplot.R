@@ -65,8 +65,9 @@ qplot.electrophoresis <- function(data, # returns a ggplot object, which can be 
 qc.mobility <- function(data, n.simulate = 100, line.color = "red") { # returns a ggplot object, which can be extended by adding more features
 	ladder.data <- subset(data$data, sample.observations == "Ladder" & ! is.na(peak))
 	ladder.data$true.length <- data$peaks$length[ladder.data$peak]
+	good.peaks <- subset(data$peaks, ! is.na(length))
 	simulated.data <- do.call(rbind, lapply(names(data$wells.by.ladder), function(ladder.well) {
-		relative.distance.range <- range(subset(data$peaks, well.number == ladder.well)$relative.distance)
+		relative.distance.range <- range(subset(good.peaks, well.number == ladder.well)$relative.distance)
 		relative.distance.diff <- diff(relative.distance.range)
 		result <- data.frame(well.number = ladder.well, relative.distance = relative.distance.range[1] + relative.distance.diff * (0:(n.simulate - 1) / (n.simulate - 1)))
 		result$estimated.length <- data$mobility.functions[[ladder.well]](result$relative.distance)
@@ -74,8 +75,8 @@ qc.mobility <- function(data, n.simulate = 100, line.color = "red") { # returns 
 	}))
 	ggplot(ladder.data, aes(x = true.length, y = relative.distance, color = fluorescence)) +
 		geom_point() + 
-		geom_point(aes(x = length, y = relative.distance), data = subset(data$peaks, sample.observations == "Ladder"), color = line.color) + # overlay the reported peak positions
-		geom_line(aes(x = estimated.length, y = relative.distance), data = simulated.data, col = line.color) + # overlay the simulated data from the mobility function +
+		geom_point(aes(x = length, y = relative.distance), data = subset(good.peaks, sample.observations == "Ladder"), color = line.color) + # overlay the reported peak positions
+		geom_line(aes(x = estimated.length, y = relative.distance), data = simulated.data, col = line.color) + # overlay the simulated data from the mobility function
 		scale_y_reverse() +
 		xlab("true length (bases)") +
 		ylab("distance migrated relative to markers") +
@@ -95,7 +96,7 @@ qc.molarity <- function(data, log = TRUE) {
 		geom_point() +
 		geom_abline() +
 		geom_smooth(method = "lm") +
-		xlab("true molarity (pM)") +
+		xlab("software-reported molarity (pM)") +
 		ylab("estimated molarity (pM)") +
 		facet_wrap(~ well.number, labeller = as_labeller(well.names))
 	
