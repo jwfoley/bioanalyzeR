@@ -83,15 +83,17 @@ qc.mobility <- function(data, n.simulate = 100, line.color = "red") { # returns 
 }
 
 qc.molarity <- function(data) {
-	ladder.data <- subset(data$data, sample.observations == "Ladder" & ! is.na(peak))
-	which.ladder.peaks <- which(data$peaks$sample.observations == "Ladder" & ! (data$peaks$peak.observations %in% c("Lower Marker", "Upper Marker"))) # exclude markers because they have the unreadable gaps
-	ladder.peaks <- data$peaks[which.ladder.peaks,]
-	ladder.peaks$estimated.molarity <- sapply(which.ladder.peaks, function(peak.index) sum(ladder.data$delta.molarity[ladder.data$peak == peak.index]))
+	peaks <- data$peaks
+	peaks$estimated.molarity <- sapply(1:nrow(peaks), function(peak.index) sum(data$data$delta.molarity[which(data$data$peak == peak.index)])) # without the which() you get the NA's too
 	
-	ggplot(ladder.peaks, aes(molarity, estimated.molarity)) +
+	# create facet labeler
+	well.names <- as.character(data$samples$name)
+	names(well.names) <- data$samples$well.number
+	
+	ggplot(peaks, aes(molarity, estimated.molarity)) +
 		geom_point() +
 		geom_abline() +
 		xlab("true molarity (pM)") +
 		ylab("estimated molarity (pM)") +
-		facet_wrap(~ well.number)
+		facet_wrap(~ well.number, labeller = as_labeller(well.names))
 }
