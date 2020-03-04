@@ -39,15 +39,12 @@ qplot.electrophoresis <- function(data, # returns a ggplot object, which can be 
 	if (! is.null(log) && log %in% c("y", "xy")) this.plot <- this.plot + scale_y_log10()
 	
 	# set labels and other settings for specific x & y variables
-	if (x == "length") {
-		this.plot <- this.plot + xlab("length (bases)")
-	} else if (x == "time") {
-		this.plot <- this.plot + xlab("time (s)")
-	} else if (x == "distance") {
-		this.plot <- this.plot + xlab("distance migrated") + scale_x_reverse()
-	} else if (x == "relative.distance") {
-		this.plot <- this.plot + xlab("distance migrated relative to markers") + scale_x_reverse()
-	}
+	this.plot <- this.plot + switch(x,
+		length = xlab("length (bases)"),
+		time = xlab("time (s)"),
+		distance = xlab("distance migrated") + scale_x_reverse(),
+		relative.distance = xlab("distance migrated relative to markers") + scale_x_reverse()
+	)
 	if (y == "delta.molarity") this.plot <- this.plot + ylab("concentration (pM)")
 	
 	# add regions
