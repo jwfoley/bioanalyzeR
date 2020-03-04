@@ -1,6 +1,6 @@
 library(ggplot2)
 
-qplot.electrophoresis <- function(data, # returns a ggplot object, which can be extended by adding more features
+qplot.electrophoresis <- function(electrophoresis, # returns a ggplot object, which can be extended by adding more features
 	x = "length",
 	y = "fluorescence",
 	log = NULL, # which variables to log-transform, as in qplot(); defaults to "x" if x-value is length or none otherwise
@@ -15,24 +15,24 @@ qplot.electrophoresis <- function(data, # returns a ggplot object, which can be 
 ) {
 	
 	# remove ladders	
-	if (! include.ladder) data$data <- subset(data$data, sample.observations != "Ladder")
+	if (! include.ladder) electrophoresis$data <- subset(electrophoresis$data, sample.observations != "Ladder")
 	
 	# remove data outside the space between markers
-	if (between.markers) for (i in 1:nrow(data$peaks)) {
-		if (data$peaks$peak.observations[i] == "Lower Marker") {
-			data$data <- subset(data$data, ! (well.number == data$peaks$well.number[i] & distance >= 0.95 * data$peaks$lower.distance[i]))
-		} else if (data$peaks$peak.observations[i] == "Upper Marker") {
-			data$data <- subset(data$data, ! (well.number == data$peaks$well.number[i] & distance <= 1.05 * data$peaks$upper.distance[i]))
+	if (between.markers) for (i in 1:nrow(electrophoresis$peaks)) {
+		if (electrophoresis$peaks$peak.observations[i] == "Lower Marker") {
+			electrophoresis$data <- subset(electrophoresis$data, ! (well.number == electrophoresis$peaks$well.number[i] & distance >= 0.95 * electrophoresis$peaks$lower.distance[i]))
+		} else if (electrophoresis$peaks$peak.observations[i] == "Upper Marker") {
+			electrophoresis$data <- subset(electrophoresis$data, ! (well.number == electrophoresis$peaks$well.number[i] & distance <= 1.05 * electrophoresis$peaks$upper.distance[i]))
 		}
 	}
 	
 	# create plot but don't add the geom yet
-	this.plot <- ggplot(data$data)
+	this.plot <- ggplot(electrophoresis$data)
 	
 	# add faceting
 	if (facet) {
-		well.names <- as.character(data$samples$name)
-		names(well.names) <- data$samples$well.number
+		well.names <- as.character(electrophoresis$samples$name)
+		names(well.names) <- electrophoresis$samples$well.number
 		this.plot <- this.plot + facet_wrap(~ well.number, scales = scales, labeller = as_labeller(well.names))
 	}
 	
@@ -53,7 +53,7 @@ qplot.electrophoresis <- function(data, # returns a ggplot object, which can be 
 	if (y == "delta.molarity") this.plot <- this.plot + ylab("concentration (pM)")
 	
 	# add regions
-	if (facet & ! is.na(region.alpha)) this.plot <- this.plot + geom_rect(aes_(xmin = as.name(paste0("lower.", x)), xmax = as.name(paste0("upper.", x)), ymin = -Inf, ymax = Inf), data = data$regions, alpha = region.alpha)
+	if (facet & ! is.na(region.alpha)) this.plot <- this.plot + geom_rect(aes_(xmin = as.name(paste0("lower.", x)), xmax = as.name(paste0("upper.", x)), ymin = -Inf, ymax = Inf), data = electrophoresis$regions, alpha = region.alpha)
 	
 	# finally add the geom (after the regions so it's in front)
 	this.plot <- this.plot + switch(geom,
@@ -69,20 +69,20 @@ qplot.electrophoresis <- function(data, # returns a ggplot object, which can be 
 	)
 	
 	# add peaks
-	if (facet & ! is.na(peak.fill)) this.plot <- this.plot + geom_area(aes_(x = as.name(x), y = as.name(y), group = as.name("peak")), data = subset(data$data, ! is.na(peak)), fill = peak.fill)
+	if (facet & ! is.na(peak.fill)) this.plot <- this.plot + geom_area(aes_(x = as.name(x), y = as.name(y), group = as.name("peak")), data = subset(electrophoresis$data, ! is.na(peak)), fill = peak.fill)
 	
 	this.plot
 }
 
-qc.mobility <- function(data, n.simulate = 100, line.color = "red") { # returns a ggplot object, which can be extended by adding more features
-	ladder.data <- subset(data$data, sample.observations == "Ladder" & ! is.na(peak))
-	ladder.data$true.length <- data$peaks$length[ladder.data$peak]
-	good.peaks <- subset(data$peaks, ! is.na(length))
-	simulated.data <- do.call(rbind, lapply(names(data$wells.by.ladder), function(ladder.well) {
+qc.mobility <- function(electrophoresis, n.simulate = 100, line.color = "red") { # returns a ggplot object, which can be extended by adding more features
+	ladder.data <- subset(electrophoresis$data, sample.observations == "Ladder" & ! is.na(peak))
+	ladder.data$true.length <- electrophoresis$peaks$length[ladder.data$peak]
+	good.peaks <- subset(electrophoresis$peaks, ! is.na(length))
+	simulated.data <- do.call(rbind, lapply(names(electrophoresis$wells.by.ladder), function(ladder.well) {
 		relative.distance.range <- range(subset(good.peaks, well.number == ladder.well)$relative.distance)
 		relative.distance.diff <- diff(relative.distance.range)
 		result <- data.frame(well.number = ladder.well, relative.distance = relative.distance.range[1] + relative.distance.diff * (0:(n.simulate - 1) / (n.simulate - 1)))
-		result$estimated.length <- data$mobility.functions[[ladder.well]](result$relative.distance)
+		result$estimated.length <- electrophoresis$mobility.functions[[ladder.well]](result$relative.distance)
 		result
 	}))
 	ggplot(ladder.data, aes(x = true.length, y = relative.distance, color = fluorescence)) +
@@ -95,14 +95,14 @@ qc.mobility <- function(data, n.simulate = 100, line.color = "red") { # returns 
 		facet_wrap(~ well.number)
 }
 
-qc.molarity <- function(data, log = TRUE) {
-	peaks <- data$peaks
-	peaks$estimated.molarity <- sapply(1:nrow(peaks), function(peak.index) sum(data$data$delta.molarity[which(data$data$peak == peak.index)])) # without the which() you get the NA's too
+qc.molarity <- function(electrophoresis, log = TRUE) {
+	peaks <- electrophoresis$peaks
+	peaks$estimated.molarity <- sapply(1:nrow(peaks), function(peak.index) sum(electrophoresis$data$delta.molarity[which(electrophoresis$data$peak == peak.index)])) # without the which() you get the NA's too
 	peaks <- subset(peaks, ! is.na(estimated.molarity)) # remove NA's so they don't affect the x-limits and throw a warning
 	
 	# create facet labeler
-	well.names <- as.character(data$samples$name)
-	names(well.names) <- data$samples$well.number
+	well.names <- as.character(electrophoresis$samples$name)
+	names(well.names) <- electrophoresis$samples$well.number
 	
 	result <- ggplot(peaks, aes(molarity, estimated.molarity)) +
 		geom_point() +
