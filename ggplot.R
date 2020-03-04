@@ -31,7 +31,7 @@ qplot.electrophoresis <- function(electrophoresis, # returns a ggplot object, wh
 	
 	# add faceting
 	if (facet) {
-		well.names <- as.character(electrophoresis$samples$name)
+		well.names <- as.character(electrophoresis$samples$sample.name)
 		names(well.names) <- electrophoresis$samples$well.number
 		this.plot <- this.plot + facet_wrap(~ well.number, scales = scales, labeller = as_labeller(well.names))
 	}
@@ -101,7 +101,7 @@ qc.molarity <- function(electrophoresis, log = TRUE) {
 	peaks <- subset(peaks, ! is.na(estimated.molarity)) # remove NA's so they don't affect the x-limits and throw a warning
 	
 	# create facet labeler
-	well.names <- as.character(electrophoresis$samples$name)
+	well.names <- as.character(electrophoresis$samples$sample.name)
 	names(well.names) <- electrophoresis$samples$well.number
 	
 	result <- ggplot(peaks, aes(molarity, estimated.molarity)) +

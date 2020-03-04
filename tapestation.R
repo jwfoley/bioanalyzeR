@@ -61,11 +61,11 @@ read.tapestation.xml <- function(xml.file) {
  	batch <- sub("\\.xml$", "", basename(xml.file))
 	result.list <- xmlApply(xmlRoot(xmlParse(xml.file))[["Samples"]], function(sample.xml) {
 		well.number <- xmlValue(sample.xml[["WellNumber"]])
-		name <- trimws(xmlValue(sample.xml[["Comment"]]))
-		if (name == "") name <- well.number
+		sample.name <- trimws(xmlValue(sample.xml[["Comment"]]))
+		if (sample.name == "") sample.name <- well.number
 		sample.observations <- trimws(xmlValue(sample.xml[["Observations"]]))
 		if (sample.observations == "Marker(s) not detected") {
-			warning(paste(sample.observations, "for well", well.number, name))
+			warning(paste(sample.observations, "for well", well.number, sample.name))
 			return(NULL)
 		}
 		well.row <- gsub("[^A-HL]", "", well.number) # assumes all row names are in A through H, or L for ladder
@@ -82,27 +82,29 @@ read.tapestation.xml <- function(xml.file) {
 				lower.distance =     as.numeric(xmlValue(peak.xml[["FromPercent"]])) / 100,
 				upper.distance =     as.numeric(xmlValue(peak.xml[["ToPercent"]])) / 100, 
 				area =               as.numeric(xmlValue(peak.xml[["Area"]])),
-				molarity =           as.numeric(xmlValue(peak.xml[["Molarity"]]))
+				molarity =           as.numeric(xmlValue(peak.xml[["Molarity"]])),
+				stringsAsFactors =   F
 			)), make.row.names = F))
 		)
 		
 		suppressWarnings( # will throw warnings if missing values are coerced to NA but we can live with that
 			regions <- if (length(xmlChildren(sample.xml[["Regions"]])) == 0) NULL else do.call(rbind, c(xmlApply(sample.xml[["Regions"]], function(region.xml) data.frame(
-				peak.comment =         trimws(xmlValue(region.xml[["Comment"]])),
+				region.comment =       trimws(xmlValue(region.xml[["Comment"]])),
 				lower.length =         as.integer(xmlValue(region.xml[["From"]])),
 				upper.length =         as.integer(xmlValue(region.xml[["To"]])),
 				average.length =       as.integer(xmlValue(region.xml[["AverageSize"]])),
 				area =                 as.numeric(xmlValue(region.xml[["Area"]])),
 				concentration =        as.numeric(xmlValue(region.xml[["Concentration"]])),
 				molarity =             as.numeric(xmlValue(region.xml[["Molarity"]])),
-				proportion.of.total =  as.numeric(xmlValue(region.xml[["PercentOfTotal"]])) / 100				
+				proportion.of.total =  as.numeric(xmlValue(region.xml[["PercentOfTotal"]])) / 100,
+				stringsAsFactors =     F
 			)), make.row.names = F))
 		)
 		
 		list(
-			sample.info = data.frame(batch = batch, well.number = well.number, well.row = well.row, well.col = well.col, name = name, reagent.id = reagent.id, sample.observations = sample.observations),
-			peaks = if (is.null(peaks)) NULL else cbind(batch, well.number, well.row, well.col, name, reagent.id, sample.observations, peaks),
-			regions = if (is.null(regions)) NULL else cbind(batch, well.number, well.row, well.col, name, reagent.id, sample.observations, regions)
+			sample.info = data.frame(batch, well.number, well.row, well.col, sample.name, reagent.id, sample.observations, stringsAsFactors = F),
+			peaks = if (is.null(peaks)) NULL else data.frame(batch, well.number, well.row, well.col, sample.name, reagent.id, sample.observations, peaks, stringsAsFactors = F),
+			regions = if (is.null(regions)) NULL else data.frame(batch, well.number, well.row, well.col, sample.name, reagent.id, sample.observations, regions, stringsAsFactors = F)
 		)
 	})
 	
@@ -113,6 +115,18 @@ read.tapestation.xml <- function(xml.file) {
 		peaks = if (all(unlist(lapply(peaks.list, is.null)))) NULL else do.call(rbind, c(peaks.list, make.row.names = F)),
 		regions = if (all(unlist(lapply(regions.list, is.null)))) NULL else do.call(rbind, c(regions.list, make.row.names = F))
 	)
+	
+	# convert sample metadata into factors, ensuring all frames have the same levels and the levels are in the observed order
+	for (field in colnames(result$samples)) {
+		result$samples[,field] <- factor(result$samples[,field], levels = unique(result$samples[,field]))
+		result$peaks[,field] <- factor(result$peaks[,field], levels = levels(result$samples[,field]))
+		result$regions[,field] <- factor(result$regions[,field], levels = levels(result$samples[,field]))
+	}
+	# convert other text into factors without those restrictions
+	for (field in c("peak.observations", "peak.comment")) result$peaks[,field] <- factor(result$peaks[,field])
+	for (field in c("region.comment")) result$regions[,field] <- factor(result$regions[,field])
+	
+	result
 }
 
 
@@ -191,14 +205,14 @@ read.tapestation <- function(xml.file, gel.image.file = NULL, fit = "spline") {
 	# scheme: one electronic ladder for the whole run but it's displayed more than once
 	} else if (
 		length(unique(subset(peaks, well.number %in% ladder.wells)$reagent.id)) == 1 &&
-		unique(subset(peaks, well.number %in% ladder.wells)$name) == "Electronic Ladder"
+		unique(subset(peaks, well.number %in% ladder.wells)$sample.name) == "Electronic Ladder"
 	) {
 		wells.by.ladder[[ladder.wells[1]]] <- unique(result$well.number)
 		rows.by.ladder[[ladder.wells[1]]] <- 1:nrow(result) # all rows of the frame are associated with this ladder
 	
 	# scheme: one ladder per reagent.id (ScreenTape)
 	} else if (all.equal(unique(peaks$reagent.id), unique(subset(peaks, well.number %in% ladder.wells)$reagent.id))) { # 
-		rows.by.ladder <- lapply(ladder.wells, function(well) which(result$reagent.id == as.character(unique(subset(peaks, well.number == well)$reagent.id))))
+		rows.by.ladder <- lapply(ladder.wells, function(well) which(result$reagent.id == unique(subset(peaks, well.number == well)$reagent.id)))
 		names(rows.by.ladder) <- ladder.wells
 		wells.by.ladder <- lapply(rows.by.ladder, function(x) unique(result[x,]$well.number))
 	
