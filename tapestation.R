@@ -16,111 +16,99 @@ find.matching.pixels <- function(rgb.image, rgb.values) {
 }
 
 
-read.tapestation.gel.image <- function(gel.image.files) {
-
-	combined.results <- do.call(rbind, lapply(gel.image.files, function(gel.image.file) {
-
-		gel.image.rgb <- readPNG(gel.image.file) # this is in the form (y, x, channel); [1,1,] is the upper left corner
-		
-		# find lower marker
-		pixel.is.lower.marker <- find.matching.pixels(gel.image.rgb, RGB.LOWER.MARKER)
-		x.is.lower.marker <- apply(pixel.is.lower.marker, 2, any)
-		
-		# use lower marker bands to identify a single representative x-value for each gel lane
-		x.gel <- which(diff(c(FALSE, x.is.lower.marker)) == 1) # guess the start x-positions of the lanes based on where there are gaps between lower markers; add this FALSE so that column 1 will test positive if necessary, and this also offsets all the indices correctly
-		lane.spacings <- diff(x.gel)
-		if (diff(range(lane.spacings)) > 1) { # the guessed lanes are not evenly spaced, even tolerating 1 pixel of antialiasing error
-			lane.spacing.freq <- table(lane.spacings)
-			estimated.lane.width <- as.integer(names(lane.spacing.freq)[which.max(lane.spacing.freq)]) # guess that the most common width is the correct one (assuming there aren't lots of problems in this batch!)
-			n.lanes <- floor((dim(gel.image.rgb)[2] - x.gel[1]) / estimated.lane.width) # assume the first edge is definitely called correctly (should only be whitespace to its left) and any whitespace to the right is narrower than a lane
-			x.gel <- x.gel[1] + estimated.lane.width * 1:n.lanes - round(estimated.lane.width / 2) # aim for the centers of the lanes because we might have slight error
-		}
-		gel.image.rgb.reduced <- gel.image.rgb[,x.gel,]
-				
-		# find gel boundaries
-		position.is.highlight <- find.matching.pixels(gel.image.rgb.reduced, RGB.HIGHLIGHT)
-		lane.with.borders <- which(position.is.highlight[1,]) # assuming there will be a highlight in the top pixel row
-		stopifnot(length(lane.with.borders) == 1) # need one highlighted lane to find gel borders
-		position.is.label <- find.matching.pixels(gel.image.rgb.reduced, RGB.GOOD) |
-			find.matching.pixels(gel.image.rgb.reduced, RGB.MEDIUM) |
-			find.matching.pixels(gel.image.rgb.reduced, RGB.BAD)
-		border.transition <- diff((position.is.highlight | position.is.label)[,lane.with.borders])
-		y.gel.start <- which(border.transition == -1)[1] - 1
-		y.gel.end <- which(border.transition == 1)[1] - 1
-
-		# now finally extract the intensities!
-		result.rgb <- gel.image.rgb.reduced[y.gel.start:y.gel.end,,] # only the actual data values
-		fluorescence.matrix <- 1 - result.rgb[,,1] # only get red fluorescence because all channels are equal in the places we care about; subtract from 1 because it's a negative (red decreases in the protein gels too even though they're blue instead of black)
-		fluorescence.matrix[result.rgb[,,1] != result.rgb[,,2]] <- NA # set non-data pixels (obscured by marker band color) to NA; assume red channel always equals green channel, but not necessary blue because protein gels use blue
-		results <- data.frame(
-			batch =         sub("\\.png$", "", basename(gel.image.file)),
-			gel.lane =      rep(1:length(x.gel), each = nrow(fluorescence.matrix)),
-			distance =      1:nrow(fluorescence.matrix) / nrow(fluorescence.matrix),
-			fluorescence =  as.vector(fluorescence.matrix)
-		)
-	}))
+read.tapestation.gel.image <- function(gel.image.file) {
+	gel.image.rgb <- readPNG(gel.image.file) # this is in the form (y, x, channel); [1,1,] is the upper left corner
 	
-	rownames(combined.results) <- NULL
-	combined.results$batch <- factor(combined.results$batch, levels = unique(combined.results$batch)) # make batches into a factor that keeps them in the observed order
+	# find lower marker
+	pixel.is.lower.marker <- find.matching.pixels(gel.image.rgb, RGB.LOWER.MARKER)
+	x.is.lower.marker <- apply(pixel.is.lower.marker, 2, any)
 	
-	combined.results
+	# use lower marker bands to identify a single representative x-value for each gel lane
+	x.gel <- which(diff(c(FALSE, x.is.lower.marker)) == 1) # guess the start x-positions of the lanes based on where there are gaps between lower markers; add this FALSE so that column 1 will test positive if necessary, and this also offsets all the indices correctly
+	lane.spacings <- diff(x.gel)
+	if (diff(range(lane.spacings)) > 1) { # the guessed lanes are not evenly spaced, even tolerating 1 pixel of antialiasing error
+		lane.spacing.freq <- table(lane.spacings)
+		estimated.lane.width <- as.integer(names(lane.spacing.freq)[which.max(lane.spacing.freq)]) # guess that the most common width is the correct one (assuming there aren't lots of problems in this batch!)
+		n.lanes <- floor((dim(gel.image.rgb)[2] - x.gel[1]) / estimated.lane.width) # assume the first edge is definitely called correctly (should only be whitespace to its left) and any whitespace to the right is narrower than a lane
+		x.gel <- x.gel[1] + estimated.lane.width * 1:n.lanes - round(estimated.lane.width / 2) # aim for the centers of the lanes because we might have slight error
+	}
+	gel.image.rgb.reduced <- gel.image.rgb[,x.gel,]
+			
+	# find gel boundaries
+	position.is.highlight <- find.matching.pixels(gel.image.rgb.reduced, RGB.HIGHLIGHT)
+	lane.with.borders <- which(position.is.highlight[1,]) # assuming there will be a highlight in the top pixel row
+	stopifnot(length(lane.with.borders) == 1) # need one highlighted lane to find gel borders
+	position.is.label <- find.matching.pixels(gel.image.rgb.reduced, RGB.GOOD) |
+		find.matching.pixels(gel.image.rgb.reduced, RGB.MEDIUM) |
+		find.matching.pixels(gel.image.rgb.reduced, RGB.BAD)
+	border.transition <- diff((position.is.highlight | position.is.label)[,lane.with.borders])
+	y.gel.start <- which(border.transition == -1)[1] - 1
+	y.gel.end <- which(border.transition == 1)[1] - 1
+
+	# now finally extract the intensities!
+	result.rgb <- gel.image.rgb.reduced[y.gel.start:y.gel.end,,] # only the actual data values
+	fluorescence.matrix <- 1 - result.rgb[,,1] # only get red fluorescence because all channels are equal in the places we care about; subtract from 1 because it's a negative (red decreases in the protein gels too even though they're blue instead of black)
+	fluorescence.matrix[result.rgb[,,1] != result.rgb[,,2]] <- NA # set non-data pixels (obscured by marker band color) to NA; assume red channel always equals green channel, but not necessary blue because protein gels use blue
+	data.frame(
+		gel.lane =      rep(1:length(x.gel), each = nrow(fluorescence.matrix)),
+		distance =      1:nrow(fluorescence.matrix) / nrow(fluorescence.matrix),
+		fluorescence =  as.vector(fluorescence.matrix)
+	)
 }
 
 
-read.tapestation.xml <- function(...) {
-	result.list <- do.call(c, lapply(list(...), function(xml.file) {
-	 	batch <- sub("\\.xml$", "", basename(xml.file))
-		xmlApply(xmlRoot(xmlParse(xml.file))[["Samples"]], function(sample.xml) {
-			well.number <- xmlValue(sample.xml[["WellNumber"]])
-			name <- trimws(xmlValue(sample.xml[["Comment"]]))
-			if (name == "") name <- well.number
-			sample.observations <- trimws(xmlValue(sample.xml[["Observations"]]))
-			if (sample.observations == "Marker(s) not detected") {
-				warning(paste(sample.observations, "for well", well.number, name))
-				return(NULL)
-			}
-			well.row <- gsub("[^A-HL]", "", well.number) # assumes all row names are in A through H, or L for ladder
-			well.col <- as.integer(gsub("[^[:digit:]]", "", well.number)) # assumes all column names are numbers!
-			
-			reagent.id <- xmlValue(sample.xml[["ScreenTapeID"]])
-			
-			suppressWarnings( # will throw warnings if missing values are coerced to NA but we can live with that
-				peaks <- if (length(xmlChildren(sample.xml[["Peaks"]])) == 0) NULL else do.call(rbind, c(xmlApply(sample.xml[["Peaks"]], function(peak.xml) data.frame(
-					peak.observations =  trimws(xmlValue(peak.xml[["Observations"]])),
-					peak.comment =       trimws(xmlValue(peak.xml[["Comment"]])),
-					length =             as.integer(xmlValue(peak.xml[["Size"]])),
-					distance =           as.numeric(xmlValue(peak.xml[["RunDistance"]])) / 100,
-					lower.distance =     as.numeric(xmlValue(peak.xml[["FromPercent"]])) / 100,
-					upper.distance =     as.numeric(xmlValue(peak.xml[["ToPercent"]])) / 100, 
-					area =               as.numeric(xmlValue(peak.xml[["Area"]])),
-					molarity =           as.numeric(xmlValue(peak.xml[["Molarity"]]))
-				)), make.row.names = F))
-			)
-			
-			suppressWarnings( # will throw warnings if missing values are coerced to NA but we can live with that
-				regions <- if (length(xmlChildren(sample.xml[["Regions"]])) == 0) NULL else do.call(rbind, c(xmlApply(sample.xml[["Regions"]], function(region.xml) data.frame(
-					peak.comment =         trimws(xmlValue(region.xml[["Comment"]])),
-					lower.length =         as.integer(xmlValue(region.xml[["From"]])),
-					upper.length =         as.integer(xmlValue(region.xml[["To"]])),
-					average.length =       as.integer(xmlValue(region.xml[["AverageSize"]])),
-					area =                 as.numeric(xmlValue(region.xml[["Area"]])),
-					concentration =        as.numeric(xmlValue(region.xml[["Concentration"]])),
-					molarity =             as.numeric(xmlValue(region.xml[["Molarity"]])),
-					proportion.of.total =  as.numeric(xmlValue(region.xml[["PercentOfTotal"]])) / 100				
-				)), make.row.names = F))
-			)
-			
-			list(
-				sample.info = data.frame(batch = batch, well.number = well.number, well.row = well.row, well.col = well.col, name = name, reagent.id = reagent.id, sample.observations = sample.observations),
-				peaks = if (is.null(peaks)) NULL else cbind(batch, well.number, well.row, well.col, name, reagent.id, sample.observations, peaks),
-				regions = if (is.null(regions)) NULL else cbind(batch, well.number, well.row, well.col, name, reagent.id, sample.observations, regions)
-			)
-		})
-	}))
+read.tapestation.xml <- function(xml.file) {
+ 	batch <- sub("\\.xml$", "", basename(xml.file))
+	result.list <- xmlApply(xmlRoot(xmlParse(xml.file))[["Samples"]], function(sample.xml) {
+		well.number <- xmlValue(sample.xml[["WellNumber"]])
+		name <- trimws(xmlValue(sample.xml[["Comment"]]))
+		if (name == "") name <- well.number
+		sample.observations <- trimws(xmlValue(sample.xml[["Observations"]]))
+		if (sample.observations == "Marker(s) not detected") {
+			warning(paste(sample.observations, "for well", well.number, name))
+			return(NULL)
+		}
+		well.row <- gsub("[^A-HL]", "", well.number) # assumes all row names are in A through H, or L for ladder
+		well.col <- as.integer(gsub("[^[:digit:]]", "", well.number)) # assumes all column names are numbers!
+		
+		reagent.id <- xmlValue(sample.xml[["ScreenTapeID"]])
+		
+		suppressWarnings( # will throw warnings if missing values are coerced to NA but we can live with that
+			peaks <- if (length(xmlChildren(sample.xml[["Peaks"]])) == 0) NULL else do.call(rbind, c(xmlApply(sample.xml[["Peaks"]], function(peak.xml) data.frame(
+				peak.observations =  trimws(xmlValue(peak.xml[["Observations"]])),
+				peak.comment =       trimws(xmlValue(peak.xml[["Comment"]])),
+				length =             as.integer(xmlValue(peak.xml[["Size"]])),
+				distance =           as.numeric(xmlValue(peak.xml[["RunDistance"]])) / 100,
+				lower.distance =     as.numeric(xmlValue(peak.xml[["FromPercent"]])) / 100,
+				upper.distance =     as.numeric(xmlValue(peak.xml[["ToPercent"]])) / 100, 
+				area =               as.numeric(xmlValue(peak.xml[["Area"]])),
+				molarity =           as.numeric(xmlValue(peak.xml[["Molarity"]]))
+			)), make.row.names = F))
+		)
+		
+		suppressWarnings( # will throw warnings if missing values are coerced to NA but we can live with that
+			regions <- if (length(xmlChildren(sample.xml[["Regions"]])) == 0) NULL else do.call(rbind, c(xmlApply(sample.xml[["Regions"]], function(region.xml) data.frame(
+				peak.comment =         trimws(xmlValue(region.xml[["Comment"]])),
+				lower.length =         as.integer(xmlValue(region.xml[["From"]])),
+				upper.length =         as.integer(xmlValue(region.xml[["To"]])),
+				average.length =       as.integer(xmlValue(region.xml[["AverageSize"]])),
+				area =                 as.numeric(xmlValue(region.xml[["Area"]])),
+				concentration =        as.numeric(xmlValue(region.xml[["Concentration"]])),
+				molarity =             as.numeric(xmlValue(region.xml[["Molarity"]])),
+				proportion.of.total =  as.numeric(xmlValue(region.xml[["PercentOfTotal"]])) / 100				
+			)), make.row.names = F))
+		)
+		
+		list(
+			sample.info = data.frame(batch = batch, well.number = well.number, well.row = well.row, well.col = well.col, name = name, reagent.id = reagent.id, sample.observations = sample.observations),
+			peaks = if (is.null(peaks)) NULL else cbind(batch, well.number, well.row, well.col, name, reagent.id, sample.observations, peaks),
+			regions = if (is.null(regions)) NULL else cbind(batch, well.number, well.row, well.col, name, reagent.id, sample.observations, regions)
+		)
+	})
 	
 	peaks.list <- lapply(result.list, function(x) x$peaks)
 	regions.list <- lapply(result.list, function(x) x$regions)
-	list(
+	result <- list(
 		samples = do.call(rbind, c(lapply(result.list, function(x) x$sample.info), make.row.names = F)),
 		peaks = if (all(unlist(lapply(peaks.list, is.null)))) NULL else do.call(rbind, c(peaks.list, make.row.names = F)),
 		regions = if (all(unlist(lapply(regions.list, is.null)))) NULL else do.call(rbind, c(regions.list, make.row.names = F))
@@ -138,7 +126,7 @@ read.tapestation <- function(xml.file, gel.image.file = NULL, fit = "spline") {
 	result <- read.tapestation.gel.image(gel.image.file)
 	stopifnot(length(unique(result$gel.lane)) == length(unique(peaks$well.number)))
 	
-	result <- cbind(parsed.data$samples[result$gel.lane,], subset(result, select = -batch))
+	result <- cbind(parsed.data$samples[result$gel.lane,], result)
 	
 	# calculate relative distances
 	lower.marker.peaks <- subset(peaks, peak.observations %in% c("Lower Marker", "edited Lower Marker"))
