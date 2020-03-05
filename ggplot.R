@@ -23,9 +23,16 @@ qplot.electrophoresis <- function(electrophoresis, # returns a ggplot object, wh
 	region.alpha = 0.2, # set to NA to stop showing regions
 	area.alpha = 0.2 # if facet = FALSE and geom = "area", alpha transparency of the filled areas
 ) {
+
+	if (is.null(log)) log <- if (x == "length") "x" else NA
 	
 	# remove ladders	
 	if (! include.ladder) electrophoresis$data <- subset(electrophoresis$data, sample.observations != "Ladder")
+	
+	# remove data in unusable ranges
+	electrophoresis$data <- electrophoresis$data[! is.na(electrophoresis$data[[x]]) & ! is.na(electrophoresis$data[[y]]),]
+	if (log %in% c("x", "xy")) electrophoresis$data <- electrophoresis$data[electrophoresis$data[[x]] > 0,]
+	if (log %in% c("y", "xy")) electrophoresis$data <- electrophoresis$data[electrophoresis$data[[y]] > 0,]
 	
 	# remove data outside the space between markers
 	if (between.markers) for (i in 1:nrow(electrophoresis$peaks)) {
@@ -47,27 +54,8 @@ qplot.electrophoresis <- function(electrophoresis, # returns a ggplot object, wh
 	# create plot but don't add the geom yet
 	this.plot <- ggplot(electrophoresis$data)
 	
-	# add faceting
-	if (facet) this.plot <- this.plot + facet_wrap(~ batch * well.number, scales = scales, labeller = labeller.electrophoresis(electrophoresis))
-	
-	# apply log transformations
-	if (
-		(is.null(log) && x == "length") ||
-		(! is.null(log) && log %in% c("x", "xy"))
-	) this.plot <- this.plot + scale_x_log10()
-	if (! is.null(log) && log %in% c("y", "xy")) this.plot <- this.plot + scale_y_log10()
-	
-	# set labels and other settings for specific x & y variables
-	this.plot <- this.plot + switch(x,
-		length = xlab("length (bases)"),
-		time = xlab("time (s)"),
-		distance = xlab("distance migrated") + scale_x_reverse(),
-		relative.distance = xlab("distance migrated relative to markers") + scale_x_reverse()
-	)
-	if (y == "delta.molarity") this.plot <- this.plot + ylab("molarity (pM)")
-	
 	# add regions
-	if (facet & ! is.na(region.alpha)) this.plot <- this.plot + geom_rect(aes_(xmin = as.name(paste0("lower.", x)), xmax = as.name(paste0("upper.", x)), ymin = -Inf, ymax = Inf), data = electrophoresis$regions, alpha = region.alpha)
+	if (facet & ! is.na(region.alpha) & ! is.null(electrophoresis$regions)) this.plot <- this.plot + geom_rect(aes_(xmin = as.name(paste0("lower.", x)), xmax = as.name(paste0("upper.", x)), ymin = -Inf, ymax = Inf), data = electrophoresis$regions, alpha = region.alpha)
 	
 	# finally add the geom (after the regions so it's in front)
 	this.plot <- this.plot + switch(geom,
@@ -83,7 +71,23 @@ qplot.electrophoresis <- function(electrophoresis, # returns a ggplot object, wh
 	)
 	
 	# add peaks
-	if (facet & ! is.na(peak.fill)) this.plot <- this.plot + geom_area(aes_(x = as.name(x), y = as.name(y), group = as.name("peak")), data = subset(electrophoresis$data, ! is.na(peak)), fill = peak.fill)
+	if (facet & ! is.na(peak.fill) & ! is.null(electrophoresis$peaks)) this.plot <- this.plot + geom_area(aes_(x = as.name(x), y = as.name(y), group = as.name("peak")), data = subset(electrophoresis$data, ! is.na(peak)), fill = peak.fill)
+	
+	# add faceting
+	if (facet) this.plot <- this.plot + facet_wrap(~ batch * well.number, scales = scales, labeller = labeller.electrophoresis(electrophoresis))
+	
+	# apply log transformations
+	if (log %in% c("x", "xy")) this.plot <- this.plot + scale_x_log10()
+	if (log %in% c("y", "xy")) this.plot <- this.plot + scale_y_log10()
+	
+	# set labels and other settings for specific x & y variables
+	this.plot <- this.plot + switch(x,
+		length = xlab("length (bases)"),
+		time = xlab("time (s)"),
+		distance = xlab("distance migrated") + scale_x_reverse(),
+		relative.distance = xlab("distance migrated relative to markers") + scale_x_reverse()
+	)
+	if (y == "delta.molarity") this.plot <- this.plot + ylab("molarity (pM)")
 	
 	this.plot
 }
@@ -112,7 +116,7 @@ qc.mobility <- function(electrophoresis, n.simulate = 100, line.color = "red") {
 qc.molarity <- function(electrophoresis, log = TRUE) {
 	peaks <- electrophoresis$peaks
 	peaks$estimated.molarity <- sapply(1:nrow(peaks), function(peak.index) sum(electrophoresis$data$delta.molarity[which(electrophoresis$data$peak == peak.index)])) # without the which() you get the NA's too
-	peaks <- subset(peaks, ! is.na(estimated.molarity)) # remove NA's so they don't affect the x-limits and throw a warning
+	peaks <- subset(peaks, ! is.na(molarity) & ! is.na(estimated.molarity)) # remove NA's so they don't affect the x-limits and throw a warning
 	
 	result <- ggplot(peaks, aes(molarity, estimated.molarity)) +
 		geom_point() +
