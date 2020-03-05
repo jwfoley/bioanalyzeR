@@ -64,7 +64,7 @@ qplot.electrophoresis <- function(electrophoresis, # returns a ggplot object, wh
 		distance = xlab("distance migrated") + scale_x_reverse(),
 		relative.distance = xlab("distance migrated relative to markers") + scale_x_reverse()
 	)
-	if (y == "delta.molarity") this.plot <- this.plot + ylab("concentration (pM)")
+	if (y == "delta.molarity") this.plot <- this.plot + ylab("molarity (pM)")
 	
 	# add regions
 	if (facet & ! is.na(region.alpha)) this.plot <- this.plot + geom_rect(aes_(xmin = as.name(paste0("lower.", x)), xmax = as.name(paste0("upper.", x)), ymin = -Inf, ymax = Inf), data = electrophoresis$regions, alpha = region.alpha)
