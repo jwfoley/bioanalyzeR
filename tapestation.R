@@ -135,12 +135,15 @@ read.tapestation <- function(xml.file, gel.image.file = NULL, fit = "spline") {
 	if (is.null(gel.image.file)) gel.image.file <- sub("\\.xml$", ".png", xml.file)
 	
 	parsed.data <- read.tapestation.xml(xml.file)
+	samples <- parsed.data$samples
+	stopifnot(length(unique(samples$batch)) == 1)
+	batch = samples$batch[1]
 	peaks <- parsed.data$peaks
 	regions <- parsed.data$regions
 	result <- read.tapestation.gel.image(gel.image.file)
-	stopifnot(length(unique(result$gel.lane)) == length(unique(peaks$well.number)))
+	stopifnot(length(unique(result$gel.lane)) == nrow(samples))
 	
-	result <- cbind(parsed.data$samples[result$gel.lane,], result)
+	result <- cbind(samples[result$gel.lane,], result)
 	
 	# calculate relative distances
 	lower.marker.peaks <- subset(peaks, peak.observations %in% c("Lower Marker", "edited Lower Marker"))
@@ -189,7 +192,7 @@ read.tapestation <- function(xml.file, gel.image.file = NULL, fit = "spline") {
 	result$delta.molarity <- NA
 	
 	# determine ladder scheme
-	ladder.wells <- as.character(subset(parsed.data$samples, sample.observations == "Ladder")$well.number)
+	ladder.wells <- as.character(subset(samples, sample.observations == "Ladder")$well.number)
 	wells.by.ladder <- list()
 	rows.by.ladder <- list()
 	
@@ -293,9 +296,18 @@ read.tapestation <- function(xml.file, gel.image.file = NULL, fit = "spline") {
 	for (i in 1:nrow(peaks)) result$peak[result$well.number == peaks$well.number[i] & result$distance >= peaks$lower.distance[i] & result$distance <= peaks$upper.distance[i]] <- i
 	
 	rownames(result) <- NULL # clean up row names again
+	
+	# wrap lists by ladder in larger lists by batch so they'll survive being combined with other batches
+	wells.by.ladder <- list(wells.by.ladder)
+	names(wells.by.ladder) <- batch
+	mobility.functions <- list(mobility.functions)
+	names(mobility.functions) <- batch
+	mass.coefficients <- list(mass.coefficients)
+	names(mass.coefficients) <- batch
+	
 	structure(list(
 		data = result,
-		samples = parsed.data$samples,
+		samples = samples,
 		wells.by.ladder = wells.by.ladder,
 		peaks = peaks,
 		regions = regions,

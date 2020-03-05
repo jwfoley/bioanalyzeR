@@ -1,5 +1,15 @@
 library(ggplot2)
 
+# ggplot2 labeller function to take batch and well.number factors (expecting ~ batch * well.number) and return facet labels that are the sample names
+# batch names are not included in the labels
+labeller.electrophoresis <- function(electrophoresis) function(factor.frame) list(
+	apply(factor.frame, 1, function(labels) {
+		which.sample <- which(electrophoresis$samples$batch == labels[1] & electrophoresis$samples$well.number == labels[2])
+		stopifnot(length(which.sample) == 1)	
+		as.character(electrophoresis$samples$sample.name[which.sample])
+	})
+)
+
 qplot.electrophoresis <- function(electrophoresis, # returns a ggplot object, which can be extended by adding more features
 	x = "length",
 	y = "fluorescence",
@@ -20,9 +30,17 @@ qplot.electrophoresis <- function(electrophoresis, # returns a ggplot object, wh
 	# remove data outside the space between markers
 	if (between.markers) for (i in 1:nrow(electrophoresis$peaks)) {
 		if (electrophoresis$peaks$peak.observations[i] == "Lower Marker") {
-			electrophoresis$data <- subset(electrophoresis$data, ! (well.number == electrophoresis$peaks$well.number[i] & distance >= 0.95 * electrophoresis$peaks$lower.distance[i]))
+			electrophoresis$data <- subset(electrophoresis$data, ! (
+				batch == electrophoresis$peaks$batch[i] &
+				well.number == electrophoresis$peaks$well.number[i] &
+				distance >= 0.95 * electrophoresis$peaks$lower.distance[i]
+			))
 		} else if (electrophoresis$peaks$peak.observations[i] == "Upper Marker") {
-			electrophoresis$data <- subset(electrophoresis$data, ! (well.number == electrophoresis$peaks$well.number[i] & distance <= 1.05 * electrophoresis$peaks$upper.distance[i]))
+			electrophoresis$data <- subset(electrophoresis$data, ! (
+				batch == electrophoresis$peaks$batch[i] &
+				well.number == electrophoresis$peaks$well.number[i] &
+				distance <= 1.05 * electrophoresis$peaks$upper.distance[i]
+			))
 		}
 	}
 	
@@ -30,11 +48,7 @@ qplot.electrophoresis <- function(electrophoresis, # returns a ggplot object, wh
 	this.plot <- ggplot(electrophoresis$data)
 	
 	# add faceting
-	if (facet) {
-		well.names <- as.character(electrophoresis$samples$sample.name)
-		names(well.names) <- electrophoresis$samples$well.number
-		this.plot <- this.plot + facet_wrap(~ well.number, scales = scales, labeller = as_labeller(well.names))
-	}
+	if (facet) this.plot <- this.plot + facet_wrap(~ batch * well.number, scales = scales, labeller = labeller.electrophoresis(electrophoresis))
 	
 	# apply log transformations
 	if (
@@ -78,13 +92,13 @@ qc.mobility <- function(electrophoresis, n.simulate = 100, line.color = "red") {
 	ladder.data <- subset(electrophoresis$data, sample.observations == "Ladder" & ! is.na(peak))
 	ladder.data$true.length <- electrophoresis$peaks$length[ladder.data$peak]
 	good.peaks <- subset(electrophoresis$peaks, ! is.na(length))
-	simulated.data <- do.call(rbind, lapply(names(electrophoresis$wells.by.ladder), function(ladder.well) {
-		relative.distance.range <- range(subset(good.peaks, well.number == ladder.well)$relative.distance)
+	simulated.data <- do.call(rbind, lapply(names(electrophoresis$wells.by.ladder), function(batch) do.call(rbind, lapply(names(electrophoresis$wells.by.ladder[[batch]]), function(ladder.well) {
+		relative.distance.range <- range(subset(good.peaks, batch == batch & well.number == ladder.well)$relative.distance)
 		relative.distance.diff <- diff(relative.distance.range)
-		result <- data.frame(well.number = ladder.well, relative.distance = relative.distance.range[1] + relative.distance.diff * (0:(n.simulate - 1) / (n.simulate - 1)))
-		result$estimated.length <- electrophoresis$mobility.functions[[ladder.well]](result$relative.distance)
+		result <- data.frame(batch, well.number = ladder.well, relative.distance = relative.distance.range[1] + relative.distance.diff * (0:(n.simulate - 1) / (n.simulate - 1)))
+		result$estimated.length <- electrophoresis$mobility.functions[[batch]][[ladder.well]](result$relative.distance)
 		result
-	}))
+	}))))
 	ggplot(ladder.data, aes(x = true.length, y = relative.distance, color = fluorescence)) +
 		geom_point() + 
 		geom_point(aes(x = length, y = relative.distance), data = subset(good.peaks, sample.observations == "Ladder"), color = line.color) + # overlay the reported peak positions
@@ -92,7 +106,7 @@ qc.mobility <- function(electrophoresis, n.simulate = 100, line.color = "red") {
 		scale_y_reverse() +
 		xlab("true length (bases)") +
 		ylab("distance migrated relative to markers") +
-		facet_wrap(~ well.number)
+		facet_wrap(~ batch * well.number)
 }
 
 qc.molarity <- function(electrophoresis, log = TRUE) {
@@ -100,17 +114,13 @@ qc.molarity <- function(electrophoresis, log = TRUE) {
 	peaks$estimated.molarity <- sapply(1:nrow(peaks), function(peak.index) sum(electrophoresis$data$delta.molarity[which(electrophoresis$data$peak == peak.index)])) # without the which() you get the NA's too
 	peaks <- subset(peaks, ! is.na(estimated.molarity)) # remove NA's so they don't affect the x-limits and throw a warning
 	
-	# create facet labeler
-	well.names <- as.character(electrophoresis$samples$sample.name)
-	names(well.names) <- electrophoresis$samples$well.number
-	
 	result <- ggplot(peaks, aes(molarity, estimated.molarity)) +
 		geom_point() +
 		geom_abline() +
 		geom_smooth(method = "lm") +
 		xlab("software-reported molarity (pM)") +
 		ylab("estimated molarity (pM)") +
-		facet_wrap(~ well.number, labeller = as_labeller(well.names))
+		facet_wrap(~ batch * well.number, labeller = labeller.electrophoresis(electrophoresis))
 	
 	if (log) result <- result + scale_x_log10() + scale_y_log10()
 	

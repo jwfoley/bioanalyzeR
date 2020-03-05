@@ -1,3 +1,22 @@
+# combine multiple electrophoresis objects
+rbind.electrophoresis <- function(...) {
+	arg.list <- list(...)
+	
+	# increment the peak indexes in the data so they'll match the new table
+	for (i in 1:(length(arg.list) - 1)) for (j in (i + 1):length(arg.list)) arg.list[[j]]$data$peak <- arg.list[[j]]$data$peak + nrow(arg.list[[i]]$peaks)
+	
+	structure(list(
+		data = do.call(rbind, lapply(arg.list, function(x) x$data)),
+		samples = do.call(rbind, lapply(arg.list, function(x) x$samples)),
+		wells.by.ladder = do.call(c, lapply(arg.list, function(x) x$wells.by.ladder)),
+		peaks = do.call(rbind, lapply(arg.list, function(x) x$peaks)),
+		regions = do.call(rbind, lapply(arg.list, function(x) x$regions)),
+		mobility.functions = do.call(c, lapply(arg.list, function(x) x$mobility.functions)),
+		mass.coefficients = do.call(c, lapply(arg.list, function(x) x$mass.coefficients))
+	), class = "electrophoresis")
+}
+
+
 # compute the sum of some variable under the electrophoresis curve between some boundaries, or within an annotated peak (or both)
 # to do it separately by sample you must provide this function a subset
 integrate.rawdata <- function(
