@@ -87,7 +87,7 @@ qplot.electrophoresis <- function(electrophoresis, # returns a ggplot object, wh
 		distance = xlab("distance migrated") + scale_x_reverse(),
 		relative.distance = xlab("distance migrated relative to markers") + scale_x_reverse()
 	)
-	if (y == "delta.molarity") this.plot <- this.plot + ylab("molarity (pM)")
+	if (y == "molarity") this.plot <- this.plot + ylab("molarity (pM)")
 	
 	this.plot
 }
@@ -115,7 +115,7 @@ qc.mobility <- function(electrophoresis, n.simulate = 100, line.color = "red") {
 
 qc.molarity <- function(electrophoresis, log = TRUE) {
 	peaks <- electrophoresis$peaks
-	peaks$estimated.molarity <- sapply(1:nrow(peaks), function(peak.index) sum(electrophoresis$data$delta.molarity[which(electrophoresis$data$peak == peak.index)])) # without the which() you get the NA's too
+	peaks$estimated.molarity <- sapply(1:nrow(peaks), function(peak.index) sum(electrophoresis$data$molarity[which(electrophoresis$data$peak == peak.index)])) # without the which() you get the NA's too
 	peaks <- subset(peaks, ! is.na(molarity) & ! is.na(estimated.molarity)) # remove NA's so they don't affect the x-limits and throw a warning
 	
 	result <- ggplot(peaks, aes(molarity, estimated.molarity)) +

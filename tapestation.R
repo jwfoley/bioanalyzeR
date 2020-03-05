@@ -187,9 +187,9 @@ read.tapestation <- function(xml.file, gel.image.file = NULL, fit = "spline") {
 			delta.fluorescence = c(NA, diff(result.this.well$fluorescence))
 		)
 	})))
-	result$delta.area <- (2 * result$fluorescence - result$delta.fluorescence) / 2 * result$delta.distance
-	result$delta.mass <- NA
-	result$delta.molarity <- NA
+	result$area <- (2 * result$fluorescence - result$delta.fluorescence) / 2 * result$delta.distance
+	result$mass <- NA
+	result$molarity <- NA
 	
 	# determine ladder scheme
 	ladder.wells <- as.character(subset(samples, sample.observations == "Ladder")$well.number)
@@ -275,12 +275,12 @@ read.tapestation <- function(xml.file, gel.image.file = NULL, fit = "spline") {
 		# preferably it would be scaled to each sample's own markers, but that's impossible because the markers are unreadable! and we can't even use their Agilent-reported molarity estimates or areas to scale relative to the ladder because those are always normalized to the upper marker! (which is often the one that's contaminated by sample anyway)
 		# so all we can do is normalize to the ladder's non-marker peaks, therefore each sample will be randomly off by some constant scaling factor, but at least molarity comparisons within a sample ought to be accurate
 		peaks.ladder$mass <- peaks.ladder$length * peaks.ladder$molarity
-		peaks.ladder$estimated.area <- sapply(1:nrow(peaks.ladder), function(i) sum(subset(result, well.number == ladder.well & distance >= peaks.ladder$lower.distance[i] & distance <= peaks.ladder$upper.distance[i])$delta.area))
+		peaks.ladder$estimated.area <- sapply(1:nrow(peaks.ladder), function(i) sum(subset(result, well.number == ladder.well & distance >= peaks.ladder$lower.distance[i] & distance <= peaks.ladder$upper.distance[i])$area))
 		fluorescence.model <- lm(mass ~ estimated.area - 1, data = peaks.ladder)
 		mass.coefficient <- fluorescence.model$coefficients[1]
 		mass.coefficients[[ladder.well]] <- mass.coefficient
-		result$delta.mass[which.rows] <- mass.coefficient * result$delta.area[which.rows]
-		result$delta.molarity[which.rows] <- result$delta.mass[which.rows] / result$length[which.rows]
+		result$mass[which.rows] <- mass.coefficient * result$area[which.rows]
+		result$molarity[which.rows] <- result$mass[which.rows] / result$length[which.rows]
 	}
 	
 	# convert inferred relative distances of regions back to raw distances
