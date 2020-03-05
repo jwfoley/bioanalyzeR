@@ -46,12 +46,12 @@ read.tapestation.gel.image <- function(gel.image.file) {
 	y.gel.end <- which(border.transition == 1)[1] - 1
 
 	# now finally extract the intensities!
-	result.rgb <- gel.image.rgb.reduced[y.gel.start:y.gel.end,,] # only the actual data values
+	result.rgb <- gel.image.rgb.reduced[y.gel.end:y.gel.start,,] # only the actual data values; reverse order so it goes bottom to top like peak calls and distance
 	fluorescence.matrix <- 1 - result.rgb[,,1] # only get red fluorescence because all channels are equal in the places we care about; subtract from 1 because it's a negative (red decreases in the protein gels too even though they're blue instead of black)
 	fluorescence.matrix[result.rgb[,,1] != result.rgb[,,2]] <- NA # set non-data pixels (obscured by marker band color) to NA; assume red channel always equals green channel, but not necessary blue because protein gels use blue
 	data.frame(
 		gel.lane =      rep(1:length(x.gel), each = nrow(fluorescence.matrix)),
-		distance =      1:nrow(fluorescence.matrix) / nrow(fluorescence.matrix),
+		distance =      nrow(fluorescence.matrix):1 / nrow(fluorescence.matrix),
 		fluorescence =  as.vector(fluorescence.matrix)
 	)
 }
