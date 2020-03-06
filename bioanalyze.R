@@ -3,117 +3,112 @@ library(openssl)
 
 read.bioanalyzer <- function(xml.files, fit = "spline") {
 	stopifnot(fit %in% c("linear", "spline", "regression"))
+	
+	batch <- sub("\\.xml$", "", basename(xml.file))
+	xml.root <- xmlRoot(xmlParse(xml.file))
+	
+	# read raw sample data
+	samples <- xml.root[["Chips"]][["Chip"]][["Files"]][["File"]][["Samples"]]
+	result.list <- xmlApply(samples, function(this.sample) {
+		if (xmlValue(this.sample[["HasData"]]) != "true") NULL else {
+			# read metadata
+			well.number <- as.integer(xmlValue(this.sample[["WellNumber"]]))
+			sample.name <- trimws(xmlValue(this.sample[["Name"]]))
+			sample.category <- trimws(xmlValue(this.sample[["Category"]]))
+			sample.observations <- trimws(xmlValue(this.sample[["Comment"]]))
 
-	results <- do.call(rbind, lapply(xml.files, function(xml.file) {
-	
-		xml.root <- xmlRoot(xmlParse(xml.file))
-		
-		assay.definitions <- xml.root[["Chips"]][["Chip"]][["AssayBody"]][["DAAssaySetpoints"]][["DAMAssayInfoMolecular"]]
-		ladder.definition <- data.frame(t(xmlSApply(assay.definitions[["LadderPeaks"]], function(standard) sapply(c("Size", "Concentration"), function (field) as.numeric(xmlValue(standard[[field]]))))), row.names = NULL)
-		marker.aligned.times <- sapply(c("VirtualLowerMarkerTime", "VirtualUpperMarkerTime"), function (field) as.numeric(xmlValue(assay.definitions[[field]])))
-		
-		# read raw sample data
-		samples <- xml.root[["Chips"]][["Chip"]][["Files"]][["File"]][["Samples"]]
-		result <- do.call(rbind, xmlApply(samples, function(this.sample) {
-			if (xmlValue(this.sample[["HasData"]]) != "true") NULL else {
-				signal.data <- this.sample[["DASignals"]][["DetectorChannels"]][[1]][["SignalData"]]
-				n.values <- as.integer(xmlValue(signal.data[["NumberOfSamples"]]))
-				raw.data <- data.frame(
-					well.number = as.integer(xmlValue(this.sample[["WellNumber"]])),
-					name = xmlValue(this.sample[["Name"]]),
-					time = as.numeric(xmlValue(signal.data[["XStart"]])) + as.numeric(xmlValue(signal.data[["XStep"]])) * (1:n.values - 1),
-					fluorescence = readBin(base64_decode(xmlValue(signal.data[["ProcessedSignal"]])), "numeric", size = 4, n = n.values, endian = "little"),
-					stringsAsFactors = F
-				)
-				
-				# align the observation times according to the markers in this sample
-				peaks.sample <- this.sample[["DAResultStructures"]][["DARIntegrator"]][["Channel"]][["PeaksMolecular"]]
-				which.lower.marker <- which(xmlSApply(peaks.sample, function(peak) xmlValue(peak[["Observations"]]) == "Lower Marker"))
-				stopifnot(length(which.lower.marker) == 1)
-				stopifnot(as.numeric(xmlValue(peaks.sample[[which.lower.marker]][["AlignedMigrationTime"]])) == marker.aligned.times[1])
-				which.upper.marker <- which(xmlSApply(peaks.sample, function(peak) xmlValue(peak[["Observations"]]) == "Upper Marker"))
-				stopifnot(length(which.upper.marker) == 1)
-				stopifnot(as.numeric(xmlValue(peaks.sample[[which.upper.marker]][["AlignedMigrationTime"]])) == marker.aligned.times[2])
-				alignment.coefficient <- diff(marker.aligned.times) / diff(sapply(c(which.lower.marker, which.upper.marker), function(i) as.numeric(xmlValue(peaks.sample[[i]][["MigrationTime"]]))))
-				alignment.offset <- marker.aligned.times[1] - alignment.coefficient * as.numeric(xmlValue(peaks.sample[[which.lower.marker]][["MigrationTime"]]))
-				raw.data$aligned.time <- raw.data$time * alignment.coefficient + alignment.offset
-				
-				raw.data
-			}
-		}))
-		
-		# analyze ladder
-		which.ladder <- which(xmlApply(samples, function(this.sample) xmlValue(this.sample[["Category"]])) == "Ladder")
-		stopifnot(length(which.ladder) == 1)
-		sample.ladder <- samples[[which.ladder]]
-		stopifnot(xmlValue(sample.ladder[["HasData"]]) == "true")
-		peaks.ladder <- data.frame(t(xmlSApply(sample.ladder[["DAResultStructures"]][["DARIntegrator"]][["Channel"]][["PeaksMolecular"]], function(peak) sapply(c("AlignedMigrationTime", "Area", "TimeCorrectedArea", "FragmentSize", "Molarity", "Concentration", "StartTime", "EndTime", "AlignedStartTime", "AlignedEndTime"), function(field) as.numeric(xmlValue(peak[[field]]))))), row.names = NULL)
-		stopifnot(all.equal(ladder.definition, peaks.ladder[,c("FragmentSize", "Concentration")], check.names = F))
-		
-		# fit standard curve for molecule length
-		# do this with aligned times so it's effectively recalibrated for each sample's markers
-		if (fit == "interpolate") {
-			warning("linear interpolation gives ugly results for molarity estimation")
-			standard.curve.function <- approxfun(peaks.ladder$AlignedMigrationTime, peaks.ladder$FragmentSize)
-		} else if (fit == "spline") {
-			standard.curve.function <- splinefun(peaks.ladder$AlignedMigrationTime, peaks.ladder$FragmentSize, method = "natural")
-		} else if (fit == "regression") {
-			mobility.model <- lm(1/AlignedMigrationTime ~ log(FragmentSize), data = peaks.ladder)
-			standard.curve.function <- function(time) exp((1 / time - mobility.model$coefficients[1]) / mobility.model$coefficients[2])
-		}
-		result$length <- sapply(result$aligned.time, function(x) if (x < marker.aligned.times[1] || x > marker.aligned.times[2]) NA else  standard.curve.function(x)) # avoid extrapolating
-		
-		# convert to molarity
-		peaks.ladder$mass <- peaks.ladder$FragmentSize * peaks.ladder$Molarity
-		peaks.ladder$mass.times.length <- peaks.ladder$mass * peaks.ladder$FragmentSize
-		result <- cbind(result, do.call(rbind, lapply(unique(result$well.number), function(this.well) {
-			result.this.well <- subset(result, well.number == this.well)
-			data.frame(
-				delta.aligned.time = c(NA, diff(result.this.well$aligned.time)),
-				delta.fluorescence = c(NA, diff(result.this.well$fluorescence))
+			# read peaks
+			peaks.raw <- xmlToDataFrame(this.sample[["DAResultStructures"]][["DARIntegrator"]][["Channel"]][["PeaksMolecular"]], stringsAsFactors = F)
+			peaks <- data.frame(
+				peak.observations =   trimws(peaks.raw$Observations),
+				length =              as.numeric(peaks.raw$FragmentSize),
+				time =                as.numeric(peaks.raw$MigrationTime),
+				aligned.time =        as.numeric(peaks.raw$AlignedMigrationTime),
+				lower.time =          as.numeric(peaks.raw$StartTime),
+				upper.time =          as.numeric(peaks.raw$EndTime),
+				lower.aligned.time =  as.numeric(peaks.raw$AlignedStartTime),
+				upper.aligned.time =  as.numeric(peaks.raw$AlignedEndTime),
+				area =                as.numeric(peaks.raw$Area),
+				molarity =            as.numeric(peaks.raw$Molarity),
+				stringsAsFactors =    F
 			)
+		
+			# read signal
+			signal.data <- this.sample[["DASignals"]][["DetectorChannels"]][[1]][["SignalData"]]
+			n.values <- as.integer(xmlValue(signal.data[["NumberOfSamples"]]))
+			raw.data <- data.frame(
+				time = as.numeric(xmlValue(signal.data[["XStart"]])) + as.numeric(xmlValue(signal.data[["XStep"]])) * (1:n.values - 1),
+				fluorescence = readBin(base64_decode(xmlValue(signal.data[["ProcessedSignal"]])), "numeric", size = 4, n = n.values, endian = "little"),
+				stringsAsFactors = F
+			)
+			
+			# align the observation times according to the markers in this sample		
+			which.lower.marker <- which(peaks$peak.observations == "Lower Marker")
+			stopifnot(length(which.lower.marker) == 1)
+			which.upper.marker <- which(peaks$peak.observations == "Upper Marker")
+			stopifnot(length(which.upper.marker) == 1)
+			alignment.coefficient <- diff(peaks$aligned.time[c(which.lower.marker, which.upper.marker)]) / diff(peaks$time[c(which.lower.marker, which.upper.marker)])
+			alignment.offset <- peaks$aligned.time[which.lower.marker] - alignment.coefficient * peaks$time[which.lower.marker]
+			raw.data$aligned.time <- raw.data$time * alignment.coefficient + alignment.offset
+			
+			list(
+				data = data.frame(batch, well.number, sample.name, sample.observations, raw.data, stringsAsFactors = F),
+				samples = data.frame(batch, well.number, sample.name, sample.category, sample.observations, stringsAsFactors = F),
+				peaks = data.frame(batch, well.number, sample.name, sample.observations, peaks, stringsAsFactors = F)
+			)
+		}
+	})
+	result <- lapply(c("data", "samples", "peaks"), function(item) do.call(rbind, c(lapply(result.list, function(x) x[[item]]), make.row.names = F)))
+	names(result) <- c("data", "samples", "peaks")
+	
+	# convert sample metadata into factors, ensuring all frames have the same levels and the levels are in the observed order
+	for (field in colnames(result$samples)) {
+		result$samples[,field] <- factor(result$samples[,field], levels = unique(result$samples[,field]))
+		if (field %in% names(result$peaks)) result$peaks[,field] <- factor(result$peaks[,field], levels = levels(result$samples[,field]))
+	}
+	# convert other text into factors without those restrictions
+	result$peaks[,"peak.observations"] <- factor(result$peaks[,"peak.observations"])
+	
+	# analyze ladder
+	which.ladder <- which(result$samples$sample.category == "Ladder")
+	stopifnot(length(which.ladder) == 1)
+	peaks.ladder <- subset(result$peaks, well.number == result$samples$well.number[which.ladder])
+	
+	# fit standard curve for molecule length
+	# do this with aligned times so it's effectively recalibrated for each sample's markers
+	if (fit == "interpolate") {
+		warning("linear interpolation gives ugly results for molarity estimation")
+		standard.curve.function <- approxfun(peaks.ladder$aligned.time, peaks.ladder$length)
+	} else if (fit == "spline") {
+		standard.curve.function <- splinefun(peaks.ladder$aligned.time, peaks.ladder$length, method = "natural")
+	} else if (fit == "regression") {
+		mobility.model <- lm(1/aligned.time ~ log(length), data = peaks.ladder)
+		standard.curve.function <- function(aligned.time) exp((1 / aligned.time - mobility.model$coefficients[1]) / mobility.model$coefficients[2])
+	}
+	result$data$length <- sapply(result$data$aligned.time, function(x) if (x < marker.aligned.times[1] || x > marker.aligned.times[2]) NA else standard.curve.function(x)) # avoid extrapolating
+	
+	# convert to molarity
+	peaks.ladder$normalized.area <- peaks.ladder$area / peaks.ladder$length / peaks.ladder$time
+	fluorescence.coefficient <- lm(molarity ~ normalized.area - 1, peaks.ladder)$coefficients
+	data.calibration <- cbind(result$data, do.call(rbind, lapply(result$samples$well.number, function(this.well) {
+		result.this.well <- subset(result$data, well.number == this.well)
+		data.frame(
+			delta.fluorescence = c(NA, diff(result.this.well$fluorescence)),
+			delta.aligned.time = c(NA, diff(result.this.well$aligned.time)),
+			delta.length = c(NA, diff(result.this.well$length))
+		)
 		})))
-		result$delta.area <- (2 * result$fluorescence - result$delta.fluorescence) / 2 * result$delta.aligned.time
-		peaks.ladder$estimated.corrected.area <- c(NA, sapply(2:(nrow(peaks.ladder) - 1), function(i) {
-			sum(apply(subset(result, well.number == which.ladder & aligned.time >= peaks.ladder$AlignedStartTime[i] & aligned.time <= peaks.ladder$AlignedEndTime[i]), 1, function(row) as.numeric(row["delta.area"]) / as.numeric(row["aligned.time"]))) # I don't know why they stop being numerics; I'm trying to compute my own TimeCorrectedArea as the sum of delta corrected areas, but that doesn't seem to be how Agilent does it and it's not working well, so maybe don't do that
-		}), NA) # skip lower and upper markers because they're done differently
-		peaks.ladder$uncorrected.area <- peaks.ladder$TimeCorrectedArea * peaks.ladder$AlignedMigrationTime # for some reason ladder peaks don't report Area (it's the same as TimeCorrectedArea, which is Area / AlignedMigrationTime in other samples) so we have to recalculate it
-		
-		
-		
-#		
-#	
-#				# fit standard curve for molecule length (done once per sample because that's how the results are provided, even though it should be the same standard curve for every sample)
-#				ladder.peaks <- this.sample[["DAResultStructures"]][["DARStandardCurve"]][[1]][["LadderPeaks"]]
-#				stopifnot(all.equal(xmlSApply(ladder.peaks, function(peak) as.numeric(xmlValue(peak[["FragmentSize"]]))), ladder$length, check.names = F)) # verify it matches the known ladder
-#				this.ladder <- cbind(ladder, data.frame(t(xmlSApply(ladder.peaks, function(peak) c(as.numeric(xmlValue(peak[["MigrationTime"]])), as.numeric(xmlValue(peak[["Area"]]))))), row.names = NULL))
-#				names(this.ladder)[ncol(ladder) + 1:2] <- c("time", "area")
-#				
-#				if (fit == "linear") {
-#					standard.curve.function <- approxfun(this.ladder$time, this.ladder$length)		
-#				} else if (fit == "spline") {
-#					standard.curve.function <- splinefun(this.ladder$time, this.ladder$length, method = "natural")
-#				}
-#				result$length <- standard.curve.function(result$time)
-#				
-#				# convert to molarity
-#				this.ladder$normalized.fluorescence <- this.ladder$area / this.ladder$length / this.ladder$time
-#				fluorescence.coefficient <- lm(molarity ~ normalized.fluorescence - 1, this.ladder)$coefficients
-#				length.derivative <- diff(result$length) / diff(result$time)
-#				result$molarity <- result$fluorescence * fluorescence.coefficient / result$time / c(NA, length.derivative) / result$length
-#			
-#				result
-#			}
-#		}))
-		
-		cbind(batch = sub("\\.xml$", "", basename(xml.file)), result)
-	}))
+	data.calibration$delta.area <- (2 * data.calibration$fluorescence - data.calibration$delta.fluorescence) / 2 * data.calibration$delta.aligned.time
+	result$data$molarity <- data.calibration$delta.area * fluorescence.coefficient / data.calibration$aligned.time / data.calibration$delta.length * data.calibration$delta.aligned.time / data.calibration$length
 	
-	# format output nicely
-	rownames(results) <- NULL
-	results$batch <- factor(results$batch, levels = unique(results$batch)) # make batches into a factor that keeps them in the observed order
-	results$name <- factor(results$name, levels = unique(results$name)) # make names into a factor that keeps them in the observed order
-	
-structure(list(data = result, peaks = NULL, regions = NULL), class = "electrophoresis")
+	structure(list(
+		data = result$data,
+		samples = result$samples,
+		wells.by.ladder = NULL,
+		peaks = result$peaks,
+		regions = NULL,
+		mobility.functions = list(standard.curve.function),
+		mass.coefficients = list(fluorescence.coefficient)
+	), class = "electrophoresis")
 }
 
