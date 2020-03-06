@@ -74,31 +74,37 @@ read.tapestation.xml <- function(xml.file) {
 		reagent.id <- xmlValue(sample.xml[["ScreenTapeID"]])
 		
 		suppressWarnings( # will throw warnings if missing values are coerced to NA but we can live with that
-			peaks <- if (length(xmlChildren(sample.xml[["Peaks"]])) == 0) NULL else do.call(rbind, c(xmlApply(sample.xml[["Peaks"]], function(peak.xml) data.frame(
-				peak.observations =  trimws(xmlValue(peak.xml[["Observations"]])),
-				peak.comment =       trimws(xmlValue(peak.xml[["Comment"]])),
-				length =             as.integer(xmlValue(peak.xml[["Size"]])),
-				distance =           as.numeric(xmlValue(peak.xml[["RunDistance"]])) / 100,
-				lower.distance =     as.numeric(xmlValue(peak.xml[["FromPercent"]])) / 100,
-				upper.distance =     as.numeric(xmlValue(peak.xml[["ToPercent"]])) / 100, 
-				area =               as.numeric(xmlValue(peak.xml[["Area"]])),
-				molarity =           as.numeric(xmlValue(peak.xml[["Molarity"]])),
-				stringsAsFactors =   F
-			)), make.row.names = F))
+			peaks <- if (length(xmlChildren(sample.xml[["Peaks"]])) == 0) NULL else {
+				peaks.raw <- xmlToDataFrame(sample.xml[["Peaks"]], stringsAsFactors = F)
+				data.frame(
+					peak.observations =  trimws(peaks.raw$Observations),
+					peak.comment =       trimws(peaks.raw$Comment),
+					length =             as.integer(peaks.raw$Size),
+					distance =           as.numeric(peaks.raw$RunDistance) / 100,
+					lower.distance =     as.numeric(peaks.raw$FromPercent) / 100,
+					upper.distance =     as.numeric(peaks.raw$ToPercent) / 100, 
+					area =               as.numeric(peaks.raw$Area),
+					molarity =           as.numeric(peaks.raw$Molarity),
+					stringsAsFactors =   F
+				)
+			}
 		)
 		
 		suppressWarnings( # will throw warnings if missing values are coerced to NA but we can live with that
-			regions <- if (length(xmlChildren(sample.xml[["Regions"]])) == 0) NULL else do.call(rbind, c(xmlApply(sample.xml[["Regions"]], function(region.xml) data.frame(
-				region.comment =       trimws(xmlValue(region.xml[["Comment"]])),
-				lower.length =         as.integer(xmlValue(region.xml[["From"]])),
-				upper.length =         as.integer(xmlValue(region.xml[["To"]])),
-				average.length =       as.integer(xmlValue(region.xml[["AverageSize"]])),
-				area =                 as.numeric(xmlValue(region.xml[["Area"]])),
-				concentration =        as.numeric(xmlValue(region.xml[["Concentration"]])),
-				molarity =             as.numeric(xmlValue(region.xml[["Molarity"]])),
-				proportion.of.total =  as.numeric(xmlValue(region.xml[["PercentOfTotal"]])) / 100,
-				stringsAsFactors =     F
-			)), make.row.names = F))
+			regions <- if (length(xmlChildren(sample.xml[["Regions"]])) == 0) NULL else {
+				regions.raw <- xmlToDataFrame(sample.xml[["Regions"]], stringsAsFactors = F)
+				data.frame(
+					region.comment =       trimws(regions.raw$Comment),
+					lower.length =         as.integer(regions.raw$From),
+					upper.length =         as.integer(regions.raw$To),
+					average.length =       as.integer(regions.raw$AverageSize),
+					area =                 as.numeric(regions.raw$Area),
+					concentration =        as.numeric(regions.raw$Concentration),
+					molarity =             as.numeric(regions.raw$Molarity),
+					proportion.of.total =  as.numeric(regions.raw$PercentOfTotal) / 100,
+					stringsAsFactors =     F
+				)
+			}
 		)
 		
 		list(
