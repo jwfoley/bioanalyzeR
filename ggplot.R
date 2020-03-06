@@ -62,12 +62,12 @@ qplot.electrophoresis <- function(electrophoresis, # returns a ggplot object, wh
 		line = geom_line(if (facet)
 			aes_(x = as.name(x), y = as.name(y)) 
 		else 
-			aes_(x = as.name(x), y = as.name(y), color = as.name("name"))
+			aes_(x = as.name(x), y = as.name(y), color = as.name("sample.name"))
 		),
 		area = if (facet)
 			geom_area(aes_(x = as.name(x), y = as.name(y))) 
 		else
-			geom_area(aes_(x = as.name(x), y = as.name(y), fill = as.name("name")), alpha = area.alpha)
+			geom_area(aes_(x = as.name(x), y = as.name(y), fill = as.name("sample.name")), alpha = area.alpha)
 	)
 	
 	# add peaks
