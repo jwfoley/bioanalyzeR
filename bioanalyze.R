@@ -64,6 +64,7 @@ read.bioanalyzer <- function(xml.files, fit = "spline") {
 	# convert sample metadata into factors, ensuring all frames have the same levels and the levels are in the observed order
 	for (field in colnames(result$samples)) {
 		result$samples[,field] <- factor(result$samples[,field], levels = unique(result$samples[,field]))
+		if (field %in% names(result$data)) result$data[,field] <- factor(result$data[,field], levels = levels(result$samples[,field]))
 		if (field %in% names(result$peaks)) result$peaks[,field] <- factor(result$peaks[,field], levels = levels(result$samples[,field]))
 	}
 	# convert other text into factors without those restrictions
