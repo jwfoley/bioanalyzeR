@@ -1,7 +1,7 @@
 library(XML)
 library(openssl)
 
-read.bioanalyzer <- function(xml.files, fit = "spline") {
+read.bioanalyzer <- function(xml.file, fit = "spline") {
 	stopifnot(fit %in% c("linear", "spline", "regression"))
 	
 	batch <- sub("\\.xml$", "", basename(xml.file))
@@ -86,6 +86,7 @@ read.bioanalyzer <- function(xml.files, fit = "spline") {
 		mobility.model <- lm(1/aligned.time ~ log(length), data = peaks.ladder)
 		standard.curve.function <- function(aligned.time) exp((1 / aligned.time - mobility.model$coefficients[1]) / mobility.model$coefficients[2])
 	}
+	marker.aligned.times <- sapply(c("VirtualLowerMarkerTime", "VirtualUpperMarkerTime"), function (field) as.numeric(xmlValue(xml.root[["Chips"]][["Chip"]][["AssayBody"]][["DAAssaySetpoints"]][["DAMAssayInfoMolecular"]][[field]])))
 	result$data$length <- sapply(result$data$aligned.time, function(x) if (x < marker.aligned.times[1] || x > marker.aligned.times[2]) NA else standard.curve.function(x)) # avoid extrapolating
 	
 	# convert to molarity
