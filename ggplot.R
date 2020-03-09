@@ -1,5 +1,15 @@
 library(ggplot2)
 
+axis.labels <- c(
+	length =             "length (bases)",
+	time =               "time (s)",
+	aligned.time =       "aligned time relative to markers (s)",
+	distance =           "distance migrated",
+	relative.distance =  "distance migrated relative to markers",
+	fluorescence =       "fluorescence",
+	molarity =           "molarity (pM)"
+)
+
 # ggplot2 labeller function to take batch and well.number factors (expecting ~ batch * well.number) and return facet labels that are the sample names
 # batch names are not included in the labels
 labeller.electrophoresis <- function(electrophoresis) function(factor.frame) list(
@@ -27,7 +37,7 @@ qplot.electrophoresis <- function(electrophoresis, # returns a ggplot object, wh
 	if (is.null(log)) log <- if (x == "length") "x" else NA
 	
 	# remove ladders	
-	if (! include.ladder) electrophoresis$data <- subset(electrophoresis$data, sample.observations != "Ladder")
+	if (! include.ladder) electrophoresis$data <- subset(electrophoresis$data, ! is.ladder)
 	
 	# remove data in unusable ranges
 	electrophoresis$data <- electrophoresis$data[! is.na(electrophoresis$data[[x]]) & ! is.na(electrophoresis$data[[y]]),]
@@ -81,36 +91,39 @@ qplot.electrophoresis <- function(electrophoresis, # returns a ggplot object, wh
 	if (log %in% c("y", "xy")) this.plot <- this.plot + scale_y_log10()
 	
 	# set labels and other settings for specific x & y variables
-	this.plot <- this.plot + switch(x,
-		length = xlab("length (bases)"),
-		time = xlab("time (s)"),
-		distance = xlab("distance migrated") + scale_x_reverse(),
-		relative.distance = xlab("distance migrated relative to markers") + scale_x_reverse()
-	)
-	if (y == "molarity") this.plot <- this.plot + ylab("molarity (pM)")
+	this.plot <- this.plot + xlab(axis.labels[x]) + ylab(axis.labels[y])
+	if (x %in% c("distance", "relative.distance")) this.plot <- this.plot + scale_x_reverse()
 	
 	this.plot
 }
 
 qc.mobility <- function(electrophoresis, n.simulate = 100, line.color = "red") { # returns a ggplot object, which can be extended by adding more features
-	ladder.data <- subset(electrophoresis$data, sample.observations == "Ladder" & ! is.na(peak))
+	ladder.data <- subset(electrophoresis$data, is.ladder & ! is.na(peak))
 	ladder.data$true.length <- electrophoresis$peaks$length[ladder.data$peak]
 	good.peaks <- subset(electrophoresis$peaks, ! is.na(length))
+	
+	# determine which kind of data we have
+	possible.x.names <- c("aligned.time", "relative.distance")
+	x.name <- possible.x.names[possible.x.names %in% colnames(electrophoresis$data)]
+	stopifnot(length(x.name) == 1)	
+	
 	simulated.data <- do.call(rbind, lapply(names(electrophoresis$wells.by.ladder), function(batch) do.call(rbind, lapply(names(electrophoresis$wells.by.ladder[[batch]]), function(ladder.well) {
-		relative.distance.range <- range(subset(good.peaks, batch == batch & well.number == ladder.well)$relative.distance)
-		relative.distance.diff <- diff(relative.distance.range)
-		result <- data.frame(batch, well.number = ladder.well, relative.distance = relative.distance.range[1] + relative.distance.diff * (0:(n.simulate - 1) / (n.simulate - 1)))
-		result$estimated.length <- electrophoresis$mobility.functions[[batch]][[ladder.well]](result$relative.distance)
+		x.range <- range(subset(good.peaks, batch == batch & well.number == ladder.well)[[x.name]])
+		x.diff <- diff(x.range)
+		result <- data.frame(batch, well.number = ladder.well, x = x.range[1] + x.diff * (0:(n.simulate - 1) / (n.simulate - 1)))
+		result$estimated.length <- electrophoresis$mobility.functions[[batch]][[ladder.well]](result$x)
 		result
 	}))))
-	ggplot(ladder.data, aes(x = true.length, y = relative.distance, color = fluorescence)) +
+	this.plot <- ggplot(ladder.data, aes_(x = as.name("true.length"), y = as.name(x.name), color = as.name("fluorescence"))) +
 		geom_point() + 
-		geom_point(aes(x = length, y = relative.distance), data = subset(good.peaks, sample.observations == "Ladder"), color = line.color) + # overlay the reported peak positions
-		geom_line(aes(x = estimated.length, y = relative.distance), data = simulated.data, col = line.color) + # overlay the simulated data from the mobility function
-		scale_y_reverse() +
+		geom_point(aes_(x = as.name("length"), y = as.name(x.name)), data = subset(good.peaks, is.ladder), color = line.color) + # overlay the reported peak positions
+		geom_line(aes(x = estimated.length, y = x), data = simulated.data, col = line.color) + # overlay the simulated data from the mobility function
 		xlab("true length (bases)") +
-		ylab("distance migrated relative to markers") +
+		ylab(axis.labels[x.name]) +
 		facet_wrap(~ batch * well.number)
+	if (x.name == "relative.distance") this.plot <- this.plot + scale_y_reverse()
+	
+	this.plot
 }
 
 qc.molarity <- function(electrophoresis, log = TRUE) {

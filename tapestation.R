@@ -64,12 +64,11 @@ read.tapestation.xml <- function(xml.file) {
 		sample.name <- trimws(xmlValue(sample.xml[["Comment"]]))
 		if (sample.name == "") sample.name <- well.number
 		sample.observations <- trimws(xmlValue(sample.xml[["Observations"]]))
+		is.ladder <- sample.observations == "Ladder"
 		if (sample.observations == "Marker(s) not detected") {
 			warning(paste(sample.observations, "for well", well.number, sample.name))
 			return(NULL)
 		}
-		well.row <- gsub("[^A-HL]", "", well.number) # assumes all row names are in A through H, or L for ladder
-		well.col <- as.integer(gsub("[^[:digit:]]", "", well.number)) # assumes all column names are numbers!
 		
 		reagent.id <- xmlValue(sample.xml[["ScreenTapeID"]])
 		
@@ -108,9 +107,9 @@ read.tapestation.xml <- function(xml.file) {
 		)
 		
 		list(
-			sample.info = data.frame(batch, well.number, well.row, well.col, sample.name, reagent.id, sample.observations, stringsAsFactors = F),
-			peaks = if (is.null(peaks)) NULL else data.frame(batch, well.number, well.row, well.col, sample.name, reagent.id, sample.observations, peaks, stringsAsFactors = F),
-			regions = if (is.null(regions)) NULL else data.frame(batch, well.number, well.row, well.col, sample.name, reagent.id, sample.observations, regions, stringsAsFactors = F)
+			sample.info = data.frame(batch, well.number, sample.name, reagent.id, is.ladder, sample.observations, stringsAsFactors = F),
+			peaks = if (is.null(peaks)) NULL else data.frame(batch, well.number, sample.name, reagent.id, is.ladder, sample.observations, peaks, stringsAsFactors = F),
+			regions = if (is.null(regions)) NULL else data.frame(batch, well.number, sample.name, reagent.id, is.ladder, sample.observations, regions, stringsAsFactors = F)
 		)
 	})
 	
@@ -123,7 +122,7 @@ read.tapestation.xml <- function(xml.file) {
 	)
 	
 	# convert sample metadata into factors, ensuring all frames have the same levels and the levels are in the observed order
-	for (field in colnames(result$samples)) {
+	for (field in c("batch", "well.number", "sample.name", "reagent.id", "sample.observations")) {
 		result$samples[,field] <- factor(result$samples[,field], levels = unique(result$samples[,field]))
 		result$peaks[,field] <- factor(result$peaks[,field], levels = levels(result$samples[,field]))
 		result$regions[,field] <- factor(result$regions[,field], levels = levels(result$samples[,field]))
@@ -198,7 +197,7 @@ read.tapestation <- function(xml.file, gel.image.file = NULL, fit = "spline") {
 	result$molarity <- NA
 	
 	# determine ladder scheme
-	ladder.wells <- as.character(subset(samples, sample.observations == "Ladder")$well.number)
+	ladder.wells <- as.character(subset(samples, is.ladder)$well.number)
 	wells.by.ladder <- list()
 	rows.by.ladder <- list()
 	

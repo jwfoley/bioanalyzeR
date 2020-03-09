@@ -14,7 +14,7 @@ read.bioanalyzer <- function(xml.file, fit = "spline") {
 			# read metadata
 			well.number <- as.integer(xmlValue(this.sample[["WellNumber"]]))
 			sample.name <- trimws(xmlValue(this.sample[["Name"]]))
-			sample.category <- trimws(xmlValue(this.sample[["Category"]]))
+			is.ladder <- (trimws(xmlValue(this.sample[["Category"]])) == "Ladder")
 			sample.observations <- trimws(xmlValue(this.sample[["Comment"]]))
 
 			# read peaks
@@ -52,9 +52,9 @@ read.bioanalyzer <- function(xml.file, fit = "spline") {
 			raw.data$aligned.time <- raw.data$time * alignment.coefficient + alignment.offset
 			
 			list(
-				data = data.frame(batch, well.number, sample.name, sample.observations, raw.data, stringsAsFactors = F),
-				samples = data.frame(batch, well.number, sample.name, sample.category, sample.observations, stringsAsFactors = F),
-				peaks = data.frame(batch, well.number, sample.name, sample.observations, peaks, stringsAsFactors = F)
+				data = data.frame(batch, well.number, sample.name, is.ladder, sample.observations, raw.data, stringsAsFactors = F),
+				samples = data.frame(batch, well.number, sample.name, is.ladder, sample.observations, stringsAsFactors = F),
+				peaks = data.frame(batch, well.number, sample.name, is.ladder, sample.observations, peaks, stringsAsFactors = F)
 			)
 		}
 	})
@@ -62,7 +62,7 @@ read.bioanalyzer <- function(xml.file, fit = "spline") {
 	names(result) <- c("data", "samples", "peaks")
 	
 	# convert sample metadata into factors, ensuring all frames have the same levels and the levels are in the observed order
-	for (field in colnames(result$samples)) {
+	for (field in c("batch", "well.number", "sample.name", "sample.observations")) {
 		result$samples[,field] <- factor(result$samples[,field], levels = unique(result$samples[,field]))
 		if (field %in% names(result$data)) result$data[,field] <- factor(result$data[,field], levels = levels(result$samples[,field]))
 		if (field %in% names(result$peaks)) result$peaks[,field] <- factor(result$peaks[,field], levels = levels(result$samples[,field]))
@@ -71,7 +71,7 @@ read.bioanalyzer <- function(xml.file, fit = "spline") {
 	result$peaks[,"peak.observations"] <- factor(result$peaks[,"peak.observations"])
 	
 	# analyze ladder
-	which.ladder <- which(result$samples$sample.category == "Ladder")
+	which.ladder <- which(result$samples$is.ladder)
 	stopifnot(length(which.ladder) == 1)
 	peaks.ladder <- subset(result$peaks, well.number == result$samples$well.number[which.ladder])
 	
@@ -113,13 +113,18 @@ read.bioanalyzer <- function(xml.file, fit = "spline") {
 	names(wells.by.ladder) <- batch
 	names(wells.by.ladder[[1]]) <- result$samples$well.number[which.ladder]
 	
+	# construct mobility.functions
+	mobility.functions <- list(list(standard.curve.function))
+	names(mobility.functions) <- batch
+	names(mobility.functions[[1]]) <- result$samples$well.number[which.ladder]
+	
 	structure(list(
 		data = result$data,
 		samples = result$samples,
 		wells.by.ladder = wells.by.ladder,
 		peaks = result$peaks,
 		regions = NULL,
-		mobility.functions = list(standard.curve.function),
+		mobility.functions = mobility.functions,
 		mass.coefficients = list(fluorescence.coefficient)
 	), class = "electrophoresis")
 }
