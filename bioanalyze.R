@@ -103,10 +103,20 @@ read.bioanalyzer <- function(xml.file, fit = "spline") {
 	data.calibration$delta.area <- (2 * data.calibration$fluorescence - data.calibration$delta.fluorescence) / 2 * data.calibration$delta.aligned.time
 	result$data$molarity <- data.calibration$delta.area * fluorescence.coefficient / data.calibration$aligned.time / data.calibration$delta.length * data.calibration$delta.aligned.time / data.calibration$length
 	
+	# annotate which peak each data point is in, if any
+	# WARNING: if peaks overlap, this will overwrite and each point will only be mapped to the last-occuring one!
+	result$data$peak <- NA
+	for (i in 1:nrow(result$peaks)) result$data$peak[result$data$well.number == result$peaks$well.number[i] & result$data$aligned.time >= result$peaks$lower.aligned.time[i] & result$data$aligned.time <= result$peaks$upper.aligned.time[i]] <- i
+	
+	# construct well.by.ladder (analogous to TapeStation but not as useful here)
+	wells.by.ladder <- list(list(result$samples$well.number))
+	names(wells.by.ladder) <- batch
+	names(wells.by.ladder[[1]]) <- result$samples$well.number[which.ladder]
+	
 	structure(list(
 		data = result$data,
 		samples = result$samples,
-		wells.by.ladder = NULL,
+		wells.by.ladder = wells.by.ladder,
 		peaks = result$peaks,
 		regions = NULL,
 		mobility.functions = list(standard.curve.function),
