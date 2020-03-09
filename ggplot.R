@@ -97,7 +97,7 @@ qplot.electrophoresis <- function(electrophoresis, # returns a ggplot object, wh
 	this.plot
 }
 
-qc.mobility <- function(electrophoresis, n.simulate = 100, line.color = "red") { # returns a ggplot object, which can be extended by adding more features
+qc.stdcrv <- function(electrophoresis, n.simulate = 100, line.color = "red") { # returns a ggplot object, which can be extended by adding more features
 	ladder.data <- subset(electrophoresis$data, is.ladder & ! is.na(peak))
 	ladder.data$true.length <- electrophoresis$peaks$length[ladder.data$peak]
 	good.peaks <- subset(electrophoresis$peaks, ! is.na(length))
@@ -126,12 +126,36 @@ qc.mobility <- function(electrophoresis, n.simulate = 100, line.color = "red") {
 	this.plot
 }
 
+qc.mobility <- function(electrophoresis, log = TRUE) {
+	possible.x.names <- c("aligned.time", "relative.distance")
+	x.name <- possible.x.names[possible.x.names %in% colnames(electrophoresis$data)]
+	stopifnot(length(x.name) == 1)	
+	
+	peaks <- cbind(electrophoresis$peaks, estimated.length = NA)
+	for (batch in names(electrophoresis$wells.by.ladder)) for (ladder.well in names(electrophoresis$wells.by.ladder[[batch]])) {
+		which.peaks <- peaks$well.number %in% electrophoresis$wells.by.ladder[[batch]][[ladder.well]]
+		peaks$estimated.length[which.peaks] <- electrophoresis$mobility.functions[[batch]][[ladder.well]](peaks[[x.name]][which.peaks])
+	}
+
+	result <- ggplot(peaks, aes(length, estimated.length, color = peak.observations)) +
+		geom_point() +
+		geom_abline() +
+		geom_smooth(method = "lm") +
+		xlab("software-reported length (bases)") +
+		ylab("estimated length (bases)") +
+		facet_wrap(~ batch * well.number, labeller = labeller.electrophoresis(electrophoresis))
+	
+	if (log) result <- result + scale_x_log10() + scale_y_log10()
+	
+	result
+}
+
 qc.molarity <- function(electrophoresis, log = TRUE) {
 	peaks <- electrophoresis$peaks
 	peaks$estimated.molarity <- sapply(1:nrow(peaks), function(peak.index) sum(electrophoresis$data$molarity[which(electrophoresis$data$peak == peak.index)])) # without the which() you get the NA's too
 	peaks <- subset(peaks, ! is.na(molarity) & ! is.na(estimated.molarity)) # remove NA's so they don't affect the x-limits and throw a warning
 	
-	result <- ggplot(peaks, aes(molarity, estimated.molarity)) +
+	result <- ggplot(peaks, aes(molarity, estimated.molarity, color = peak.observations)) +
 		geom_point() +
 		geom_abline() +
 		geom_smooth(method = "lm") +
