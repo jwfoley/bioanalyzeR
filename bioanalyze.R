@@ -8,8 +8,7 @@ read.bioanalyzer <- function(xml.file, fit = "spline") {
 	xml.root <- xmlRoot(xmlParse(xml.file))
 	
 	# read raw sample data
-	samples <- xml.root[["Chips"]][["Chip"]][["Files"]][["File"]][["Samples"]]
-	result.list <- xmlApply(samples, function(this.sample) {
+	result.list <- xmlApply(xml.root[["Chips"]][["Chip"]][["Files"]][["File"]][["Samples"]], function(this.sample) {
 		if (xmlValue(this.sample[["HasData"]]) != "true") NULL else {
 			# read metadata
 			well.number <- as.integer(xmlValue(this.sample[["WellNumber"]]))
@@ -30,6 +29,7 @@ read.bioanalyzer <- function(xml.file, fit = "spline") {
 				upper.aligned.time =  as.numeric(peaks.raw$AlignedEndTime),
 				area =                as.numeric(peaks.raw$Area),
 				molarity =            as.numeric(peaks.raw$Molarity),
+				timecorrectedarea =     as.numeric(peaks.raw$TimeCorrectedArea), # test
 				stringsAsFactors =    F
 			)
 		
@@ -89,24 +89,38 @@ read.bioanalyzer <- function(xml.file, fit = "spline") {
 	marker.aligned.times <- sapply(c("VirtualLowerMarkerTime", "VirtualUpperMarkerTime"), function (field) as.numeric(xmlValue(xml.root[["Chips"]][["Chip"]][["AssayBody"]][["DAAssaySetpoints"]][["DAMAssayInfoMolecular"]][[field]])))
 	result$data$length <- sapply(result$data$aligned.time, function(x) if (x < marker.aligned.times[1] || x > marker.aligned.times[2]) NA else standard.curve.function(x)) # avoid extrapolating
 	
-	# convert to molarity
-	peaks.ladder$normalized.area <- peaks.ladder$area / peaks.ladder$length / peaks.ladder$time
-	fluorescence.coefficient <- lm(molarity ~ normalized.area - 1, peaks.ladder)$coefficients
-	data.calibration <- cbind(result$data, do.call(rbind, lapply(result$samples$well.number, function(this.well) {
-		result.this.well <- subset(result$data, well.number == this.well)
-		data.frame(
-			delta.fluorescence = c(NA, diff(result.this.well$fluorescence)),
-			delta.aligned.time = c(NA, diff(result.this.well$aligned.time)),
-			delta.length = c(NA, diff(result.this.well$length))
-		)
-		})))
-	data.calibration$delta.area <- (2 * data.calibration$fluorescence - data.calibration$delta.fluorescence) / 2 * data.calibration$delta.aligned.time
-	result$data$molarity <- data.calibration$delta.area * fluorescence.coefficient / data.calibration$aligned.time / data.calibration$delta.length * data.calibration$delta.aligned.time / data.calibration$length
-	
 	# annotate which peak each data point is in, if any
 	# WARNING: if peaks overlap, this will overwrite and each point will only be mapped to the last-occuring one!
 	result$data$peak <- NA
 	for (i in 1:nrow(result$peaks)) result$data$peak[result$data$well.number == result$peaks$well.number[i] & result$data$aligned.time >= result$peaks$lower.aligned.time[i] & result$data$aligned.time <= result$peaks$upper.aligned.time[i]] <- i
+	
+	# convert to molarity
+	# the idea is that we must correct fluorescence area by migration time to account for the fact that faster-moving molecules spend less time in front of the detector (Agilent's TimeCorrectedArea apparently does this with the raw time, not the aligned time)
+	# and then fluorescence is proportional to mass, which is molarity * length
+	data.calibration <- cbind(result$data, do.call(rbind, lapply(result$samples$well.number, function(this.well) {
+		result.this.well <- subset(result$data, well.number == this.well)
+		data.frame(
+			delta.fluorescence = c(NA, diff(result.this.well$fluorescence)),
+			delta.time = c(NA, diff(result.this.well$aligned.time))
+		)
+	})))
+	# estimate area under each measurement with the trapezoidal rule; to simplify math, each point's sum is for the trapezoid to the left of it
+	data.calibration$area <- (2 * data.calibration$fluorescence - data.calibration$delta.fluorescence) * data.calibration$delta.time
+	# correct area by migration time
+	data.calibration$corrected.area <- data.calibration$area / data.calibration$time
+	# calculate corrected area under peaks
+	peaks.calibration <- cbind(result$peaks, mass = result$peaks$molarity * result$peaks$length)	
+	# fit the coefficient of mass vs. corrected area, independently for each sample, according to the markers
+	mass.coefficients <- sapply(result$samples$well.number, function(well) {
+		which.markers <- sapply(c("Lower Marker", "Upper Marker"), function(name) which(result$peaks$well.number == well & result$peaks$peak.observations == name))
+		stopifnot(length(which.markers) == 2)
+		marker.areas <- sapply(which.markers, function(peak) sum(data.calibration$corrected.area[which(data.calibration$peak == peak)]))
+		marker.masses <- peaks.calibration$mass[which.markers]
+		lm(marker.masses ~ marker.areas - 1)$coefficients[1]
+	})
+	names(mass.coefficients) <- result$samples$well.number
+	# finally apply this coefficient to get the molarity of each trapezoid
+	result$data$molarity <- data.calibration$corrected.area * mass.coefficients[result$data$well.number] / result$data$length
 	
 	# construct well.by.ladder (analogous to TapeStation but not as useful here)
 	wells.by.ladder <- list(list(result$samples$well.number))
@@ -118,6 +132,10 @@ read.bioanalyzer <- function(xml.file, fit = "spline") {
 	names(mobility.functions) <- batch
 	names(mobility.functions[[1]]) <- result$samples$well.number[which.ladder]
 	
+	# construct mass coefficients
+	mass.coefficients <- list(mass.coefficients)
+	names(mass.coefficients) <- batch
+	
 	structure(list(
 		data = result$data,
 		samples = result$samples,
@@ -125,7 +143,7 @@ read.bioanalyzer <- function(xml.file, fit = "spline") {
 		peaks = result$peaks,
 		regions = NULL,
 		mobility.functions = mobility.functions,
-		mass.coefficients = list(fluorescence.coefficient)
+		mass.coefficients = mass.coefficients
 	), class = "electrophoresis")
 }
 
