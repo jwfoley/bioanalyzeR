@@ -1,7 +1,7 @@
 Simple R functions for importing and analyzing electrophoresis data from an Agilent 2100 Bioanalyzer or 2200/4150/4200 TapeStation.
 
-
 # Reading input data
+Simple R functions for importing and graphing electrophoresis data from an Agilent 2100 Bioanalyzer or 2200/4150/4200 TapeStation.
 
 ## `read.bioanalyzer`
 Reads data from a Bioanalyzer XML files (see below for how to export those) into an S3 object of class `electrophoresis` containing the raw data and varous metadata. 

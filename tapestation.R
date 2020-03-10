@@ -295,6 +295,7 @@ read.tapestation <- function(xml.file, gel.image.file = NULL, fit = "spline") {
 	for (i in 1:nrow(peaks)) result$peak[result$well.number == peaks$well.number[i] & result$distance >= peaks$lower.distance[i] & result$distance <= peaks$upper.distance[i]] <- i
 	
 	rownames(result) <- NULL # clean up row names again
+	attr(result, "peaks") <- peaks
 	
 	# wrap lists by ladder in larger lists by batch so they'll survive being combined with other batches
 	wells.by.ladder <- list(wells.by.ladder)
