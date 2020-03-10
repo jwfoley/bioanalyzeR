@@ -87,6 +87,8 @@ read.bioanalyzer <- function(xml.file, fit = "spline") {
 	}
 	marker.aligned.times <- sapply(c("VirtualLowerMarkerTime", "VirtualUpperMarkerTime"), function (field) as.numeric(xmlValue(xml.root[["Chips"]][["Chip"]][["AssayBody"]][["DAAssaySetpoints"]][["DAMAssayInfoMolecular"]][[field]])))
 	result$data$length <- sapply(result$data$aligned.time, function(x) if (x < marker.aligned.times[1] || x > marker.aligned.times[2]) NA else standard.curve.function(x)) # avoid extrapolating
+	result$peaks$lower.length <- standard.curve.function(result$peaks$lower.aligned.time)
+	result$peaks$upper.length <- standard.curve.function(result$peaks$upper.aligned.time)
 	
 	# annotate which peak each data point is in, if any
 	# WARNING: if peaks overlap, this will overwrite and each point will only be mapped to the last-occuring one!

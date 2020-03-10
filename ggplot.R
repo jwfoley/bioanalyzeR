@@ -35,34 +35,35 @@ qplot.electrophoresis <- function(electrophoresis, # returns a ggplot object, wh
 ) {
 
 	if (is.null(log)) log <- if (x == "length") "x" else NA
+	graph.data <- electrophoresis$data
 	
-	# remove ladders	
-	if (! include.ladder) electrophoresis$data <- subset(electrophoresis$data, ! is.ladder)
+	# remove ladders
+	if (! include.ladder) graph.data <- subset(graph.data, ! is.ladder)
 	
 	# remove data in unusable ranges
-	electrophoresis$data <- electrophoresis$data[! is.na(electrophoresis$data[[x]]) & ! is.na(electrophoresis$data[[y]]),]
-	if (log %in% c("x", "xy")) electrophoresis$data <- electrophoresis$data[electrophoresis$data[[x]] > 0,]
-	if (log %in% c("y", "xy")) electrophoresis$data <- electrophoresis$data[electrophoresis$data[[y]] > 0,]
+	graph.data <- graph.data[! is.na(graph.data[[x]]) & ! is.na(graph.data[[y]]),]
+	if (log %in% c("x", "xy")) graph.data <- graph.data[graph.data[[x]] > 0,]
+	if (log %in% c("y", "xy")) graph.data <- graph.data[graph.data[[y]] > 0,]
 	
 	# remove data outside the space between markers
 	if (between.markers) for (i in 1:nrow(electrophoresis$peaks)) {
 		if (electrophoresis$peaks$peak.observations[i] == "Lower Marker") {
-			electrophoresis$data <- subset(electrophoresis$data, ! (
+			graph.data <- subset(graph.data, ! (
 				batch == electrophoresis$peaks$batch[i] &
 				well.number == electrophoresis$peaks$well.number[i] &
-				distance >= 0.95 * electrophoresis$peaks$lower.distance[i]
+				length <= electrophoresis$peaks$upper.length[i]
 			))
 		} else if (electrophoresis$peaks$peak.observations[i] == "Upper Marker") {
-			electrophoresis$data <- subset(electrophoresis$data, ! (
+			graph.data <- subset(graph.data, ! (
 				batch == electrophoresis$peaks$batch[i] &
 				well.number == electrophoresis$peaks$well.number[i] &
-				distance <= 1.05 * electrophoresis$peaks$upper.distance[i]
+				length >= electrophoresis$peaks$lower.length[i]
 			))
 		}
 	}
 	
 	# create plot but don't add the geom yet
-	this.plot <- ggplot(electrophoresis$data)
+	this.plot <- ggplot(graph.data)
 	
 	# add regions
 	if (facet & ! is.na(region.alpha) & ! is.null(electrophoresis$regions)) this.plot <- this.plot + geom_rect(aes_(xmin = as.name(paste0("lower.", x)), xmax = as.name(paste0("upper.", x)), ymin = -Inf, ymax = Inf), data = electrophoresis$regions, alpha = region.alpha)
@@ -81,7 +82,7 @@ qplot.electrophoresis <- function(electrophoresis, # returns a ggplot object, wh
 	)
 	
 	# add peaks
-	if (facet & ! is.na(peak.fill) & ! is.null(electrophoresis$peaks)) this.plot <- this.plot + geom_area(aes_(x = as.name(x), y = as.name(y), group = as.name("peak")), data = subset(electrophoresis$data, ! is.na(peak)), fill = peak.fill)
+	if (facet & ! is.na(peak.fill) & ! is.null(electrophoresis$peaks)) this.plot <- this.plot + geom_area(aes_(x = as.name(x), y = as.name(y), group = as.name("peak")), data = subset(graph.data, ! is.na(peak)), fill = peak.fill)
 	
 	# add faceting
 	if (facet) this.plot <- this.plot + facet_wrap(~ batch * well.number, scales = scales, labeller = labeller.electrophoresis(electrophoresis))
