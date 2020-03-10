@@ -82,7 +82,7 @@ read.tapestation.xml <- function(xml.file) {
 					distance =           as.numeric(peaks.raw$RunDistance) / 100,
 					lower.distance =     as.numeric(peaks.raw$FromPercent) / 100,
 					upper.distance =     as.numeric(peaks.raw$ToPercent) / 100, 
-					area =               as.numeric(peaks.raw$Area),
+					reported.area =               as.numeric(peaks.raw$Area), # test
 					molarity =           as.numeric(peaks.raw$Molarity),
 					stringsAsFactors =   F
 				)
@@ -183,19 +183,6 @@ read.tapestation <- function(xml.file, gel.image.file = NULL, fit = "spline") {
 	peaks$lower.relative.distance <- (peaks$lower.distance - marker.distances$upper[peaks$well.number]) / marker.distances$range[peaks$well.number]
 	peaks$upper.relative.distance <- (peaks$upper.distance - marker.distances$upper[peaks$well.number]) / marker.distances$range[peaks$well.number]
 	
-	# allocate new variables, which might or might not get populated
-	result$length <- NA
-	result <- cbind(result, do.call(rbind, lapply(unique(result$well.number), function(this.well) {
-		result.this.well <- subset(result, well.number == this.well)
-		data.frame(
-			delta.distance = c(NA, diff(result.this.well$distance)),
-			delta.fluorescence = c(NA, diff(result.this.well$fluorescence))
-		)
-	})))
-	result$area <- (2 * result$fluorescence - result$delta.fluorescence) / 2 * result$delta.distance
-	result$mass <- NA
-	result$molarity <- NA
-	
 	# determine ladder scheme
 	ladder.wells <- as.character(subset(samples, is.ladder)$well.number)
 	wells.by.ladder <- list()
@@ -229,6 +216,8 @@ read.tapestation <- function(xml.file, gel.image.file = NULL, fit = "spline") {
 		warning("warning: unknown ladder scheme so lengths and molarities are not calculated")
 	}
 	
+	result$length <- NA
+	result$molarity <- NA
 	peaks$lower.length <- NA
 	peaks$upper.length <- NA
 	if (! is.null(regions)) {
@@ -238,6 +227,15 @@ read.tapestation <- function(xml.file, gel.image.file = NULL, fit = "spline") {
 	mobility.functions <- list()
 	mobility.inverses <- list()
 	mass.coefficients <- list()
+	data.calibration <- cbind(result, do.call(rbind, lapply(samples$well.number, function(this.well) {
+		result.this.well <- subset(result, well.number == this.well)
+		data.frame(
+			delta.fluorescence = c(NA, diff(result.this.well$fluorescence)),
+			delta.distance = c(NA, -diff(result.this.well$distance))
+		)
+	})))
+	# estimate area under each measurement with the trapezoidal rule; to simplify math, each point's sum is for the trapezoid to the left of it
+	data.calibration$area <- (2 * data.calibration$fluorescence - data.calibration$delta.fluorescence) * data.calibration$delta.distance
 	for (ladder.well in names(rows.by.ladder)) { # use names(rows.by.ladder) because it only exists if we're in a recognized scheme
 		peaks.ladder <- subset(peaks, well.number == ladder.well)
 		which.rows <- rows.by.ladder[[ladder.well]]
@@ -280,12 +278,10 @@ read.tapestation <- function(xml.file, gel.image.file = NULL, fit = "spline") {
 		# preferably it would be scaled to each sample's own markers, but that's impossible because the markers are unreadable! and we can't even use their Agilent-reported molarity estimates or areas to scale relative to the ladder because those are always normalized to the upper marker! (which is often the one that's contaminated by sample anyway)
 		# so all we can do is normalize to the ladder's non-marker peaks, therefore each sample will be randomly off by some constant scaling factor, but at least molarity comparisons within a sample ought to be accurate
 		peaks.ladder$mass <- peaks.ladder$length * peaks.ladder$molarity
-		peaks.ladder$estimated.area <- sapply(1:nrow(peaks.ladder), function(i) sum(subset(result, well.number == ladder.well & distance >= peaks.ladder$lower.distance[i] & distance <= peaks.ladder$upper.distance[i])$area))
-		fluorescence.model <- lm(mass ~ estimated.area - 1, data = peaks.ladder)
-		mass.coefficient <- fluorescence.model$coefficients[1]
+		peaks.ladder$area <- sapply(1:nrow(peaks.ladder), function(i) sum(subset(data.calibration, well.number == ladder.well & distance >= peaks.ladder$lower.distance[i] & distance <= peaks.ladder$upper.distance[i])$area))
+		mass.coefficient <- lm(mass ~ area - 1, data = peaks.ladder)$coefficients[1]
 		mass.coefficients[[ladder.well]] <- mass.coefficient
-		result$mass[which.rows] <- mass.coefficient * result$area[which.rows]
-		result$molarity[which.rows] <- result$mass[which.rows] / result$length[which.rows]
+		result$molarity[which.rows] <- mass.coefficient * data.calibration$area[which.rows] / result$length[which.rows]
 	}
 	
 	# convert inferred relative distances of regions back to raw distances

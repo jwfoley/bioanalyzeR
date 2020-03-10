@@ -29,7 +29,6 @@ read.bioanalyzer <- function(xml.file, fit = "spline") {
 				upper.aligned.time =  as.numeric(peaks.raw$AlignedEndTime),
 				area =                as.numeric(peaks.raw$Area),
 				molarity =            as.numeric(peaks.raw$Molarity),
-				timecorrectedarea =     as.numeric(peaks.raw$TimeCorrectedArea), # test
 				stringsAsFactors =    F
 			)
 		
@@ -101,7 +100,7 @@ read.bioanalyzer <- function(xml.file, fit = "spline") {
 		result.this.well <- subset(result$data, well.number == this.well)
 		data.frame(
 			delta.fluorescence = c(NA, diff(result.this.well$fluorescence)),
-			delta.time = c(NA, diff(result.this.well$aligned.time))
+			delta.time = c(NA, diff(result.this.well$time))
 		)
 	})))
 	# estimate area under each measurement with the trapezoidal rule; to simplify math, each point's sum is for the trapezoid to the left of it
