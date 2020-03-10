@@ -23,9 +23,9 @@ integrate.rawdata <- function(
 	data,
 	lower.bound = NULL,
 	upper.bound = NULL,
-	peak = NULL,
 	bound.unit = "length",
-	sum.unit = "delta.molarity"
+	peak = NULL,
+	sum.unit = "molarity"
 ) {
 	above.lower <- if (is.null(lower.bound)) rep(TRUE, nrow(data)) else data[[bound.unit]] >= lower.bound
 	below.upper <- if (is.null(upper.bound)) rep(TRUE, nrow(data)) else data[[bound.unit]] <= upper.bound
@@ -36,13 +36,13 @@ integrate.rawdata <- function(
 # compute the sum of some variable under the electrophoresis curve within each peak in the peak table
 integrate.peaks <- function(
 	electrophoresis,
-	sum.unit = "delta.molarity"
+	sum.unit = "molarity"
 ) sapply(1:nrow(electrophoresis$peaks), function(peak) integrate.rawdata(electrophoresis$data, peak = peak, sum.unit = sum.unit))
 
 # compute the sum of some variable under the electrophoresis curve within each region in the region table
 integrate.regions <- function(
 	electrophoresis,
-	sum.unit = "delta.molarity"
+	sum.unit = "molarity"
 ) sapply(1:nrow(electrophoresis$region), function(region.index) integrate.rawdata(subset(electrophoresis$data, well.number == as.character(electrophoresis$regions$well.number[region.index])), electrophoresis$regions$lower.length[region.index], electrophoresis$regions$upper.length[region.index], sum.unit = sum.unit))
 
 # compute the sum of some variable under the electrophoresis curve within a specified region, for each sample

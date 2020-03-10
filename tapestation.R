@@ -82,7 +82,6 @@ read.tapestation.xml <- function(xml.file) {
 					distance =           as.numeric(peaks.raw$RunDistance) / 100,
 					lower.distance =     as.numeric(peaks.raw$FromPercent) / 100,
 					upper.distance =     as.numeric(peaks.raw$ToPercent) / 100, 
-					reported.area =               as.numeric(peaks.raw$Area), # test
 					molarity =           as.numeric(peaks.raw$Molarity),
 					stringsAsFactors =   F
 				)
@@ -306,7 +305,7 @@ read.tapestation <- function(xml.file, gel.image.file = NULL, fit = "spline") {
 	names(mass.coefficients) <- batch
 	
 	structure(list(
-		data = result,
+		data = result[,colnames(result) != "gel.lane"],
 		samples = samples,
 		wells.by.ladder = wells.by.ladder,
 		peaks = peaks,

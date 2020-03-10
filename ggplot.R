@@ -28,7 +28,7 @@ qplot.electrophoresis <- function(electrophoresis, # returns a ggplot object, wh
 	scales = "fixed", # scaling rules for the facets, passed to facet_wrap()
 	geom = "line", # default gives geom_line; "area" for geom_area is another good option
 	include.ladder = FALSE, # show the ladder wells?
-	between.markers = FALSE, # show only data between the marker peaks (so their signal doesn't ruin the scale)
+	between.markers = TRUE, # show only data between the marker peaks (so their signal doesn't ruin the scale)
 	peak.fill = "darkred", # set to NA to stop showing peaks
 	region.alpha = 0.2, # set to NA to stop showing regions
 	area.alpha = 0.2 # if facet = FALSE and geom = "area", alpha transparency of the filled areas
