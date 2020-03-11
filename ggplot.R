@@ -151,6 +151,24 @@ qc.mobility <- function(electrophoresis, log = TRUE) {
 	result
 }
 
+qc.concentration <- function(electrophoresis, log = TRUE) {
+	peaks <- electrophoresis$peaks
+	peaks$estimated.concentration <- sapply(1:nrow(peaks), function(peak.index) sum(electrophoresis$data$concentration[which(electrophoresis$data$peak == peak.index)])) # without the which() you get the NA's too
+	peaks <- subset(peaks, ! is.na(concentration) & ! is.na(estimated.concentration)) # remove NA's so they don't affect the x-limits and throw a warning
+	
+	result <- ggplot(peaks, aes(concentration, estimated.concentration, color = peak.observations)) +
+		geom_abline() +
+		geom_point() +
+		geom_smooth(method = "lm") +
+		xlab("software-reported concentration (pg/uL)") +
+		ylab("estimated concentration (pg/uL)") +
+		facet_wrap(~ batch * well.number, labeller = labeller.electrophoresis(electrophoresis))
+	
+	if (log) result <- result + scale_x_log10() + scale_y_log10()
+	
+	result
+}
+
 qc.molarity <- function(electrophoresis, log = TRUE) {
 	peaks <- electrophoresis$peaks
 	peaks$estimated.molarity <- sapply(1:nrow(peaks), function(peak.index) sum(electrophoresis$data$molarity[which(electrophoresis$data$peak == peak.index)])) # without the which() you get the NA's too
