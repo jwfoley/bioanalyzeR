@@ -109,7 +109,7 @@ read.bioanalyzer <- function(xml.file, fit = "spline") {
 	} else if (fit == "regression") {
 		mobility.model <- lm(1/aligned.time ~ log(length), data = peaks.ladder)
 		standard.curve.function <- function(aligned.time) exp((1 / aligned.time - mobility.model$coefficients[1]) / mobility.model$coefficients[2])
-		standard.curve.inverse <- function(length) 1/(log(length) * mobility.model$coefficients[1] + mobility.model$coefficients[2])
+		standard.curve.inverse <- function(length) 1/(mobility.model$coefficients[1] + log(length) * mobility.model$coefficients[2])
 	}
 	result$length <- standard.curve.function(result$aligned.time)
 	ladder.limits <- range(defined.ladder.peaks$Size)
@@ -117,8 +117,8 @@ read.bioanalyzer <- function(xml.file, fit = "spline") {
 	peaks$lower.length <- standard.curve.function(peaks$lower.aligned.time)
 	peaks$upper.length <- standard.curve.function(peaks$upper.aligned.time)
 	if (! is.null(regions)) {
-		regions$lower.aligned.time <- standard.curve.inverse(regions$upper.length)
-		regions$upper.aligned.time <- standard.curve.inverse(regions$lower.length)
+		regions$lower.aligned.time <- standard.curve.inverse(regions$lower.length)
+		regions$upper.aligned.time <- standard.curve.inverse(regions$upper.length)
 	}
 	
 	# annotate which peak each data point is in, if any
