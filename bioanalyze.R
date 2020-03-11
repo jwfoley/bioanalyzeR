@@ -61,22 +61,24 @@ read.bioanalyzer <- function(xml.file, fit = "spline") {
 				stopifnot(length(which.upper.marker) == 1)
 				alignment.coefficient <- diff(peaks$aligned.time[c(which.lower.marker, which.upper.marker)]) / diff(peaks$time[c(which.lower.marker, which.upper.marker)])
 				alignment.offset <- peaks$aligned.time[which.lower.marker] - alignment.coefficient * peaks$time[which.lower.marker]
-				raw.data$aligned.time <- raw.data$time * alignment.coefficient + alignment.offset
 			} else {
 				alignment.coefficient <- peaks$aligned.time[which.lower.marker] / peaks$time[which.lower.marker]
-				raw.data$aligned.time <- raw.data$time * alignment.coefficient
+				alignment.offset <- 0
 			}
+			raw.data$aligned.time <- raw.data$time * alignment.coefficient + alignment.offset
 			
 			list(
 				data = data.frame(batch, well.number, sample.name, is.ladder, sample.observations, raw.data, stringsAsFactors = F),
 				samples = data.frame(batch, well.number, sample.name, is.ladder, sample.observations, stringsAsFactors = F),
-				peaks = data.frame(batch, well.number, sample.name, is.ladder, sample.observations, peaks, stringsAsFactors = F)
+				peaks = data.frame(batch, well.number, sample.name, is.ladder, sample.observations, peaks, stringsAsFactors = F),
+				alignment.values = c(alignment.coefficient, alignment.offset)
 			)
 		}
 	})
 	result <- do.call(rbind, c(lapply(result.list, function(x) x$data), make.row.names = F))
 	samples <- do.call(rbind, c(lapply(result.list, function(x) x$samples), make.row.names = F))
 	peaks <- do.call(rbind, c(lapply(result.list, function(x) x$peaks), make.row.names = F))
+	alignment.values <- lapply(result.list, function(x) x$alignment.values)
 	
 	# convert sample metadata into factors, ensuring all frames have the same levels and the levels are in the observed order
 	for (field in c("batch", "well.number", "sample.name", "sample.observations")) {
@@ -119,6 +121,15 @@ read.bioanalyzer <- function(xml.file, fit = "spline") {
 	if (! is.null(regions)) {
 		regions$lower.aligned.time <- standard.curve.inverse(regions$lower.length)
 		regions$upper.aligned.time <- standard.curve.inverse(regions$upper.length)
+		
+		# convert inferred aligned times of regions back to raw times
+		regions$lower.time <- NA
+		regions$upper.time <- NA
+		for (i in 1:nrow(samples)) {
+			which.regions <- which(regions$well.number == samples$well.number[i])
+			regions$lower.time[which.regions] <- (regions$lower.aligned.time[which.regions] - alignment.values[[i]][2])/alignment.values[[i]][1]
+			regions$upper.time[which.regions] <- (regions$upper.aligned.time[which.regions] - alignment.values[[i]][2])/alignment.values[[i]][1]
+		}
 	}
 	
 	# annotate which peak each data point is in, if any
