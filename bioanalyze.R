@@ -6,6 +6,8 @@ read.bioanalyzer <- function(xml.file, fit = "spline") {
 	
 	batch <- sub("\\.xml$", "", basename(xml.file))
 	xml.root <- xmlRoot(xmlParse(xml.file))
+	has.upper.marker <- as.logical(xmlValue(xml.root[["Chips"]][["Chip"]][["AssayBody"]][["DASampleSetpoints"]][["DAMAlignment"]][["Channel"]][["AlignUpperMarker"]]))
+	defined.ladder.peaks <- xmlToDataFrame(xml.root[["Chips"]][["Chip"]][["AssayBody"]][["DAAssaySetpoints"]][["DAMAssayInfoMolecular"]][["LadderPeaks"]], colClasses = rep("numeric", 4))
 	
 	# read raw sample data
 	result.list <- xmlApply(xml.root[["Chips"]][["Chip"]][["Files"]][["File"]][["Samples"]], function(this.sample) {
@@ -42,13 +44,18 @@ read.bioanalyzer <- function(xml.file, fit = "spline") {
 			)
 			
 			# align the observation times according to the markers in this sample		
-			which.lower.marker <- which(peaks$peak.observations == "Lower Marker")
+			which.lower.marker <- which(peaks$peak.observations == "Lower Marker" & peaks$length == defined.ladder.peaks$Size[1]) # check the size too because sometimes the software annotates more than one as the same marker with no consequences
 			stopifnot(length(which.lower.marker) == 1)
-			which.upper.marker <- which(peaks$peak.observations == "Upper Marker")
-			stopifnot(length(which.upper.marker) == 1)
-			alignment.coefficient <- diff(peaks$aligned.time[c(which.lower.marker, which.upper.marker)]) / diff(peaks$time[c(which.lower.marker, which.upper.marker)])
-			alignment.offset <- peaks$aligned.time[which.lower.marker] - alignment.coefficient * peaks$time[which.lower.marker]
-			raw.data$aligned.time <- raw.data$time * alignment.coefficient + alignment.offset
+			if (has.upper.marker) {
+				which.upper.marker <- which(peaks$peak.observations == "Upper Marker" & peaks$length == defined.ladder.peaks$Size[nrow(defined.ladder.peaks)])
+				stopifnot(length(which.upper.marker) == 1)
+				alignment.coefficient <- diff(peaks$aligned.time[c(which.lower.marker, which.upper.marker)]) / diff(peaks$time[c(which.lower.marker, which.upper.marker)])
+				alignment.offset <- peaks$aligned.time[which.lower.marker] - alignment.coefficient * peaks$time[which.lower.marker]
+				raw.data$aligned.time <- raw.data$time * alignment.coefficient + alignment.offset
+			} else {
+				alignment.coefficient <- peaks$aligned.time[which.lower.marker] / peaks$time[which.lower.marker]
+				raw.data$aligned.time <- raw.data$time * alignment.coefficient
+			}
 			
 			list(
 				data = data.frame(batch, well.number, sample.name, is.ladder, sample.observations, raw.data, stringsAsFactors = F),
@@ -85,8 +92,9 @@ read.bioanalyzer <- function(xml.file, fit = "spline") {
 		mobility.model <- lm(1/aligned.time ~ log(length), data = peaks.ladder)
 		standard.curve.function <- function(aligned.time) exp((1 / aligned.time - mobility.model$coefficients[1]) / mobility.model$coefficients[2])
 	}
-	marker.aligned.times <- sapply(c("VirtualLowerMarkerTime", "VirtualUpperMarkerTime"), function (field) as.numeric(xmlValue(xml.root[["Chips"]][["Chip"]][["AssayBody"]][["DAAssaySetpoints"]][["DAMAssayInfoMolecular"]][[field]])))
-	result$data$length <- sapply(result$data$aligned.time, function(x) if (x < marker.aligned.times[1] || x > marker.aligned.times[2]) NA else standard.curve.function(x)) # avoid extrapolating
+	result$data$length <- standard.curve.function(result$data$aligned.time)
+	ladder.limits <- range(defined.ladder.peaks$Size)
+	result$data$length[result$data$length < ladder.limits[1] | result$data$length > ladder.limits[2]] <- NA # avoid extrapolating
 	result$peaks$lower.length <- standard.curve.function(result$peaks$lower.aligned.time)
 	result$peaks$upper.length <- standard.curve.function(result$peaks$upper.aligned.time)
 	
@@ -113,8 +121,15 @@ read.bioanalyzer <- function(xml.file, fit = "spline") {
 	peaks.calibration <- cbind(result$peaks, mass = result$peaks$molarity * result$peaks$length)	
 	# fit the coefficient of mass vs. corrected area, independently for each sample, according to the markers
 	mass.coefficients <- sapply(result$samples$well.number, function(well) {
-		which.markers <- sapply(c("Lower Marker", "Upper Marker"), function(name) which(result$peaks$well.number == well & result$peaks$peak.observations == name))
-		stopifnot(length(which.markers) == 2)
+		which.markers <- which(result$peaks$well.number == well & ((
+			result$peaks$peak.observations == "Lower Marker" & result$peaks$length == defined.ladder.peaks$Size[1]
+		) | (
+			result$peaks$peak.observations == "Upper Marker" & result$peaks$length == defined.ladder.peaks$Size[nrow(defined.ladder.peaks)]
+		)))
+		stopifnot(
+			(has.upper.marker && length(which.markers) == 2) ||
+			(! has.upper.marker && length(which.markers) == 1)
+		)
 		marker.areas <- sapply(which.markers, function(peak) sum(data.calibration$corrected.area[which(data.calibration$peak == peak)]))
 		marker.masses <- peaks.calibration$mass[which.markers]
 		lm(marker.masses ~ marker.areas - 1)$coefficients[1]
