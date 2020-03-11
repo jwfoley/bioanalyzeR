@@ -1,6 +1,13 @@
 library(XML)
 library(png)
 
+# molecular weight as a function of length, with relevant scaling factor, i.e. for DNA and RNA we're converting ng/uL to pmol/L so we need to scale Daltons by 1E6
+# source: https://www.thermofisher.com/us/en/home/references/ambion-tech-support/rna-tools-and-calculators/dna-and-rna-molecular-weights-and-conversions.html
+molecular.weight <- list(
+	DNA = function(length) (length * 607.4 + 157.9)/1E6,
+	RNA = function(length) (length * 320.5 + 159.0)/1E6
+)
+
 # hardcoded colors
 RGB.UPPER.MARKER <-  c(128,   0, 128)  # upper marker is purple
 RGB.LOWER.MARKER <-  c(  0, 128,   0)  # lower marker is green
@@ -59,7 +66,19 @@ read.tapestation.gel.image <- function(gel.image.file) {
 
 read.tapestation.xml <- function(xml.file) {
  	batch <- sub("\\.xml$", "", basename(xml.file))
-	result.list <- xmlApply(xmlRoot(xmlParse(xml.file))[["Samples"]], function(sample.xml) {
+ 	xml.root <- xmlRoot(xmlParse(xml.file))
+ 	
+ 	# try to guess the assay type from the name
+ 	assay.name <- xmlValue(xml.root[["FileInformation"]][["Assay"]])
+ 	if (grepl("RNA", assay.name)) {
+ 		assay.type <- "RNA"
+	} else if (grepl("D", assay.name)) {
+		assay.type <- "DNA"
+	} else {
+		stop("unrecognized assay name")
+	}
+ 	
+	result.list <- xmlApply(xml.root[["Samples"]], function(sample.xml) {
 		well.number <- xmlValue(sample.xml[["WellNumber"]])
 		sample.name <- trimws(xmlValue(sample.xml[["Comment"]]))
 		if (sample.name == "") sample.name <- well.number
@@ -81,7 +100,8 @@ read.tapestation.xml <- function(xml.file) {
 					length =             as.integer(peaks.raw$Size),
 					distance =           as.numeric(peaks.raw$RunDistance) / 100,
 					lower.distance =     as.numeric(peaks.raw$FromPercent) / 100,
-					upper.distance =     as.numeric(peaks.raw$ToPercent) / 100, 
+					upper.distance =     as.numeric(peaks.raw$ToPercent) / 100,
+					concentration =      as.numeric(peaks.raw$CalibratedQuantity),
 					molarity =           as.numeric(peaks.raw$Molarity),
 					stringsAsFactors =   F
 				)
@@ -96,8 +116,7 @@ read.tapestation.xml <- function(xml.file) {
 					lower.length =         as.integer(regions.raw$From),
 					upper.length =         as.integer(regions.raw$To),
 					average.length =       as.integer(regions.raw$AverageSize),
-					area =                 as.numeric(regions.raw$Area),
-					concentration =        as.numeric(regions.raw$Concentration),
+					concentration =        as.integer(regions.raw$Concentration),
 					molarity =             as.numeric(regions.raw$Molarity),
 					proportion.of.total =  as.numeric(regions.raw$PercentOfTotal) / 100,
 					stringsAsFactors =     F
@@ -117,7 +136,8 @@ read.tapestation.xml <- function(xml.file) {
 	result <- list(
 		samples = do.call(rbind, c(lapply(result.list, function(x) x$sample.info), make.row.names = F)),
 		peaks = if (all(unlist(lapply(peaks.list, is.null)))) NULL else do.call(rbind, c(peaks.list, make.row.names = F)),
-		regions = if (all(unlist(lapply(regions.list, is.null)))) NULL else do.call(rbind, c(regions.list, make.row.names = F))
+		regions = if (all(unlist(lapply(regions.list, is.null)))) NULL else do.call(rbind, c(regions.list, make.row.names = F)),
+		assay.type = assay.type
 	)
 	
 	# convert sample metadata into factors, ensuring all frames have the same levels and the levels are in the observed order
@@ -216,6 +236,7 @@ read.tapestation <- function(xml.file, gel.image.file = NULL, fit = "spline") {
 	}
 	
 	result$length <- NA
+	result$concentration <- NA
 	result$molarity <- NA
 	peaks$lower.length <- NA
 	peaks$upper.length <- NA
@@ -276,11 +297,11 @@ read.tapestation <- function(xml.file, gel.image.file = NULL, fit = "spline") {
 		# this is done by fitting a one-parameter model on the non-marker peaks of the ladder, because the marker peaks in all samples are unreadable (blocked by green and purple bands)
 		# preferably it would be scaled to each sample's own markers, but that's impossible because the markers are unreadable! and we can't even use their Agilent-reported molarity estimates or areas to scale relative to the ladder because those are always normalized to the upper marker! (which is often the one that's contaminated by sample anyway)
 		# so all we can do is normalize to the ladder's non-marker peaks, therefore each sample will be randomly off by some constant scaling factor, but at least molarity comparisons within a sample ought to be accurate
-		peaks.ladder$mass <- peaks.ladder$length * peaks.ladder$molarity
 		peaks.ladder$area <- sapply(1:nrow(peaks.ladder), function(i) sum(subset(data.calibration, well.number == ladder.well & distance >= peaks.ladder$lower.distance[i] & distance <= peaks.ladder$upper.distance[i])$area))
-		mass.coefficient <- lm(mass ~ area - 1, data = peaks.ladder)$coefficients[1]
+		mass.coefficient <- lm(concentration ~ area - 1, data = peaks.ladder)$coefficients[1]
 		mass.coefficients[[ladder.well]] <- mass.coefficient
-		result$molarity[which.rows] <- mass.coefficient * data.calibration$area[which.rows] / result$length[which.rows]
+		result$concentration[which.rows] <- mass.coefficient * data.calibration$area[which.rows]
+		result$molarity[which.rows] <- result$concentration[which.rows] / molecular.weight[[parsed.data$assay.type]](result$length[which.rows])
 	}
 	
 	# convert inferred relative distances of regions back to raw distances

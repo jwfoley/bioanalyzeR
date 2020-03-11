@@ -1,11 +1,21 @@
 library(XML)
 library(openssl)
 
+# molecular weight as a function of length, with relevant scaling factor, i.e. for DNA and RNA we're converting ng/uL to nmol/L (or pg/uL to pmol/L) so we need to scale Daltons by 1E6
+# protein is a special case because the "length" is already reported in kDa so all it needs is a scaling factorsource(
+# source: https://www.thermofisher.com/us/en/home/references/ambion-tech-support/rna-tools-and-calculators/dna-and-rna-molecular-weights-and-conversions.html
+molecular.weight <- list(
+	DNA = function(length) (length * 607.4 + 157.9)/1E6,
+	RNA = function(length) (length * 320.5 + 159.0)/1E6
+)
+
 read.bioanalyzer <- function(xml.file, fit = "spline") {
 	stopifnot(fit %in% c("linear", "spline", "regression"))
 	
 	batch <- sub("\\.xml$", "", basename(xml.file))
 	xml.root <- xmlRoot(xmlParse(xml.file))
+	assay.type <- xmlValue(xml.root[["Chips"]][["Chip"]][["AssayHeader"]][["Class"]])
+	stopifnot(assay.type %in% names(molecular.weight))
 	has.upper.marker <- as.logical(xmlValue(xml.root[["Chips"]][["Chip"]][["AssayBody"]][["DASampleSetpoints"]][["DAMAlignment"]][["Channel"]][["AlignUpperMarker"]]))
 	defined.ladder.peaks <- xmlToDataFrame(xml.root[["Chips"]][["Chip"]][["AssayBody"]][["DAAssaySetpoints"]][["DAMAssayInfoMolecular"]][["LadderPeaks"]], colClasses = rep("numeric", 4))
 	
@@ -30,6 +40,7 @@ read.bioanalyzer <- function(xml.file, fit = "spline") {
 				lower.aligned.time =  as.numeric(peaks.raw$AlignedStartTime),
 				upper.aligned.time =  as.numeric(peaks.raw$AlignedEndTime),
 				area =                as.numeric(peaks.raw$Area),
+				concentration =       as.numeric(peaks.raw$Concentration),
 				molarity =            as.numeric(peaks.raw$Molarity),
 				stringsAsFactors =    F
 			)
@@ -44,10 +55,10 @@ read.bioanalyzer <- function(xml.file, fit = "spline") {
 			)
 			
 			# align the observation times according to the markers in this sample		
-			which.lower.marker <- which(peaks$peak.observations == "Lower Marker" & peaks$length == defined.ladder.peaks$Size[1]) # check the size too because sometimes the software annotates more than one as the same marker with no consequences
+			which.lower.marker <- which(peaks$peak.observations == "Lower Marker" & peaks$concentration == defined.ladder.peaks$Concentration[1]) # check the concentration too because sometimes the software annotates more than one as the same marker with no consequences, and sometimes the size is off by a tiny bit, but the concentration is hardcoded
 			stopifnot(length(which.lower.marker) == 1)
 			if (has.upper.marker) {
-				which.upper.marker <- which(peaks$peak.observations == "Upper Marker" & peaks$length == defined.ladder.peaks$Size[nrow(defined.ladder.peaks)])
+				which.upper.marker <- which(peaks$peak.observations == "Upper Marker" & peaks$concentration == defined.ladder.peaks$Concentration[nrow(defined.ladder.peaks)])
 				stopifnot(length(which.upper.marker) == 1)
 				alignment.coefficient <- diff(peaks$aligned.time[c(which.lower.marker, which.upper.marker)]) / diff(peaks$time[c(which.lower.marker, which.upper.marker)])
 				alignment.offset <- peaks$aligned.time[which.lower.marker] - alignment.coefficient * peaks$time[which.lower.marker]
@@ -103,9 +114,9 @@ read.bioanalyzer <- function(xml.file, fit = "spline") {
 	result$data$peak <- NA
 	for (i in 1:nrow(result$peaks)) result$data$peak[result$data$well.number == result$peaks$well.number[i] & result$data$aligned.time >= result$peaks$lower.aligned.time[i] & result$data$aligned.time <= result$peaks$upper.aligned.time[i]] <- i
 	
-	# convert to molarity
+	# convert to concentration and molarity
 	# the idea is that we must correct fluorescence area by migration time to account for the fact that faster-moving molecules spend less time in front of the detector (Agilent's TimeCorrectedArea apparently does this with the raw time, not the aligned time)
-	# and then fluorescence is proportional to mass, which is molarity * length
+	# and then fluorescence is proportional to concentration, which is molarity * length
 	data.calibration <- cbind(result$data, do.call(rbind, lapply(result$samples$well.number, function(this.well) {
 		result.this.well <- subset(result$data, well.number == this.well)
 		data.frame(
@@ -117,26 +128,26 @@ read.bioanalyzer <- function(xml.file, fit = "spline") {
 	data.calibration$area <- (2 * data.calibration$fluorescence - data.calibration$delta.fluorescence) * data.calibration$delta.time
 	# correct area by migration time
 	data.calibration$corrected.area <- data.calibration$area / data.calibration$time
-	# calculate corrected area under peaks
-	peaks.calibration <- cbind(result$peaks, mass = result$peaks$molarity * result$peaks$length)	
 	# fit the coefficient of mass vs. corrected area, independently for each sample, according to the markers
 	mass.coefficients <- sapply(result$samples$well.number, function(well) {
 		which.markers <- which(result$peaks$well.number == well & ((
-			result$peaks$peak.observations == "Lower Marker" & result$peaks$length == defined.ladder.peaks$Size[1]
+			result$peaks$peak.observations == "Lower Marker" & result$peaks$concentration == defined.ladder.peaks$Concentration[1]
 		) | (
-			result$peaks$peak.observations == "Upper Marker" & result$peaks$length == defined.ladder.peaks$Size[nrow(defined.ladder.peaks)]
+			result$peaks$peak.observations == "Upper Marker" & result$peaks$concentration == defined.ladder.peaks$Concentration[nrow(defined.ladder.peaks)]
 		)))
 		stopifnot(
 			(has.upper.marker && length(which.markers) == 2) ||
 			(! has.upper.marker && length(which.markers) == 1)
 		)
 		marker.areas <- sapply(which.markers, function(peak) sum(data.calibration$corrected.area[which(data.calibration$peak == peak)]))
-		marker.masses <- peaks.calibration$mass[which.markers]
-		lm(marker.masses ~ marker.areas - 1)$coefficients[1]
+		marker.concentrations <- result$peaks$concentration[which.markers]
+		lm(marker.concentrations ~ marker.areas - 1)$coefficients[1]
 	})
 	names(mass.coefficients) <- result$samples$well.number
-	# finally apply this coefficient to get the molarity of each trapezoid
-	result$data$molarity <- data.calibration$corrected.area * mass.coefficients[result$data$well.number] / result$data$length
+	# apply this coefficient to get the concentration of each trapezoid
+	result$data$concentration <- data.calibration$corrected.area * mass.coefficients[result$data$well.number]
+	# finally scale by molecular weight to get the molarity
+	result$data$molarity <- result$data$concentration / molecular.weight[[assay.type]](result$data$length)
 	
 	# construct well.by.ladder (analogous to TapeStation but not as useful here)
 	wells.by.ladder <- list(list(result$samples$well.number))
@@ -148,7 +159,7 @@ read.bioanalyzer <- function(xml.file, fit = "spline") {
 	names(mobility.functions) <- batch
 	names(mobility.functions[[1]]) <- result$samples$well.number[which.ladder]
 	
-	# construct mass coefficients
+	# construct mass.coefficients
 	mass.coefficients <- list(mass.coefficients)
 	names(mass.coefficients) <- batch
 	
