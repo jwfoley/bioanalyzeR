@@ -75,50 +75,63 @@ read.bioanalyzer <- function(xml.file, fit = "spline") {
 			)
 		}
 	})
-	result <- lapply(c("data", "samples", "peaks"), function(item) do.call(rbind, c(lapply(result.list, function(x) x[[item]]), make.row.names = F)))
-	names(result) <- c("data", "samples", "peaks")
+	result <- do.call(rbind, c(lapply(result.list, function(x) x$data), make.row.names = F))
+	samples <- do.call(rbind, c(lapply(result.list, function(x) x$samples), make.row.names = F))
+	peaks <- do.call(rbind, c(lapply(result.list, function(x) x$peaks), make.row.names = F))
 	
 	# convert sample metadata into factors, ensuring all frames have the same levels and the levels are in the observed order
 	for (field in c("batch", "well.number", "sample.name", "sample.observations")) {
-		result$samples[,field] <- factor(result$samples[,field], levels = unique(result$samples[,field]))
-		if (field %in% names(result$data)) result$data[,field] <- factor(result$data[,field], levels = levels(result$samples[,field]))
-		if (field %in% names(result$peaks)) result$peaks[,field] <- factor(result$peaks[,field], levels = levels(result$samples[,field]))
+		samples[,field] <- factor(samples[,field], levels = unique(samples[,field]))
+		if (field %in% names(result)) result[,field] <- factor(result[,field], levels = levels(samples[,field]))
+		if (field %in% names(peaks)) peaks[,field] <- factor(peaks[,field], levels = levels(samples[,field]))
 	}
 	# convert other text into factors without those restrictions
-	result$peaks[,"peak.observations"] <- factor(result$peaks[,"peak.observations"])
+	peaks[,"peak.observations"] <- factor(peaks[,"peak.observations"])
+	
+	# read smear regions
+	# they are only defined once for the whole assay, but for compatibility with TapeStation data they must be defined repeatedly for each sample (TapeStation can have different regions for different samples)
+	regions.raw <- xmlToDataFrame(xml.root[["Chips"]][["Chip"]][["AssayBody"]][["DASampleSetpoints"]][["DAMSmearAnalysis"]][["Channel"]][["RegionsMolecularSetpoints"]], stringsAsFactors = F)
+	regions <- if (nrow(regions.raw) == 0) NULL else data.frame(samples[rep(1:nrow(samples), each = nrow(regions.raw)),], lower.length = as.numeric(regions.raw$StartBasePair), upper.length = as.numeric(regions.raw$EndBasePair), row.names = NULL)
 	
 	# analyze ladder
-	which.ladder <- which(result$samples$is.ladder)
+	which.ladder <- which(samples$is.ladder)
 	stopifnot(length(which.ladder) == 1)
-	peaks.ladder <- subset(result$peaks, well.number == result$samples$well.number[which.ladder])
+	peaks.ladder <- subset(peaks, well.number == samples$well.number[which.ladder])
 	
 	# fit standard curve for molecule length
 	# do this with aligned times so it's effectively recalibrated for each sample's markers
 	if (fit == "interpolate") {
 		warning("linear interpolation gives ugly results for molarity estimation")
 		standard.curve.function <- approxfun(peaks.ladder$aligned.time, peaks.ladder$length)
+		standard.curve.inverse <- approxfun(peaks.ladder$length, peaks.ladder$aligned.time)
 	} else if (fit == "spline") {
 		standard.curve.function <- splinefun(peaks.ladder$aligned.time, peaks.ladder$length, method = "natural")
+		standard.curve.inverse <- splinefun(peaks.ladder$length, peaks.ladder$aligned.time, method = "natural")
 	} else if (fit == "regression") {
 		mobility.model <- lm(1/aligned.time ~ log(length), data = peaks.ladder)
 		standard.curve.function <- function(aligned.time) exp((1 / aligned.time - mobility.model$coefficients[1]) / mobility.model$coefficients[2])
+		standard.curve.inverse <- function(length) 1/(log(length) * mobility.model$coefficients[1] + mobility.model$coefficients[2])
 	}
-	result$data$length <- standard.curve.function(result$data$aligned.time)
+	result$length <- standard.curve.function(result$aligned.time)
 	ladder.limits <- range(defined.ladder.peaks$Size)
-	result$data$length[result$data$length < ladder.limits[1] | result$data$length > ladder.limits[2]] <- NA # avoid extrapolating
-	result$peaks$lower.length <- standard.curve.function(result$peaks$lower.aligned.time)
-	result$peaks$upper.length <- standard.curve.function(result$peaks$upper.aligned.time)
+	result$length[result$length < ladder.limits[1] | result$length > ladder.limits[2]] <- NA # avoid extrapolating
+	peaks$lower.length <- standard.curve.function(peaks$lower.aligned.time)
+	peaks$upper.length <- standard.curve.function(peaks$upper.aligned.time)
+	if (! is.null(regions)) {
+		regions$lower.aligned.time <- standard.curve.inverse(regions$upper.length)
+		regions$upper.aligned.time <- standard.curve.inverse(regions$lower.length)
+	}
 	
 	# annotate which peak each data point is in, if any
 	# WARNING: if peaks overlap, this will overwrite and each point will only be mapped to the last-occuring one!
-	result$data$peak <- NA
-	for (i in 1:nrow(result$peaks)) result$data$peak[result$data$well.number == result$peaks$well.number[i] & result$data$aligned.time >= result$peaks$lower.aligned.time[i] & result$data$aligned.time <= result$peaks$upper.aligned.time[i]] <- i
+	result$peak <- NA
+	for (i in 1:nrow(peaks)) result$peak[result$well.number == peaks$well.number[i] & result$aligned.time >= peaks$lower.aligned.time[i] & result$aligned.time <= peaks$upper.aligned.time[i]] <- i
 	
 	# convert to concentration and molarity
 	# the idea is that we must correct fluorescence area by migration time to account for the fact that faster-moving molecules spend less time in front of the detector (Agilent's TimeCorrectedArea apparently does this with the raw time, not the aligned time)
 	# and then fluorescence is proportional to concentration, which is molarity * length
-	data.calibration <- cbind(result$data, do.call(rbind, lapply(result$samples$well.number, function(this.well) {
-		result.this.well <- subset(result$data, well.number == this.well)
+	data.calibration <- cbind(result, do.call(rbind, lapply(samples$well.number, function(this.well) {
+		result.this.well <- subset(result, well.number == this.well)
 		data.frame(
 			delta.fluorescence = c(NA, diff(result.this.well$fluorescence)),
 			delta.time = c(NA, diff(result.this.well$time))
@@ -129,46 +142,46 @@ read.bioanalyzer <- function(xml.file, fit = "spline") {
 	# correct area by migration time
 	data.calibration$corrected.area <- data.calibration$area / data.calibration$time
 	# fit the coefficient of mass vs. corrected area, independently for each sample, according to the markers
-	mass.coefficients <- sapply(result$samples$well.number, function(well) {
-		which.markers <- which(result$peaks$well.number == well & ((
-			result$peaks$peak.observations == "Lower Marker" & result$peaks$concentration == defined.ladder.peaks$Concentration[1]
+	mass.coefficients <- sapply(samples$well.number, function(well) {
+		which.markers <- which(peaks$well.number == well & ((
+			peaks$peak.observations == "Lower Marker" & peaks$concentration == defined.ladder.peaks$Concentration[1]
 		) | (
-			result$peaks$peak.observations == "Upper Marker" & result$peaks$concentration == defined.ladder.peaks$Concentration[nrow(defined.ladder.peaks)]
+			peaks$peak.observations == "Upper Marker" & peaks$concentration == defined.ladder.peaks$Concentration[nrow(defined.ladder.peaks)]
 		)))
 		stopifnot(
 			(has.upper.marker && length(which.markers) == 2) ||
 			(! has.upper.marker && length(which.markers) == 1)
 		)
 		marker.areas <- sapply(which.markers, function(peak) sum(data.calibration$corrected.area[which(data.calibration$peak == peak)]))
-		marker.concentrations <- result$peaks$concentration[which.markers]
+		marker.concentrations <- peaks$concentration[which.markers]
 		lm(marker.concentrations ~ marker.areas - 1)$coefficients[1]
 	})
-	names(mass.coefficients) <- result$samples$well.number
+	names(mass.coefficients) <- samples$well.number
 	# apply this coefficient to get the concentration of each trapezoid
-	result$data$concentration <- data.calibration$corrected.area * mass.coefficients[result$data$well.number]
+	result$concentration <- data.calibration$corrected.area * mass.coefficients[result$well.number]
 	# finally scale by molecular weight to get the molarity
-	result$data$molarity <- result$data$concentration / molecular.weight[[assay.type]](result$data$length)
+	result$molarity <- result$concentration / molecular.weight[[assay.type]](result$length)
 	
 	# construct well.by.ladder (analogous to TapeStation but not as useful here)
-	wells.by.ladder <- list(list(result$samples$well.number))
+	wells.by.ladder <- list(list(samples$well.number))
 	names(wells.by.ladder) <- batch
-	names(wells.by.ladder[[1]]) <- result$samples$well.number[which.ladder]
+	names(wells.by.ladder[[1]]) <- samples$well.number[which.ladder]
 	
 	# construct mobility.functions
 	mobility.functions <- list(list(standard.curve.function))
 	names(mobility.functions) <- batch
-	names(mobility.functions[[1]]) <- result$samples$well.number[which.ladder]
+	names(mobility.functions[[1]]) <- samples$well.number[which.ladder]
 	
 	# construct mass.coefficients
 	mass.coefficients <- list(mass.coefficients)
 	names(mass.coefficients) <- batch
 	
 	structure(list(
-		data = result$data,
-		samples = result$samples,
+		data = result,
+		samples = samples,
 		wells.by.ladder = wells.by.ladder,
-		peaks = result$peaks,
-		regions = NULL,
+		peaks = peaks,
+		regions = regions,
 		mobility.functions = mobility.functions,
 		mass.coefficients = mass.coefficients
 	), class = "electrophoresis")
