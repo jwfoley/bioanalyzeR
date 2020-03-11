@@ -139,8 +139,8 @@ qc.mobility <- function(electrophoresis, log = TRUE) {
 	}
 
 	result <- ggplot(peaks, aes(length, estimated.length, color = peak.observations)) +
-		geom_point() +
 		geom_abline() +
+		geom_point() +
 		geom_smooth(method = "lm") +
 		xlab("software-reported length (bases)") +
 		ylab("estimated length (bases)") +
@@ -157,8 +157,8 @@ qc.molarity <- function(electrophoresis, log = TRUE) {
 	peaks <- subset(peaks, ! is.na(molarity) & ! is.na(estimated.molarity)) # remove NA's so they don't affect the x-limits and throw a warning
 	
 	result <- ggplot(peaks, aes(molarity, estimated.molarity, color = peak.observations)) +
-		geom_point() +
 		geom_abline() +
+		geom_point() +
 		geom_smooth(method = "lm") +
 		xlab("software-reported molarity (pM)") +
 		ylab("estimated molarity (pM)") +
