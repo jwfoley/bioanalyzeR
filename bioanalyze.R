@@ -151,21 +151,20 @@ read.bioanalyzer <- function(xml.file, fit = "spline") {
 	data.calibration$area <- (2 * data.calibration$fluorescence - data.calibration$delta.fluorescence) * data.calibration$delta.time
 	# correct area by migration time
 	data.calibration$corrected.area <- data.calibration$area / data.calibration$time
-	# fit the coefficient of mass vs. corrected area, independently for each sample, according to the markers
-	mass.coefficients <- sapply(samples$well.number, function(well) {
-		which.markers <- which(peaks$well.number == well & ((
+	# fit the coefficient of mass vs. corrected area, using only the (non-marker) ladder peaks
+	# this is because in the RNA kits, there is only one marker and its concentration is reported as zero, so we can't directly use it to calibrate the other samples
+	# instead, we calculate one coefficient for the ladder and then scale each sample's coefficient by the area of its marker peak relative to the area of the ladder's marker peak
+	peaks.calibration <- cbind(peaks, corrected.area = sapply(1:nrow(peaks), function(peak) sum(data.calibration$corrected.area[which(data.calibration$peak == peak)])))
+	ladder.peaks <- subset(peaks.calibration, peak.observations == "Ladder Peak")
+	ladder.mass.coefficient <- mean(ladder.peaks$concentration / ladder.peaks$corrected.area)
+	marker.areas <- lapply(samples$well.number, function(well) {
+		peaks.calibration$corrected.area[which(peaks$well.number == well & ((
 			peaks$peak.observations == "Lower Marker" & peaks$concentration == defined.ladder.peaks$Concentration[1]
 		) | (
 			peaks$peak.observations == "Upper Marker" & peaks$concentration == defined.ladder.peaks$Concentration[nrow(defined.ladder.peaks)]
-		)))
-		stopifnot(
-			(has.upper.marker && length(which.markers) == 2) ||
-			(! has.upper.marker && length(which.markers) == 1)
-		)
-		marker.areas <- sapply(which.markers, function(peak) sum(data.calibration$corrected.area[which(data.calibration$peak == peak)]))
-		marker.concentrations <- peaks$concentration[which.markers]
-		lm(marker.concentrations ~ marker.areas - 1)$coefficients[1]
+		)))]
 	})
+	mass.coefficients <- ladder.mass.coefficient * sapply(marker.areas, function(these.areas) mean(marker.areas[[which(samples$is.ladder)]] / these.areas)) # if there are two markers per sample, this gives the mean area ratio relative to their counterparts in the ladder well; if only one marker, the mean ratio is just the ratio 
 	names(mass.coefficients) <- samples$well.number
 	# apply this coefficient to get the concentration of each trapezoid
 	result$concentration <- data.calibration$corrected.area * mass.coefficients[result$well.number]
