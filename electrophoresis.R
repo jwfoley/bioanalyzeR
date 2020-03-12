@@ -7,6 +7,7 @@ rbind.electrophoresis <- function(...) {
 	
 	structure(list(
 		data = do.call(rbind, lapply(arg.list, function(x) x$data)),
+		assay.info = do.call(c, lapply(arg.list, function(x) x$assay.info)),
 		samples = do.call(rbind, lapply(arg.list, function(x) x$samples)),
 		wells.by.ladder = do.call(c, lapply(arg.list, function(x) x$wells.by.ladder)),
 		peaks = do.call(rbind, lapply(arg.list, function(x) x$peaks)),

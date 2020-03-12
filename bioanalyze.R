@@ -13,13 +13,26 @@ read.bioanalyzer <- function(xml.file, fit = "spline") {
 	
 	batch <- sub("\\.xml$", "", basename(xml.file))
 	xml.root <- xmlRoot(xmlParse(xml.file))
-	assay.type <- xmlValue(xml.root[["Chips"]][["Chip"]][["AssayHeader"]][["Class"]])
-	stopifnot(assay.type %in% names(molecular.weight))
-	has.upper.marker <- as.logical(xmlValue(xml.root[["Chips"]][["Chip"]][["AssayBody"]][["DASampleSetpoints"]][["DAMAlignment"]][["Channel"]][["AlignUpperMarker"]]))
-	defined.ladder.peaks <- xmlToDataFrame(xml.root[["Chips"]][["Chip"]][["AssayBody"]][["DAAssaySetpoints"]][["DAMAssayInfoMolecular"]][["LadderPeaks"]], colClasses = rep("numeric", 4))
+	chip.root <- xml.root[["Chips"]][["Chip"]]
+	assay.info <- list(
+		file.name =           xmlValue(chip.root[["Files"]][["File"]][["FileInformation"]][["FileName"]]),
+		creation.date =       xmlValue(chip.root[["ChipInformation"]][["CreationDate"]]),
+		assay.name =          xmlValue(chip.root[["AssayHeader"]][["Title"]]),
+		assay.type =          xmlValue(chip.root[["AssayHeader"]][["Class"]]),
+		length.unit =         xmlValue(chip.root[["AssayBody"]][["DAAssaySetpoints"]][["DAMAssayInfoMolecular"]][["SizeUnit"]]),
+		concentration.unit =  xmlValue(chip.root[["AssayBody"]][["DAAssaySetpoints"]][["DAMAssayInfoMolecular"]][["ConcentrationUnit"]])
+	)
+	stopifnot(assay.info$assay.type %in% names(molecular.weight))
+	# hardcode the molarity unit depending on concentration unit, otherwise the MW scales will be wrong
+	assay.info$molarity.unit <- switch(assay.info$concentration.unit,
+		"ng/µl" = "nM",
+		"pg/µl" = "pM"
+	)
+	has.upper.marker <- as.logical(xmlValue(chip.root[["AssayBody"]][["DASampleSetpoints"]][["DAMAlignment"]][["Channel"]][["AlignUpperMarker"]]))
+	defined.ladder.peaks <- xmlToDataFrame(chip.root[["AssayBody"]][["DAAssaySetpoints"]][["DAMAssayInfoMolecular"]][["LadderPeaks"]], colClasses = rep("numeric", 4))
 	
 	# read raw sample data
-	result.list <- xmlApply(xml.root[["Chips"]][["Chip"]][["Files"]][["File"]][["Samples"]], function(this.sample) {
+	result.list <- xmlApply(chip.root[["Files"]][["File"]][["Samples"]], function(this.sample) {
 		if (xmlValue(this.sample[["HasData"]]) != "true") NULL else {
 			# read metadata
 			well.number <- as.integer(xmlValue(this.sample[["WellNumber"]]))
@@ -91,7 +104,7 @@ read.bioanalyzer <- function(xml.file, fit = "spline") {
 	
 	# read smear regions
 	# they are only defined once for the whole assay, but for compatibility with TapeStation data they must be defined repeatedly for each sample (TapeStation can have different regions for different samples)
-	regions.raw <- xmlToDataFrame(xml.root[["Chips"]][["Chip"]][["AssayBody"]][["DASampleSetpoints"]][["DAMSmearAnalysis"]][["Channel"]][["RegionsMolecularSetpoints"]], stringsAsFactors = F)
+	regions.raw <- xmlToDataFrame(chip.root[["AssayBody"]][["DASampleSetpoints"]][["DAMSmearAnalysis"]][["Channel"]][["RegionsMolecularSetpoints"]], stringsAsFactors = F)
 	regions <- if (nrow(regions.raw) == 0) NULL else data.frame(samples[rep(1:nrow(samples), each = nrow(regions.raw)),], lower.length = as.numeric(regions.raw$StartBasePair), upper.length = as.numeric(regions.raw$EndBasePair), row.names = NULL)
 	
 	# analyze ladder
@@ -169,7 +182,7 @@ read.bioanalyzer <- function(xml.file, fit = "spline") {
 	# apply this coefficient to get the concentration of each trapezoid
 	result$concentration <- data.calibration$corrected.area * mass.coefficients[result$well.number]
 	# finally scale by molecular weight to get the molarity
-	result$molarity <- result$concentration / molecular.weight[[assay.type]](result$length)
+	result$molarity <- result$concentration / molecular.weight[[assay.info$assay.type]](result$length)
 	
 	# construct well.by.ladder (analogous to TapeStation but not as useful here)
 	wells.by.ladder <- list(list(samples$well.number))
@@ -185,8 +198,13 @@ read.bioanalyzer <- function(xml.file, fit = "spline") {
 	mass.coefficients <- list(mass.coefficients)
 	names(mass.coefficients) <- batch
 	
+	# construct assay.info
+	assay.info <- list(assay.info)
+	names(assay.info) <- batch
+	
 	structure(list(
 		data = result,
+		assay.info = assay.info,
 		samples = samples,
 		wells.by.ladder = wells.by.ladder,
 		peaks = peaks,

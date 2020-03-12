@@ -1,13 +1,33 @@
 library(ggplot2)
 
-axis.labels <- c(
-	length =             "length (bases)",
+# given an electrophoresis object and a variable name (like "length"), generate a nice axis label with appropriate units
+axis.label <- function(electrophoresis, variable) switch(variable,
 	time =               "time (s)",
 	aligned.time =       "aligned time relative to markers (s)",
 	distance =           "distance migrated",
 	relative.distance =  "distance migrated relative to markers",
 	fluorescence =       "fluorescence",
-	molarity =           "molarity (pM)"
+	length = {
+		length.units <- unique(sapply(electrophoresis$assay.info, function(x) x$length.unit))
+		if (length(length.units) == 1) paste0("length (", length.units, ")") else {
+			warning("incompatible length units")
+			"length"
+		}
+	},
+	concentration = {
+		concentration.units <- unique(sapply(electrophoresis$assay.info, function(x) x$concentration.unit))
+		if (length(concentration.units) == 1) paste0("concentration (", concentration.units, ")") else {
+			warning("incompatible concentration units")
+			"concentration"
+		}
+	},
+	molarity = {
+		molarity.units <- unique(sapply(electrophoresis$assay.info, function(x) x$molarity.unit))
+		if (length(molarity.units) == 1) paste0("molarity (", molarity.units, ")") else {
+			warning("incompatible molarity units")
+			"molarity"
+		}
+	},	
 )
 
 # ggplot2 labeller function to take batch and well.number factors (expecting ~ batch * well.number) and return facet labels that are the sample names
@@ -92,7 +112,7 @@ qplot.electrophoresis <- function(electrophoresis, # returns a ggplot object, wh
 	if (log %in% c("y", "xy")) this.plot <- this.plot + scale_y_log10()
 	
 	# set labels and other settings for specific x & y variables
-	this.plot <- this.plot + xlab(axis.labels[x]) + ylab(axis.labels[y])
+	this.plot <- this.plot + xlab(axis.label(electrophoresis, x)) + ylab(axis.label(electrophoresis, y))
 	if (x %in% c("distance", "relative.distance")) this.plot <- this.plot + scale_x_reverse()
 	
 	this.plot
@@ -119,8 +139,8 @@ qc.stdcrv <- function(electrophoresis, n.simulate = 100, line.color = "red") { #
 		geom_point() + 
 		geom_point(aes_(x = as.name("length"), y = as.name(x.name)), data = subset(good.peaks, is.ladder), color = line.color) + # overlay the reported peak positions
 		geom_line(aes(x = estimated.length, y = x), data = simulated.data, col = line.color) + # overlay the simulated data from the mobility function
-		xlab("true length (bases)") +
-		ylab(axis.labels[x.name]) +
+		xlab(paste("true", axis.label(electrophoresis, "length"))) +
+		ylab(axis.label(electrophoresis, x.name)) +
 		facet_wrap(~ batch * well.number)
 	if (x.name == "relative.distance") this.plot <- this.plot + scale_y_reverse()
 	
@@ -142,8 +162,8 @@ qc.mobility <- function(electrophoresis, log = TRUE) {
 		geom_abline() +
 		geom_point() +
 		geom_smooth(method = "lm") +
-		xlab("software-reported length (bases)") +
-		ylab("estimated length (bases)") +
+		xlab(paste("software-reported", axis.label(electrophoresis, "length"))) +
+		ylab(paste("estimated", axis.label(electrophoresis, "length"))) +
 		facet_wrap(~ batch * well.number, labeller = labeller.electrophoresis(electrophoresis))
 	
 	if (log) result <- result + scale_x_log10() + scale_y_log10()
@@ -160,8 +180,8 @@ qc.concentration <- function(electrophoresis, log = TRUE) {
 		geom_abline() +
 		geom_point() +
 		geom_smooth(method = "lm") +
-		xlab("software-reported concentration (pg/uL)") +
-		ylab("estimated concentration (pg/uL)") +
+		xlab(paste("software-reported", axis.label(electrophoresis, "concentration"))) +
+		ylab(paste("estimated", axis.label(electrophoresis, "concentration"))) +
 		facet_wrap(~ batch * well.number, labeller = labeller.electrophoresis(electrophoresis))
 	
 	if (log) result <- result + scale_x_log10() + scale_y_log10()
@@ -178,11 +198,12 @@ qc.molarity <- function(electrophoresis, log = TRUE) {
 		geom_abline() +
 		geom_point() +
 		geom_smooth(method = "lm") +
-		xlab("software-reported molarity (pM)") +
-		ylab("estimated molarity (pM)") +
+		xlab(paste("software-reported", axis.label(electrophoresis, "molarity"))) +
+		ylab(paste("estimated", axis.label(electrophoresis, "molarity"))) +
 		facet_wrap(~ batch * well.number, labeller = labeller.electrophoresis(electrophoresis))
 	
 	if (log) result <- result + scale_x_log10() + scale_y_log10()
 	
 	result
 }
+

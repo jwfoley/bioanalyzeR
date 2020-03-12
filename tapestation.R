@@ -68,15 +68,26 @@ read.tapestation.xml <- function(xml.file) {
  	batch <- sub("\\.xml$", "", basename(xml.file))
  	xml.root <- xmlRoot(xmlParse(xml.file))
  	
+ 	assay.info <- list(
+ 		file.name =      xmlValue(xml.root[["FileInformation"]][["FileName"]]),
+ 		creation.date =  xmlValue(xml.root[["FileInformation"]][["RunEndDate"]]),
+ 		assay.name =     xmlValue(xml.root[["FileInformation"]][["Assay"]])
+ 	)
  	# try to guess the assay type from the name
- 	assay.name <- xmlValue(xml.root[["FileInformation"]][["Assay"]])
- 	if (grepl("RNA", assay.name)) {
- 		assay.type <- "RNA"
-	} else if (grepl("D", assay.name)) {
-		assay.type <- "DNA"
+ 	if (grepl("RNA", assay.info$assay.name)) {
+ 		assay.info$assay.type <- "RNA"
+	} else if (grepl("D", assay.info$assay.name)) {
+		assay.info$assay.type <- "DNA"
 	} else {
 		stop("unrecognized assay name")
 	}
+	assay.info$length.unit <- xmlValue(xml.root[["Assay"]][["Units"]][["MolecularWeightUnit"]])
+	assay.info$concentration.unit <- xmlValue(xml.root[["Assay"]][["Units"]][["ConcentrationUnit"]])
+	# hardcode the molarity unit depending on concentration unit, otherwise the MW scales will be wrong
+	assay.info$molarity.unit <- switch(assay.info$concentration.unit,
+		"ng/µl" = "nM",
+		"pg/µl" = "pM"
+	)
  	
 	result.list <- xmlApply(xml.root[["Samples"]], function(sample.xml) {
 		well.number <- xmlValue(sample.xml[["WellNumber"]])
@@ -137,7 +148,7 @@ read.tapestation.xml <- function(xml.file) {
 		samples = do.call(rbind, c(lapply(result.list, function(x) x$sample.info), make.row.names = F)),
 		peaks = if (all(unlist(lapply(peaks.list, is.null)))) NULL else do.call(rbind, c(peaks.list, make.row.names = F)),
 		regions = if (all(unlist(lapply(regions.list, is.null)))) NULL else do.call(rbind, c(regions.list, make.row.names = F)),
-		assay.type = assay.type
+		assay.info = assay.info
 	)
 	
 	# convert sample metadata into factors, ensuring all frames have the same levels and the levels are in the observed order
@@ -301,7 +312,7 @@ read.tapestation <- function(xml.file, gel.image.file = NULL, fit = "spline") {
 		mass.coefficient <- lm(concentration ~ area - 1, data = peaks.ladder)$coefficients[1]
 		mass.coefficients[[ladder.well]] <- mass.coefficient
 		result$concentration[which.rows] <- mass.coefficient * data.calibration$area[which.rows]
-		result$molarity[which.rows] <- result$concentration[which.rows] / molecular.weight[[parsed.data$assay.type]](result$length[which.rows])
+		result$molarity[which.rows] <- result$concentration[which.rows] / molecular.weight[[parsed.data$assay.info$assay.type]](result$length[which.rows])
 	}
 	
 	# convert inferred relative distances of regions back to raw distances
@@ -325,9 +336,12 @@ read.tapestation <- function(xml.file, gel.image.file = NULL, fit = "spline") {
 	names(mobility.functions) <- batch
 	mass.coefficients <- list(mass.coefficients)
 	names(mass.coefficients) <- batch
+	assay.info <- list(parsed.data$assay.info)
+	names(assay.info) <- batch
 	
 	structure(list(
 		data = result[,colnames(result) != "gel.lane"],
+		assay.info = assay.info,
 		samples = samples,
 		wells.by.ladder = wells.by.ladder,
 		peaks = peaks,
