@@ -1,14 +1,14 @@
 Package: bioanalyzeR
-Title: What the Package Does (One Line, Title Case)
+Title: Analysis of data from Agilent electrophoresis systems
 Version: 0.0.0.9000
 Authors@R: 
-    person(given = "First",
-           family = "Last",
+    person(given = "Joseph",
+           family = "William",
            role = c("aut", "cre"),
-           email = "first.last@example.com",
-           comment = c(ORCID = "YOUR-ORCID-ID"))
-Description: What the package does (one paragraph).
-License: What license it uses
+           email = "jwfoley@stanford.edu",
+           comment = c(ORCID = "0000-0002-1579-5286"))
+Description: This package reads raw data and metadata exported from Agilent Bioanalyzer and TapeStation software into R-friendly data frames. It estimates concentration and molarity for all possible data points. Pre-defined plotting functions use ggplot2 to create attractive graphs of the raw data, as well as the estimated molecule length and molarity, and overlay the peaks and regions of interest reported by the Agilent software. Additional functions streamline common operations like calculating the total molarity within a region or the molar ratio between two regions.
+License: LGPL-3
 Encoding: UTF-8
 LazyData: true
 RoxygenNote: 7.1.0
