@@ -1,13 +1,3 @@
-library(XML)
-library(png)
-
-# molecular weight as a function of length, with relevant scaling factor, i.e. for DNA and RNA we're converting ng/uL to pmol/L so we need to scale Daltons by 1E6
-# source: https://www.thermofisher.com/us/en/home/references/ambion-tech-support/rna-tools-and-calculators/dna-and-rna-molecular-weights-and-conversions.html
-molecular.weight <- list(
-	DNA = function(length) (length * 607.4 + 157.9)/1E6,
-	RNA = function(length) (length * 320.5 + 159.0)/1E6
-)
-
 # hardcoded colors
 RGB.UPPER.MARKER <-  c(128,   0, 128)  # upper marker is purple
 RGB.LOWER.MARKER <-  c(  0, 128,   0)  # lower marker is green
@@ -16,6 +6,7 @@ RGB.GOOD <-          c(138, 208, 160)  # label for high RIN is green
 RGB.MEDIUM <-        c(255, 237, 101)  # label for medium RIN is yellow
 RGB.BAD <-           c(255, 106,  71)  # label for low RIN is red
 
+
 # find all pixels in an RGB array from readPNG, with values in [0,1], that match a given RGB trio, with values in [0, 255]
 find.matching.pixels <- function(rgb.image, rgb.values) {
 	rgb.fractions <- rgb.values / 255
@@ -23,6 +14,8 @@ find.matching.pixels <- function(rgb.image, rgb.values) {
 }
 
 
+#' @export
+#' @importFrom png readPNG
 read.tapestation.gel.image <- function(gel.image.file) {
 	gel.image.rgb <- readPNG(gel.image.file) # this is in the form (y, x, channel); [1,1,] is the upper left corner
 	
@@ -64,6 +57,8 @@ read.tapestation.gel.image <- function(gel.image.file) {
 }
 
 
+#' @export
+#' @importFrom XML xmlRoot xmlParse xmlValue xmlApply xmlChildren xmlToDataFrame
 read.tapestation.xml <- function(xml.file) {
  	batch <- sub("\\.xml$", "", basename(xml.file))
  	xml.root <- xmlRoot(xmlParse(xml.file))
@@ -165,6 +160,7 @@ read.tapestation.xml <- function(xml.file) {
 }
 
 
+#' @export
 read.tapestation <- function(xml.file, gel.image.file = NULL, fit = "spline") {
 	stopifnot(fit %in% c("interpolation", "spline", "regression"))
 	if (is.null(gel.image.file)) gel.image.file <- sub("\\.xml$", ".png", xml.file)

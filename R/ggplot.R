@@ -1,6 +1,5 @@
-library(ggplot2)
-
 # given an electrophoresis object and a variable name (like "length"), generate a nice axis label with appropriate units
+#' @export
 axis.label <- function(electrophoresis, variable) switch(variable,
 	time =               "time (s)",
 	aligned.time =       "aligned time relative to markers (s)",
@@ -32,6 +31,7 @@ axis.label <- function(electrophoresis, variable) switch(variable,
 
 # ggplot2 labeller function to take batch and well.number factors (expecting ~ batch * well.number) and return facet labels that are the sample names
 # batch names are not included in the labels
+#' @export
 labeller.electrophoresis <- function(electrophoresis) function(factor.frame) list(
 	apply(factor.frame, 1, function(labels) {
 		which.sample <- which(electrophoresis$samples$batch == labels[1] & electrophoresis$samples$well.number == labels[2])
@@ -40,6 +40,8 @@ labeller.electrophoresis <- function(electrophoresis) function(factor.frame) lis
 	})
 )
 
+#' @export
+#' @import ggplot2
 qplot.electrophoresis <- function(electrophoresis, # returns a ggplot object, which can be extended by adding more features
 	x = "length",
 	y = "fluorescence",
@@ -118,6 +120,8 @@ qplot.electrophoresis <- function(electrophoresis, # returns a ggplot object, wh
 	this.plot
 }
 
+#' @export
+#' @import ggplot2
 qc.stdcrv <- function(electrophoresis, n.simulate = 100, line.color = "red") { # returns a ggplot object, which can be extended by adding more features
 	ladder.data <- subset(electrophoresis$data, is.ladder & ! is.na(peak))
 	ladder.data$true.length <- electrophoresis$peaks$length[ladder.data$peak]
@@ -147,6 +151,8 @@ qc.stdcrv <- function(electrophoresis, n.simulate = 100, line.color = "red") { #
 	this.plot
 }
 
+#' @export
+#' @import ggplot2
 qc.electrophoresis <- function(electrophoresis, variable, log = TRUE) {
 	peaks <- switch(variable,
 		length = {

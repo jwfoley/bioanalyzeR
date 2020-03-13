@@ -1,4 +1,5 @@
 # combine multiple electrophoresis objects
+#' @export
 rbind.electrophoresis <- function(...) {
 	arg.list <- list(...)
 	
@@ -20,6 +21,7 @@ rbind.electrophoresis <- function(...) {
 
 # compute the sum of some variable under the electrophoresis curve between some boundaries, or within an annotated peak (or both)
 # to do it separately by sample you must provide this function a subset
+#' @export
 integrate.rawdata <- function(
 	data,
 	lower.bound = NULL,
@@ -35,18 +37,21 @@ integrate.rawdata <- function(
 }
 
 # compute the sum of some variable under the electrophoresis curve within each peak in the peak table
+#' @export
 integrate.peaks <- function(
 	electrophoresis,
 	sum.unit = "molarity"
 ) sapply(1:nrow(electrophoresis$peaks), function(peak) integrate.rawdata(electrophoresis$data, peak = peak, sum.unit = sum.unit))
 
 # compute the sum of some variable under the electrophoresis curve within each region in the region table
+#' @export
 integrate.regions <- function(
 	electrophoresis,
 	sum.unit = "molarity"
 ) sapply(1:nrow(electrophoresis$region), function(region.index) integrate.rawdata(subset(electrophoresis$data, well.number == as.character(electrophoresis$regions$well.number[region.index])), electrophoresis$regions$lower.length[region.index], electrophoresis$regions$upper.length[region.index], sum.unit = sum.unit))
 
 # compute the sum of some variable under the electrophoresis curve within a specified region, for each sample
+#' @export
 integrate.custom <- function(
 	electrophoresis,
 	...
@@ -54,6 +59,7 @@ integrate.custom <- function(
 
 # given two or more regions (pairs of lower and upper bounds), calculate the ratio of the integrated sum of each additional region relative to the integrated sum of the first region, for each sample
 # bounds should be a list of pairs of lower and upper bounds, e.g. list(c(100, 200), c(200, 700))
+#' @export
 region.ratio <- function(
 	electrophoresis,
 	bounds,
@@ -67,6 +73,7 @@ region.ratio <- function(
 }
 
 # shortcut to do region.ratio for common Illumina library size vs. adapter dimer contamination
+#' @export
 illumina.library.ratio <- function(
 	electrophoresis,
 	bounds = list(c(100, 200), c(200, 700)),
