@@ -147,59 +147,34 @@ qc.stdcrv <- function(electrophoresis, n.simulate = 100, line.color = "red") { #
 	this.plot
 }
 
-qc.mobility <- function(electrophoresis, log = TRUE) {
-	possible.x.names <- c("aligned.time", "relative.distance")
-	x.name <- possible.x.names[possible.x.names %in% colnames(electrophoresis$data)]
-	stopifnot(length(x.name) == 1)	
+qc.electrophoresis <- function(electrophoresis, variable, log = TRUE) {
+	peaks <- switch(variable,
+		length = {
+			possible.x.names <- c("aligned.time", "relative.distance")
+			x.name <- possible.x.names[possible.x.names %in% colnames(electrophoresis$data)]
+			stopifnot(length(x.name) == 1)	
+			
+			peaks <- cbind(electrophoresis$peaks, estimated.variable = NA)
+			for (batch in names(electrophoresis$wells.by.ladder)) for (ladder.well in names(electrophoresis$wells.by.ladder[[batch]])) {
+				which.peaks <- peaks$well.number %in% electrophoresis$wells.by.ladder[[batch]][[ladder.well]]
+				peaks$estimated.variable[which.peaks] <- electrophoresis$mobility.functions[[batch]][[ladder.well]](peaks[[x.name]][which.peaks])
+			}
+			peaks
+		},
+		
+		concentration = cbind(electrophoresis$peaks, estimated.variable = sapply(1:nrow(electrophoresis$peaks), function(peak.index) sum(electrophoresis$data$concentration[which(electrophoresis$data$peak == peak.index)]))),
+		
+		molarity = cbind(electrophoresis$peaks, estimated.variable = sapply(1:nrow(electrophoresis$peaks), function(peak.index) sum(electrophoresis$data$molarity[which(electrophoresis$data$peak == peak.index)])))
+	)
 	
-	peaks <- cbind(electrophoresis$peaks, estimated.length = NA)
-	for (batch in names(electrophoresis$wells.by.ladder)) for (ladder.well in names(electrophoresis$wells.by.ladder[[batch]])) {
-		which.peaks <- peaks$well.number %in% electrophoresis$wells.by.ladder[[batch]][[ladder.well]]
-		peaks$estimated.length[which.peaks] <- electrophoresis$mobility.functions[[batch]][[ladder.well]](peaks[[x.name]][which.peaks])
-	}
-
-	result <- ggplot(peaks, aes(length, estimated.length, color = peak.observations)) +
+	peaks <- subset(peaks, ! is.na(estimated.variable)) # remove NA's so they don't affect the x-limits and throw a warning
+	
+	result <- ggplot(peaks, aes_(as.name(variable), as.name("estimated.variable"), color = as.name("peak.observations"))) +
 		geom_abline() +
 		geom_point() +
 		geom_smooth(method = "lm") +
-		xlab(paste("software-reported", axis.label(electrophoresis, "length"))) +
-		ylab(paste("estimated", axis.label(electrophoresis, "length"))) +
-		facet_wrap(~ batch * well.number, labeller = labeller.electrophoresis(electrophoresis))
-	
-	if (log) result <- result + scale_x_log10() + scale_y_log10()
-	
-	result
-}
-
-qc.concentration <- function(electrophoresis, log = TRUE) {
-	peaks <- electrophoresis$peaks
-	peaks$estimated.concentration <- sapply(1:nrow(peaks), function(peak.index) sum(electrophoresis$data$concentration[which(electrophoresis$data$peak == peak.index)])) # without the which() you get the NA's too
-	peaks <- subset(peaks, ! is.na(concentration) & ! is.na(estimated.concentration)) # remove NA's so they don't affect the x-limits and throw a warning
-	
-	result <- ggplot(peaks, aes(concentration, estimated.concentration, color = peak.observations)) +
-		geom_abline() +
-		geom_point() +
-		geom_smooth(method = "lm") +
-		xlab(paste("software-reported", axis.label(electrophoresis, "concentration"))) +
-		ylab(paste("estimated", axis.label(electrophoresis, "concentration"))) +
-		facet_wrap(~ batch * well.number, labeller = labeller.electrophoresis(electrophoresis))
-	
-	if (log) result <- result + scale_x_log10() + scale_y_log10()
-	
-	result
-}
-
-qc.molarity <- function(electrophoresis, log = TRUE) {
-	peaks <- electrophoresis$peaks
-	peaks$estimated.molarity <- sapply(1:nrow(peaks), function(peak.index) sum(electrophoresis$data$molarity[which(electrophoresis$data$peak == peak.index)])) # without the which() you get the NA's too
-	peaks <- subset(peaks, ! is.na(molarity) & ! is.na(estimated.molarity)) # remove NA's so they don't affect the x-limits and throw a warning
-	
-	result <- ggplot(peaks, aes(molarity, estimated.molarity, color = peak.observations)) +
-		geom_abline() +
-		geom_point() +
-		geom_smooth(method = "lm") +
-		xlab(paste("software-reported", axis.label(electrophoresis, "molarity"))) +
-		ylab(paste("estimated", axis.label(electrophoresis, "molarity"))) +
+		xlab(paste("software-reported", axis.label(electrophoresis, variable))) +
+		ylab(paste("estimated", axis.label(electrophoresis, variable))) +
 		facet_wrap(~ batch * well.number, labeller = labeller.electrophoresis(electrophoresis))
 	
 	if (log) result <- result + scale_x_log10() + scale_y_log10()
