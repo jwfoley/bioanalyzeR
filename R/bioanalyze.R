@@ -1,3 +1,16 @@
+#' Read a Bioanalyzer XML file
+#'
+#' This function reads an XML file exported from the Bioanalyzer software, then fills out the results with estimates of molecule length, concentration, and molarity.
+#'
+#' Spline fitting seems to perform reasonably well on all data. Agilent appears to use linear interpolation with DNA data and log-linear regression on RNA data, so you could choose those options if you want to reproduce the results of the software more precisely. However, linear interpolation creates sudden spikes in the derivative that make the concentration and molarity estimates unstable; spline fitting is basically a smoother version of that. Log-linear regression is the standard theoretical approach but does not actually fit the data very well; more sophisticated parametric models may be added in the future.
+#'
+#' @param xml.file The filename of an XML file exported from the Bioanalyzer software. The filename is expected to end in \code{.xml} and the name before that extension is used as the name of the batch.
+#' @param fit The method used to fit the mobility model of molecule length vs. migration distance, one of \code{"interpolation"} (linear interpolation via \code{\link{approxfun}}), \code{"spline"} (splines via \code{\link{splinefun}}), or \code{"regression"} (log-linear regression via \code{\link{lm}} with the model \code{relative.distance ~ log(length)}).
+#'
+#' @return An \code{electrophoresis} object containing the data from this Bioanalyzer run.
+#' 
+#' @seealso \code{\link{read.tapestation}}
+#'
 #' @export
 #' @importFrom XML xmlRoot xmlParse xmlValue xmlToDataFrame xmlApply
 #' @importFrom openssl base64_decode
@@ -15,7 +28,6 @@ read.bioanalyzer <- function(xml.file, fit = "spline") {
 		length.unit =         xmlValue(chip.root[["AssayBody"]][["DAAssaySetpoints"]][["DAMAssayInfoMolecular"]][["SizeUnit"]]),
 		concentration.unit =  xmlValue(chip.root[["AssayBody"]][["DAAssaySetpoints"]][["DAMAssayInfoMolecular"]][["ConcentrationUnit"]])
 	)
-	stopifnot(assay.info$assay.type %in% names(molecular.weight))
 	# hardcode the molarity unit depending on concentration unit, otherwise the MW scales will be wrong
 	assay.info$molarity.unit <- switch(assay.info$concentration.unit,
 		"ng/µl" = "nM",
@@ -175,7 +187,7 @@ read.bioanalyzer <- function(xml.file, fit = "spline") {
 	# apply this coefficient to get the concentration of each trapezoid
 	result$concentration <- data.calibration$corrected.area * mass.coefficients[result$well.number]
 	# finally scale by molecular weight to get the molarity
-	result$molarity <- result$concentration / molecular.weight[[assay.info$assay.type]](result$length)
+	result$molarity <- result$concentration / molecular.weight(result$length, assay.info$assay.type) * 1E6 # we're converting ng/uL to nmol/L or pg/uL to pmol/L so we need to scale by 1E6
 	
 	# construct well.by.ladder (analogous to TapeStation but not as useful here)
 	wells.by.ladder <- list(list(samples$well.number))

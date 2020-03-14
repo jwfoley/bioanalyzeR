@@ -14,6 +14,20 @@ find.matching.pixels <- function(rgb.image, rgb.values) {
 }
 
 
+#' Read a TapeStation gel image
+#'
+#' This function reads a gel image exported from the TapeStation software and saved in PNG format. The gel image must include a blue highlight around one lane in order for the function to identify the boundaries of the gel area.
+#'
+#' Because the gel image alone contains little metadata, this function returns only a simple data frame containing the fluorescence intensity vs. migration distance at every point in every lane of the gel (numbered from left to right). It is less useful by itself than when it is called inside \code{\link{read.tapestation}}.
+#'
+#' Note: This function attempts to find the marker bands by their special color. But because this color is overlaid on the gel image, it is impossible to read the fluorescence intensity inside the markers, so it is reported as NA.
+#'
+#' @param gel.image.file The filename of a TapeStation gel image with blue highlight, in PNG format.
+#'
+#' @return A data frame with one row for each vertical pixel of each gel lane.
+#' 
+#' @seealso \code{\link{read.tapestation}}, \code{\link{read.tapestation.xml}}
+#'
 #' @export
 #' @importFrom png readPNG
 read.tapestation.gel.image <- function(gel.image.file) {
@@ -57,6 +71,18 @@ read.tapestation.gel.image <- function(gel.image.file) {
 }
 
 
+#' Read a TapeStation XML file
+#'
+#' This function reads an XML file exported from the TapeStation software.
+#'
+#' Because the XML file contains only metadata and not the raw fluorescence data, this function is less useful by itself than when it is called inside \code{\link{read.tapestation}}.
+#'
+#' @param xml.file The filename of an XML file exported from the TapeStation software. The filename is expected to end in \code{.xml} and the name before that extension is used as the name of the batch.
+#'
+#' @return A list of some of the components of an \code{electrophoresis} object
+#' 
+#' @seealso \code{\link{read.tapestation}}, \code{\link{read.tapestation.gel.image}}
+#'
 #' @export
 #' @importFrom XML xmlRoot xmlParse xmlValue xmlApply xmlChildren xmlToDataFrame
 read.tapestation.xml <- function(xml.file) {
@@ -160,6 +186,20 @@ read.tapestation.xml <- function(xml.file) {
 }
 
 
+#' Read TapeStation data
+#'
+#' This function reads TapeStation run data from an exported XML file and a PNG gel image, then fills out the results with estimates of molecule length, concentration, and molarity.
+#'
+#' Spline fitting seems to perform reasonably well on all data. Agilent appears to use linear interpolation with DNA data and log-linear regression on RNA data, so you could choose those options if you want to reproduce the results of the software more precisely. However, linear interpolation creates sudden spikes in the derivative that make the concentration and molarity estimates unstable; spline fitting is basically a smoother version of that. Log-linear regression is the standard theoretical approach but does not actually fit the data very well; more sophisticated parametric models may be added in the future.
+#'
+#' @param xml.file The filename of an XML file exported from the TapeStation software. The filename is expected to end in \code{.xml} and the name before that extension is used as the name of the batch.
+#' @param gel.image.file The filename of a TapeStation gel image with blue highlight, in PNG format. If \code{NULL}, the gel image file is expected to have the same name as the XML file with a different extension, e.g. \code{experiment1.xml} and \code{experiment1.png}, so if you name your files in that pattern you don't need to fill out this argument.
+#' @param fit The method used to fit the mobility model of molecule length vs. migration distance, one of \code{"interpolation"} (linear interpolation via \code{\link{approxfun}}), \code{"spline"} (splines via \code{\link{splinefun}}), or \code{"regression"} (log-linear regression via \code{\link{lm}} with the model \code{relative.distance ~ log(length)}).
+#'
+#' @return An \code{electrophoresis} object containing the data from this TapeStation run.
+#' 
+#' @seealso \code{\link{read.bioanalyzer}}, \code{\link{read.tapestation.gel.image}}, \code{\link{read.tapestation.xml.file}}
+#'
 #' @export
 read.tapestation <- function(xml.file, gel.image.file = NULL, fit = "spline") {
 	stopifnot(fit %in% c("interpolation", "spline", "regression"))
@@ -308,7 +348,7 @@ read.tapestation <- function(xml.file, gel.image.file = NULL, fit = "spline") {
 		mass.coefficient <- lm(concentration ~ area - 1, data = peaks.ladder)$coefficients[1]
 		mass.coefficients[[ladder.well]] <- mass.coefficient
 		result$concentration[which.rows] <- mass.coefficient * data.calibration$area[which.rows]
-		result$molarity[which.rows] <- result$concentration[which.rows] / molecular.weight[[parsed.data$assay.info$assay.type]](result$length[which.rows])
+		result$molarity[which.rows] <- result$concentration[which.rows] / molecular.weight(result$length[which.rows], parsed.data$assay.info$assay.type) * 1E6 # we're converting ng/uL to nmol/L or pg/uL to pmol/L so we need to scale by 1E6
 	}
 	
 	# convert inferred relative distances of regions back to raw distances

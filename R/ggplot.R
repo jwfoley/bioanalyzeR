@@ -1,6 +1,16 @@
-# given an electrophoresis object and a variable name (like "length"), generate a nice axis label with appropriate units
+#' Variable labels for electrophoresis data
+#'
+#' This function generates a customized descriptive label for a variable in an \code{electrophoresis} object.
+#'
+#' If your \code{electrophoresis} object contains multiple batches with different units for some reason, this function gives a warning and does not include a unit in the label.
+#'
+#' @param electrophoresis An \code{electrophoresis} object.
+#' @param variable The name of the variable to convert into a label. One of \code{"time"}, \code{"aligned.time"}, \code{"distance"}, \code{"relative.distance"}, \code{"fluorescence"}, \code{"length"}, \code{"concentration"}, \code{"molarity"}.
+#'
+#' @return A \code{"character"} object containing a descriptive, human-readable label including the correct units (e.g. ng/µl, nM) specified in the original metadata.
+#'
 #' @export
-axis.label <- function(electrophoresis, variable) switch(variable,
+variable.label <- function(electrophoresis, variable) switch(variable,
 	time =               "time (s)",
 	aligned.time =       "aligned time relative to markers (s)",
 	distance =           "distance migrated",
@@ -29,8 +39,12 @@ axis.label <- function(electrophoresis, variable) switch(variable,
 	},	
 )
 
-# ggplot2 labeller function to take batch and well.number factors (expecting ~ batch * well.number) and return facet labels that are the sample names
-# batch names are not included in the labels
+#' Labeller for electrophoresis samples
+#'
+#' This is a labeller function compatible with \code{\link{facet_wrap}} and \code{\link{facet_grid}}. It allows you to facet the data from an \code{electrophoresis} object on \code{batch * well.number}, to keep the samples in the observed order, but replaces the facet labels with the annotated sample names.
+#'
+#' @param electrophoresis An \code{electrophoresis} object whose \code{samples} member contains all the samples in your plot.
+#'
 #' @export
 labeller.electrophoresis <- function(electrophoresis) function(factor.frame) list(
 	apply(factor.frame, 1, function(labels) {
@@ -40,23 +54,41 @@ labeller.electrophoresis <- function(electrophoresis) function(factor.frame) lis
 	})
 )
 
+#' Plot electrophoresis data
+#'
+#' This function is a shortcut to plot the data from an \code{electrophoresis} object, wrapping \code{\link{ggplot}} similarly to \code{\link{qplot}}. The result is analogous to electropherograms produced by the Agilent software.
+#'
+#' @param electrophoresis An \code{electrophoresis} object.
+#' @param x The variable to use as the x-value of each point in the graph. Can be one of \code{"time"}, \code{"aligned.time"}, \code{"distance"}, \code{"relative.distance"}, or \code{"length"}.
+#' @param y The variable to use as the y-value of each point in the graph. Can be one of \code{"fluorescence"}, \code{"concentration"}, or \code{"molarity"}.
+#' @param log Which variables to log-transform (\code{"x"}, \code{"y"}, or \code{"xy"}).
+#' @param facet If \code{TRUE}, display each sample in a separate facet via \code{\link{facet_wrap}}, as in the Agilent software's usual display mode. If \code{FALSE}, overlay all samples in one graph and color-coded, as in the Agilent software's comparison mode.
+#' @param scales Scaling rules for the facets, passed to \code{\link{facet_wrap}}.
+#' @param geom Name of the geom to draw. Currently only \code{"line"} (\code{\link{geom_line}}, to get continuous lines) and \code{"area"} (\code{\link{geom_area}}, to fill the area under the curves) are supported.
+#' @param include.ladder If \code{FALSE}, graph only the actual samples and not the ladder(s) wells.
+#' @param between.markers If \code{TRUE}, graph only data between the marker peaks.
+#' @param peak.fill Color to fill the area under reported peaks. Set to \code{NA} to skip plotting the peaks.
+#' @param region.alpha Alpha-transparency of the highlight in the reported regions of interested. Set to \code{NA} to skip plotting the regions.
+#' @param area.alpha Alpha-transparency of the filled areas under the curves, if they are overlaid in one graph (\code{facet = FALSE} and \code{geom = "area"}), to make them visible through one another.
+#'
+#' @return A ggplot object containing several layers. You can draw it directly or customize it like any other ggplot object by adding more layers.
+#'
 #' @export
 #' @import ggplot2
-qplot.electrophoresis <- function(electrophoresis, # returns a ggplot object, which can be extended by adding more features
+qplot.electrophoresis <- function(electrophoresis,
 	x = "length",
-	y = "fluorescence",
-	log = NULL, # which variables to log-transform, as in qplot(); defaults to "x" if x-value is length or none otherwise
-	facet = TRUE, # if false, overlay everything on one graph and color-code the curves
-	scales = "fixed", # scaling rules for the facets, passed to facet_wrap()
-	geom = "line", # default gives geom_line; "area" for geom_area is another good option
-	include.ladder = FALSE, # show the ladder wells?
-	between.markers = TRUE, # show only data between the marker peaks (so their signal doesn't ruin the scale)
-	peak.fill = "darkred", # set to NA to stop showing peaks
-	region.alpha = 0.2, # set to NA to stop showing regions
-	area.alpha = 0.2 # if facet = FALSE and geom = "area", alpha transparency of the filled areas
+	y = "molarity",
+	log = "",
+	facet = TRUE,
+	scales = "fixed",
+	geom = "line",
+	include.ladder = FALSE,
+	between.markers = TRUE,
+	peak.fill = "darkred",
+	region.alpha = 0.2,
+	area.alpha = 0.2
 ) {
 
-	if (is.null(log)) log <- if (x == "length") "x" else NA
 	graph.data <- electrophoresis$data
 	
 	# remove ladders
@@ -114,15 +146,28 @@ qplot.electrophoresis <- function(electrophoresis, # returns a ggplot object, wh
 	if (log %in% c("y", "xy")) this.plot <- this.plot + scale_y_log10()
 	
 	# set labels and other settings for specific x & y variables
-	this.plot <- this.plot + xlab(axis.label(electrophoresis, x)) + ylab(axis.label(electrophoresis, y))
+	this.plot <- this.plot + xlab(variable.label(electrophoresis, x)) + ylab(variable.label(electrophoresis, y))
 	if (x %in% c("distance", "relative.distance")) this.plot <- this.plot + scale_x_reverse()
 	
 	this.plot
 }
 
-#' @export
+#' Plot mobility standard curves
+#'
+#' This function is a shortcut to plot the standard curve(s) of molecule length vs. migration speed from an \code{electrophoresis} object, wrapping \code{\link{ggplot}}. This allows you to check the quality of the model.
+#'
+#' The positions of the ladder peaks reported by the Agilent software are shown in the selected color, and the fluorescence intensites within the peak boundaries are also plotted. If there are multiple ladders, each is shown as a separate facet.
+#'
+#' @param electrophoresis An \code{electrophoresis} object.
+#' @param n.simulate Number of data points to simulate for drawing the standard curve.
+#' @param line.color Color of the standard curve and data points.
+#'
+#' @return A ggplot object containing several layers. You can draw it directly or customize it like any other ggplot object by adding more layers.
+#' 
+#' @seealso \code{\link{qc.electrophoresis}}
+#'
 #' @import ggplot2
-qc.stdcrv <- function(electrophoresis, n.simulate = 100, line.color = "red") { # returns a ggplot object, which can be extended by adding more features
+stdcrv.mobility <- function(electrophoresis, n.simulate = 100, line.color = "red") { # returns a ggplot object, which can be extended by adding more features
 	ladder.data <- subset(electrophoresis$data, is.ladder & ! is.na(peak))
 	ladder.data$true.length <- electrophoresis$peaks$length[ladder.data$peak]
 	good.peaks <- subset(electrophoresis$peaks, ! is.na(length))
@@ -143,14 +188,28 @@ qc.stdcrv <- function(electrophoresis, n.simulate = 100, line.color = "red") { #
 		geom_point() + 
 		geom_point(aes_(x = as.name("length"), y = as.name(x.name)), data = subset(good.peaks, is.ladder), color = line.color) + # overlay the reported peak positions
 		geom_line(aes(x = estimated.length, y = x), data = simulated.data, col = line.color) + # overlay the simulated data from the mobility function
-		xlab(paste("true", axis.label(electrophoresis, "length"))) +
-		ylab(axis.label(electrophoresis, x.name)) +
+		xlab(paste("true", variable.label(electrophoresis, "length"))) +
+		ylab(variable.label(electrophoresis, x.name)) +
 		facet_wrap(~ batch * well.number)
 	if (x.name == "relative.distance") this.plot <- this.plot + scale_y_reverse()
 	
 	this.plot
 }
 
+#' Compare estimates with Agilent software's output
+#'
+#' This function is a shortcut to plot the estimates of a variable from the \code{\link{bioanalyzeR}} package against the values reported by the Agilent software, at all reported peaks. This allows you to check the quality of the estimates.
+#'
+#' If \code{variable = "length"}, apply the mobility model(s) fit by \code{\link{read.bioanalyzer}} or \code{\link{read.tapestation}} to the peak centers' aligned times or relative distance and compare those estimated molecule lengths with the lengths reported by the Agilent software. If \code{variable = "concentration"} or \code{variable = "molarity"}, integrate the appropriate variable between the boundaries of each peak and compare that sum with the figure reported by the Agilent software. For the ladder Agilent's reported values are hardcoded to the known, correct properties of the ladder molecules.
+#'
+#' @param electrophoresis An \code{electrophoresis} object.
+#' @param variable Which variable to compare. One of \code{"length"}, \code{"concentration"}, \code{"molarity"}.
+#' @param log Whether to log-scale both axes. Typically the data are more evenly spaced in log scale.
+#'
+#' @return A ggplot object containing several layers. You can draw it directly or customize it like any other ggplot object by adding more layers.
+#' 
+#' @seealso \code{\link{stdcrv.mobility}}
+#'
 #' @export
 #' @import ggplot2
 qc.electrophoresis <- function(electrophoresis, variable, log = TRUE) {
@@ -179,8 +238,8 @@ qc.electrophoresis <- function(electrophoresis, variable, log = TRUE) {
 		geom_abline() +
 		geom_point() +
 		geom_smooth(method = "lm") +
-		xlab(paste("software-reported", axis.label(electrophoresis, variable))) +
-		ylab(paste("estimated", axis.label(electrophoresis, variable))) +
+		xlab(paste("software-reported", variable.label(electrophoresis, variable))) +
+		ylab(paste("estimated", variable.label(electrophoresis, variable))) +
 		facet_wrap(~ batch * well.number, labeller = labeller.electrophoresis(electrophoresis))
 	
 	if (log) result <- result + scale_x_log10() + scale_y_log10()
