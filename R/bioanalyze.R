@@ -13,7 +13,7 @@
 #'
 #' @export
 #' @importFrom XML xmlRoot xmlParse xmlValue xmlToDataFrame xmlApply
-#' @importFrom openssl base64_decode
+#' @importFrom base64enc base64decode
 read.bioanalyzer <- function(xml.file, fit = "spline") {
 	stopifnot(fit %in% c("linear", "spline", "regression"))
 	
@@ -67,7 +67,7 @@ read.bioanalyzer <- function(xml.file, fit = "spline") {
 			n.values <- as.integer(xmlValue(signal.data[["NumberOfSamples"]]))
 			raw.data <- data.frame(
 				time = as.numeric(xmlValue(signal.data[["XStart"]])) + as.numeric(xmlValue(signal.data[["XStep"]])) * (1:n.values - 1),
-				fluorescence = readBin(base64_decode(xmlValue(signal.data[["ProcessedSignal"]])), "numeric", size = 4, n = n.values, endian = "little"),
+				fluorescence = readBin(base64decode(xmlValue(signal.data[["ProcessedSignal"]])), "numeric", size = 4, n = n.values, endian = "little"),
 				stringsAsFactors = F
 			)
 			
