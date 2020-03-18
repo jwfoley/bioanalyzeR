@@ -136,7 +136,10 @@ qplot.electrophoresis <- function(electrophoresis,
 	)
 	
 	# add peaks
-	if (facet & ! is.na(peak.fill) & ! is.null(electrophoresis$peaks)) this.plot <- this.plot + geom_area(aes_(x = as.name(x), y = as.name(y), group = as.name("peak")), data = subset(graph.data, ! is.na(peak)), fill = peak.fill)
+	if (facet & ! is.na(peak.fill) & ! is.null(electrophoresis$peaks)) {
+		peak.data <- subset(cbind(electrophoresis$data, peak = in.peaks(electrophoresis)), ! is.na(peak))
+		this.plot <- this.plot + geom_area(aes_(x = as.name(x), y = as.name(y), group = as.name("peak")), data = peak.data, fill = peak.fill)
+	}
 	
 	# add faceting
 	if (facet) this.plot <- this.plot + facet_wrap(~ batch * well.number, scales = scales, labeller = labeller.electrophoresis(electrophoresis))
@@ -167,8 +170,10 @@ qplot.electrophoresis <- function(electrophoresis,
 #' @seealso \code{\link{qc.electrophoresis}}
 #'
 #' @import ggplot2
+#'
+#' @export
 stdcrv.mobility <- function(electrophoresis, n.simulate = 100, line.color = "red") { # returns a ggplot object, which can be extended by adding more features
-	ladder.data <- subset(electrophoresis$data, is.ladder & ! is.na(peak))
+	ladder.data <- subset(cbind(electrophoresis$data, peak = in.peaks(electrophoresis)), is.ladder & ! is.na(peak))
 	ladder.data$true.length <- electrophoresis$peaks$length[ladder.data$peak]
 	good.peaks <- subset(electrophoresis$peaks, ! is.na(length))
 	
@@ -227,9 +232,9 @@ qc.electrophoresis <- function(electrophoresis, variable, log = TRUE) {
 			peaks
 		},
 		
-		concentration = cbind(electrophoresis$peaks, estimated.variable = sapply(1:nrow(electrophoresis$peaks), function(peak.index) sum(electrophoresis$data$concentration[which(electrophoresis$data$peak == peak.index)]))),
+		concentration = cbind(electrophoresis$peaks, estimated.variable = integrate.peaks(electrophoresis, "concentration")),
 		
-		molarity = cbind(electrophoresis$peaks, estimated.variable = sapply(1:nrow(electrophoresis$peaks), function(peak.index) sum(electrophoresis$data$molarity[which(electrophoresis$data$peak == peak.index)])))
+		molarity = cbind(electrophoresis$peaks, estimated.variable = integrate.peaks(electrophoresis, "molarity"))
 	)
 	
 	peaks <- subset(peaks, ! is.na(estimated.variable)) # remove NA's so they don't affect the x-limits and throw a warning
