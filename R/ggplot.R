@@ -89,26 +89,24 @@ qplot.electrophoresis <- function(electrophoresis,
 	area.alpha = 0.2
 ) {
 
-	graph.data <- electrophoresis$data
-	
 	# remove ladders
-	if (! include.ladder) graph.data <- subset(graph.data, ! is.ladder)
+	if (! include.ladder) electrophoresis$data <- subset(electrophoresis$data, ! is.ladder)
 	
 	# remove data in unusable ranges
-	graph.data <- graph.data[! is.na(graph.data[[x]]) & ! is.na(graph.data[[y]]),]
-	if (log %in% c("x", "xy")) graph.data <- graph.data[graph.data[[x]] > 0,]
-	if (log %in% c("y", "xy")) graph.data <- graph.data[graph.data[[y]] > 0,]
+	electrophoresis$data <- electrophoresis$data[! is.na(electrophoresis$data[[x]]) & ! is.na(electrophoresis$data[[y]]),]
+	if (log %in% c("x", "xy")) electrophoresis$data <- electrophoresis$data[electrophoresis$data[[x]] > 0,]
+	if (log %in% c("y", "xy")) electrophoresis$data <- electrophoresis$data[electrophoresis$data[[y]] > 0,]
 	
 	# remove data outside the space between markers
 	if (between.markers) for (i in 1:nrow(electrophoresis$peaks)) {
 		if (electrophoresis$peaks$peak.observations[i] == "Lower Marker") {
-			graph.data <- subset(graph.data, ! (
+			electrophoresis$data <- subset(electrophoresis$data, ! (
 				batch == electrophoresis$peaks$batch[i] &
 				well.number == electrophoresis$peaks$well.number[i] &
 				length <= electrophoresis$peaks$upper.length[i]
 			))
 		} else if (electrophoresis$peaks$peak.observations[i] == "Upper Marker") {
-			graph.data <- subset(graph.data, ! (
+			electrophoresis$data <- subset(electrophoresis$data, ! (
 				batch == electrophoresis$peaks$batch[i] &
 				well.number == electrophoresis$peaks$well.number[i] &
 				length >= electrophoresis$peaks$lower.length[i]
@@ -117,7 +115,7 @@ qplot.electrophoresis <- function(electrophoresis,
 	}
 	
 	# create plot but don't add the geom yet
-	this.plot <- ggplot(graph.data)
+	this.plot <- ggplot(electrophoresis$data)
 	
 	# add regions
 	if (facet & ! is.na(region.alpha) & ! is.null(electrophoresis$regions)) this.plot <- this.plot + geom_rect(aes_(xmin = as.name(paste0("lower.", x)), xmax = as.name(paste0("upper.", x)), ymin = -Inf, ymax = Inf), data = electrophoresis$regions, alpha = region.alpha)
