@@ -43,7 +43,8 @@ read.bioanalyzer <- function(xml.file, fit = "spline") {
 			well.number <- as.integer(xmlValue(this.sample[["WellNumber"]]))
 			sample.name <- trimws(xmlValue(this.sample[["Name"]]))
 			is.ladder <- (trimws(xmlValue(this.sample[["Category"]])) == "Ladder")
-			sample.observations <- trimws(xmlValue(this.sample[["Comment"]]))
+			sample.comment <- trimws(xmlValue(this.sample[["Comment"]]))
+			sample.observations <- trimws(xmlValue(this.sample[["ResultFlagCommonLabel"]]))
 
 			# read peaks
 			peaks.raw <- xmlToDataFrame(this.sample[["DAResultStructures"]][["DARIntegrator"]][["Channel"]][["PeaksMolecular"]], stringsAsFactors = F)
@@ -86,9 +87,9 @@ read.bioanalyzer <- function(xml.file, fit = "spline") {
 			raw.data$aligned.time <- raw.data$time * alignment.coefficient + alignment.offset
 			
 			list(
-				data = data.frame(batch, well.number, sample.name, is.ladder, sample.observations, raw.data, stringsAsFactors = F),
-				samples = data.frame(batch, well.number, sample.name, is.ladder, sample.observations, stringsAsFactors = F),
-				peaks = data.frame(batch, well.number, sample.name, is.ladder, sample.observations, peaks, stringsAsFactors = F),
+				data = data.frame(batch, well.number, sample.name, is.ladder, sample.observations, sample.comment, raw.data, stringsAsFactors = F),
+				samples = data.frame(batch, well.number, sample.name, is.ladder, sample.observations, sample.comment, stringsAsFactors = F),
+				peaks = data.frame(batch, well.number, sample.name, is.ladder, sample.observations, sample.comment, peaks, stringsAsFactors = F),
 				alignment.values = c(alignment.coefficient, alignment.offset)
 			)
 		}
@@ -110,7 +111,7 @@ read.bioanalyzer <- function(xml.file, fit = "spline") {
 	names(result$assay.info) <- batch
 	
 	# convert sample metadata into factors, ensuring all frames have the same levels and the levels are in the observed order
-	for (field in c("batch", "well.number", "sample.name", "sample.observations")) {
+	for (field in c("batch", "well.number", "sample.name", "sample.observations", "sample.comment")) {
 		result$samples[,field] <- factor(result$samples[,field], levels = unique(result$samples[,field]))
 		if (field %in% names(result$data)) result$data[,field] <- factor(result$data[,field], levels = levels(result$samples[,field]))
 		if (field %in% names(result$peaks)) result$peaks[,field] <- factor(result$peaks[,field], levels = levels(result$samples[,field]))
