@@ -2,6 +2,11 @@
 
 S3method(rbind,electrophoresis)
 export(illumina.library.ratio)
+export(in.custom.region)
+export(in.peak)
+export(in.peaks)
+export(in.region)
+export(in.regions)
 export(integrate.custom)
 export(integrate.peaks)
 export(integrate.rawdata)
