@@ -171,15 +171,10 @@ read.bioanalyzer <- function(xml.file, fit = "spline") {
 		}
 	}
 	
-	# annotate which peak each data point is in, if any
-	# WARNING: if peaks overlap, this will overwrite and each point will only be mapped to the last-occuring one!
-	result$data$peak <- NA
-	for (i in 1:nrow(result$peaks)) result$data$peak[result$data$well.number == result$peaks$well.number[i] & result$data$aligned.time >= result$peaks$lower.aligned.time[i] & result$data$aligned.time <= result$peaks$upper.aligned.time[i]] <- i
-	
 	# convert to concentration and molarity
 	# the idea is that we must correct fluorescence area by migration time to account for the fact that faster-moving molecules spend less time in front of the detector (Agilent's TimeCorrectedArea apparently does this with the raw time, not the aligned time)
 	# and then fluorescence is proportional to concentration, which is molarity * length
-	data.calibration <- cbind(result$data, do.call(rbind, lapply(result$samples$well.number, function(this.well) {
+	data.calibration <- cbind(result$data, peak = in.peaks(result), do.call(rbind, lapply(result$samples$well.number, function(this.well) {
 		result.this.well <- subset(result$data, well.number == this.well)
 		data.frame(
 			delta.fluorescence = c(NA, diff(result.this.well$fluorescence)),
