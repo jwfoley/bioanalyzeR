@@ -16,5 +16,5 @@ A new \code{electrophoresis} object containing all the data from the previous on
 This function combines multiple \code{electrophoresis} objects into one so you can analyze and graph multiple batches together.
 }
 \details{
-All data frames are combined by \code{\link{rbind}} and lists are combined by \code{\link{c}}. Factor levels are expanded to the union of all inputs. The \code{data$peak} column is renumbered to match the new peak table.
+All data frames are combined by \code{\link{rbind}} and lists are combined by \code{\link{c}}. Factor levels are expanded to the union of all inputs.
 }
