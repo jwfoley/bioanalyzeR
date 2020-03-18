@@ -11,4 +11,9 @@ Description: This package reads raw data and metadata exported from the Agilent 
 License: LGPL-3
 Encoding: UTF-8
 LazyData: true
+Imports:
+    XML
+    base64enc
+    png
+    ggplot2
 RoxygenNote: 7.1.0
