@@ -10,7 +10,7 @@ in.regions(electrophoresis)
 \item{electrophoresis}{An \code{electrophoresis} object.}
 }
 \value{
-A vector of integers with length \code{nrow(data)}. Each element is either an integer indicating the row of \code{electrophoresis$regions} that the data point belongs to, or NA if it is not in any of the annotated regions.
+A vector of integers with length \code{nrow(data)}. Each element is either the integer index of the region in \code{electrophoresis$regions} that the data point belongs to, or NA if it is not in any of the annotated regions.
 }
 \description{
 This function takes an electrophoresis object and reports which of the regions each data point belongs to, if any.

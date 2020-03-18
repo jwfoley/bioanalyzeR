@@ -4,16 +4,28 @@
 \alias{integrate.custom}
 \title{Integrate a variable in a custom region}
 \usage{
-integrate.custom(electrophoresis, ...)
+integrate.custom(
+  electrophoresis,
+  lower.bound = -Inf,
+  upper.bound = Inf,
+  bound.variable = "length",
+  sum.variable = "molarity"
+)
 }
 \arguments{
 \item{electrophoresis}{An \code{electrophoresis} object.}
 
-\item{...}{Arguments passed to \code{\link{integrate.rawdata}}. In particular use \code{lower.bound} and \code{upper.bound} to set the boundaries, \code{bound.variable} for the boundary variable, and \code{sum.variable} for the variable to sum.}
+\item{lower.bound}{Lower boundary of the region to integrate.}
+
+\item{upper.bound}{Upper boundary of the region to integrate.}
+
+\item{bound.variable}{Which variable the boundaries refer to.}
+
+\item{sum.variable}{Which variable to sum in each region.}
 }
 \description{
 Compute the sum of some electrophoresis variable in an \code{electrophoresis} object between specified boundaries. The variable is summed individually for each sample.
 }
 \seealso{
-\code{\link{integrate.rawdata}}, \code{\link{integrate.peaks}}, \code{\link{integrate.regions}}, \code{\link{region.ratio}}
+\code{\link{integrate.peaks}}, \code{\link{integrate.regions}}, \code{\link{region.ratio}}
 }

@@ -10,7 +10,7 @@ in.peaks(electrophoresis)
 \item{electrophoresis}{An \code{electrophoresis} object.}
 }
 \value{
-A vector of integers with length \code{nrow(data)}. Each element is either an integer indicating the row of \code{electrophoresis$peaks} that the data point belongs to, or NA if it is not in any of the annotated peaks.
+A vector of integers with length \code{nrow(data)}. Each element is either the integer index of the peak in \code{electrophoresis$peaks} that the data point belongs to, or NA if it is not in any of the annotated peaks.
 }
 \description{
 This function takes an electrophoresis object and reports which of the peaks each data point belongs to, if any.

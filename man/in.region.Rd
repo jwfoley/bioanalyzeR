@@ -9,7 +9,7 @@ in.region(electrophoresis, which.region)
 \arguments{
 \item{electrophoresis}{An \code{electrophoresis} object.}
 
-\item{which.region}{An integer indicating one of the region in \code{electrophoresis$regions}.}
+\item{which.region}{The integer index of a region in \code{electrophoresis$regions}.}
 }
 \value{
 A vector of logicals with length \code{nrow(data)}.

@@ -9,7 +9,7 @@ in.peak(electrophoresis, which.peak)
 \arguments{
 \item{electrophoresis}{An \code{electrophoresis} object.}
 
-\item{which.peak}{An integer indicating one of the peaks in \code{electrophoresis$peaks}.}
+\item{which.peak}{The integer index of a peak in \code{electrophoresis$peaks}.}
 }
 \value{
 A vector of logicals with length \code{nrow(data)}.

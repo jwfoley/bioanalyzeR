@@ -14,11 +14,11 @@ in.custom.region(
 \arguments{
 \item{data}{A data frame of electrophoresis data, from the \code{$data} member of an \code{electrophoresis} object (not the whole object itself).}
 
-\item{lower.bound}{Lower boundary of the region to integrate, or \code{NULL} to extend to negative infinity.}
+\item{lower.bound}{Lower boundary of the region.}
 
-\item{upper.bound}{Upper boundary of the region to integrate, or \code{NULL} to extend to positive infinity.}
+\item{upper.bound}{Upper boundary of the region.}
 
-\item{bound.variable}{Which variable the boundaries refer to, e.g. \code{"length"}.}
+\item{bound.variable}{Which variable the boundaries refer to.}
 }
 \value{
 A vector of logicals with length \code{nrow(data)}.

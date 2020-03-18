@@ -15,5 +15,5 @@ integrate.regions(electrophoresis, sum.variable = "molarity")
 Compute the sum of some electrophoresis variable between the boundaries of each region of interest in an \code{electrophoresis} object.
 }
 \seealso{
-\code{\link{integrate.rawdata}}, \code{\link{integrate.peaks}}, \code{\link{integrate.custom}}
+\code{\link{integrate.peaks}}, \code{\link{integrate.custom}}
 }

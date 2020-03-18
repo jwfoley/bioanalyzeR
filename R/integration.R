@@ -1,33 +1,3 @@
-#' Integrate a variable under the electrophoresis curve
-#'
-#' Compute the sum of some electrophoresis variable between some specified boundaries, or within an annotated peak, or both (intersection).
-#'
-#' This is an all-purpose base function that accepts any combination of sum variable, boundaries, boundary variable, and peak. Crucially, it operates directly on the \code{$data} member of an \code{electrophoresis} object rather than the entire object, and does not separate the results by sample. You can achieve this manually by taking a \code{\link{subset}} of the data but it is probably easier to use one of the functions that wrap this one.
-#'
-#' @param data A data frame of electrophoresis data, from the \code{$data} member of an electrophoresis object (not the whole object itself).
-#' @param lower.bound Lower boundary of the region to integrate, or \code{NULL} to extend to negative infinity.
-#' @param upper.bound Upper boundary of the region to integrate, or \code{NULL} to extend to positive infinity.
-#' @param bound.variable Which variable the boundaries refer to, e.g. \code{"length"}.
-#' @param peak The index of the peak to integrate in, or \code{NULL} to ignore peaks.
-#' @param sum.variable Which variable to sum in the target region.
-#'
-#' @seealso \code{\link{integrate.peaks}}, \code{\link{integrate.regions}}, \code{\link{integrate.custom}}
-#'
-#' @export
-integrate.rawdata <- function(
-	data,
-	lower.bound = NULL,
-	upper.bound = NULL,
-	bound.variable = "length",
-	peak = NULL,
-	sum.variable = "molarity"
-) {
-	above.lower <- if (is.null(lower.bound)) rep(TRUE, nrow(data)) else data[[bound.variable]] >= lower.bound
-	below.upper <- if (is.null(upper.bound)) rep(TRUE, nrow(data)) else data[[bound.variable]] <= upper.bound
-	in.peak <- if (is.null(peak)) rep(TRUE, nrow(data)) else ! is.na(data$peak) & data$peak == peak
-	sum(data[[sum.variable]][above.lower & below.upper & in.peak])
-}
-
 #' Integrate a variable under each peak
 #'
 #' Compute the sum of some electrophoresis variable between the boundaries of each reported peak in an \code{electrophoresis} object.
@@ -35,13 +5,13 @@ integrate.rawdata <- function(
 #' @param electrophoresis An \code{electrophoresis} object.
 #' @param sum.variable Which variable to sum in each peak.
 #'
-#' @seealso \code{\link{integrate.rawdata}}, \code{\link{integrate.regions}}, \code{\link{integrate.custom}}
+#' @seealso \code{\link{integrate.regions}}, \code{\link{integrate.custom}}
 #'
 #' @export
 integrate.peaks <- function(
 	electrophoresis,
 	sum.variable = "molarity"
-) sapply(1:nrow(electrophoresis$peaks), function(peak) integrate.rawdata(electrophoresis$data, peak = peak, sum.variable = sum.variable))
+) sapply(1:nrow(electrophoresis$peaks), function(peak) sum(electrophoresis$data[[sum.variable]][which(in.peak(electrophoresis, peak))]))
 
 #' Integrate a variable in each region
 #'
@@ -50,28 +20,37 @@ integrate.peaks <- function(
 #' @param electrophoresis An \code{electrophoresis} object.
 #' @param sum.variable Which variable to sum in each region.
 #'
-#' @seealso \code{\link{integrate.rawdata}}, \code{\link{integrate.peaks}}, \code{\link{integrate.custom}}
+#' @seealso \code{\link{integrate.peaks}}, \code{\link{integrate.custom}}
 #'
 #' @export
 integrate.regions <- function(
 	electrophoresis,
 	sum.variable = "molarity"
-) sapply(1:nrow(electrophoresis$region), function(region.index) integrate.rawdata(subset(electrophoresis$data, well.number == as.character(electrophoresis$regions$well.number[region.index])), electrophoresis$regions$lower.length[region.index], electrophoresis$regions$upper.length[region.index], sum.variable = sum.variable))
+) sapply(1:nrow(electrophoresis$regions), function(region) sum(electrophoresis$data[[sum.variable]][which(in.region(electrophoresis, region))]))
 
 #' Integrate a variable in a custom region
 #'
 #' Compute the sum of some electrophoresis variable in an \code{electrophoresis} object between specified boundaries. The variable is summed individually for each sample.
 #'
 #' @param electrophoresis An \code{electrophoresis} object.
-#' @param ... Arguments passed to \code{\link{integrate.rawdata}}. In particular use \code{lower.bound} and \code{upper.bound} to set the boundaries, \code{bound.variable} for the boundary variable, and \code{sum.variable} for the variable to sum.
+#' @param lower.bound Lower boundary of the region to integrate.
+#' @param upper.bound Upper boundary of the region to integrate.
+#' @param bound.variable Which variable the boundaries refer to.
+#' @param sum.variable Which variable to sum in each region.
 #'
-#' @seealso \code{\link{integrate.rawdata}}, \code{\link{integrate.peaks}}, \code{\link{integrate.regions}}, \code{\link{region.ratio}}
+#' @seealso \code{\link{integrate.peaks}}, \code{\link{integrate.regions}}, \code{\link{region.ratio}}
 #'
 #' @export
 integrate.custom <- function(
 	electrophoresis,
-	...
-) sapply(as.character(electrophoresis$samples$well.number), function(well) integrate.rawdata(subset(electrophoresis$data, well.number == well), ...))
+	lower.bound = -Inf,
+	upper.bound = Inf,
+	bound.variable = "length",
+	sum.variable = "molarity"
+) {
+	in.this.region <- in.custom.region(electrophoresis$data, lower.bound, upper.bound, bound.variable)
+	sapply(1:nrow(electrophoresis$samples), function(sample) sum(electrophoresis$data[[sum.variable]][in.this.region & from.sample(electrophoresis, sample)]))
+}
 
 #' Compare sums within regions
 #'
