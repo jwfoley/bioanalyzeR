@@ -1,5 +1,12 @@
 Simple R functions for importing and analyzing electrophoresis data from an Agilent 2100 Bioanalyzer or 2200/4150/4200 TapeStation.
 
+# Why is this useful?
+
+1. **More flexible and professional-looking graphs.** The graphing options in the Agilent software are limited, especially when you combine data from multiple batches. Importing the data into R, especially with the help of `ggplot2`, allows you to customize the presentation in any way you can imagine.
+1. **Less misleading graphs.** The electropherograms from the Agilent software show only fluorescence on the y-axis. Fluorescence is proportional to mass, but often the real variable of interest is molarity: how many molecules? A 200 bp peak a 100 bp peak with twice as much molarity look the same on a fluorescence graph but very different on a molarity graph.
+1. **Automated analysis.** If you just want to perform a simple QC analysis like DV200 or library insert:dimer ratio, you can script that for an unlimited number of batches and collect the results directly into a table—which, in turn, you can also graph.
+
+
 # Installation
 
     > library(devtools)
