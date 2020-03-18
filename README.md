@@ -32,7 +32,6 @@ This is a generalized data structure for the data and metadata of one or more Bi
 	* `length` - estimated molecule length at this point
 	* `concentration` - estimated concentration of the area under the curve between this point and the previous one
 	* `molarity` - estimated molarity of the area under the curve between this point and the previous one
-	* `peak` - the index of the peak, if any, that this measurement is inside
 * `assay.info` - a list of metadata about each batch and the assay kit used
 * `samples` - a data frame of metadata for each sample (also annotated to `data`, `peaks`, and `regions` with the same factor levels), specifically:
 	* `batch` - the batch (instrument run) of the sample, from the file name
@@ -41,11 +40,12 @@ This is a generalized data structure for the data and metadata of one or more Bi
 	* `reagent.id` (TapeStation) - the name of the ScreenTape used for this sample
 	* `is.ladder` - a Boolean indicating whether this sample is a ladder of standards for calibration
 	* `sample.observations` - notes about this sample supplied by the user or the Agilent software
+	* `sample.comment` - notes about this sample supplied by the user
 * `wells.by.ladder` - a list of which wells in each batch correspond to a given ladder (the TapeStation may run a separate ladder on each tape)
 * `peaks` - a data frame of peaks reported by the Agilent software, annotated with their lower and upper boundaries in various scales
 * `regions` - a data frame of regions of interest reported by the Agilent software, annotated with their lower and upper boundaries in varous scales
 * `mobility functions` - a list of model functions, one per ladder used for calibration, to convert migration speed measurements (aligned time or relative distance) into estimated molecule lengths
-* `mass.coefficients` - a list of coefficients, one per sample (Bioanalyzer) or one per ladder (TapeStation), to convert area under the curve to estimated mass
+* `mass.coefficients` - a list of coefficients, one per sample, to convert area under the curve to estimated mass
 
 
 # Graphing the data
@@ -68,9 +68,6 @@ Compare the estimated molecule lengths, concentrations, or molarities from this 
 Combine multiple `electrophoresis` objects into one.
 
 ## Summing data
-
-### `integrate.rawdata`
-Computes the sum of some variable under the electrophoresis curve between specified boundaries, or within an annotated peak, or in the intersection of both.
 
 ### `integrate.peaks`
 Computes the sum of some variable in each peak in the peak table.
