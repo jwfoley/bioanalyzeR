@@ -90,7 +90,7 @@ qplot.electrophoresis <- function(electrophoresis,
 ) {
 
 	# remove ladders
-	if (! include.ladder) electrophoresis$data <- subset(electrophoresis$data, ! is.ladder)
+	if (! include.ladder) electrophoresis <- subset(electrophoresis, well.number != ladder.well)
 	
 	# remove data in unusable ranges
 	electrophoresis$data <- electrophoresis$data[! is.na(electrophoresis$data[[x]]) & ! is.na(electrophoresis$data[[y]]),]
@@ -101,14 +101,12 @@ qplot.electrophoresis <- function(electrophoresis,
 	if (between.markers) for (i in 1:nrow(electrophoresis$peaks)) {
 		if (electrophoresis$peaks$peak.observations[i] == "Lower Marker") {
 			electrophoresis$data <- subset(electrophoresis$data, ! (
-				batch == electrophoresis$peaks$batch[i] &
-				well.number == electrophoresis$peaks$well.number[i] &
+				sample.index == electrophoresis$peaks$sample.index[i] &
 				length <= electrophoresis$peaks$upper.length[i]
 			))
 		} else if (electrophoresis$peaks$peak.observations[i] == "Upper Marker") {
 			electrophoresis$data <- subset(electrophoresis$data, ! (
-				batch == electrophoresis$peaks$batch[i] &
-				well.number == electrophoresis$peaks$well.number[i] &
+				sample.index == electrophoresis$peaks$sample.index[i] &
 				length >= electrophoresis$peaks$lower.length[i]
 			))
 		}
@@ -140,7 +138,7 @@ qplot.electrophoresis <- function(electrophoresis,
 	}
 	
 	# add faceting
-	if (facet) this.plot <- this.plot + facet_wrap(~ batch * well.number, scales = scales, labeller = labeller.electrophoresis(electrophoresis))
+	if (facet) this.plot <- this.plot + facet_wrap(~ sample.index, scales = scales)
 	
 	# apply log transformations
 	if (log %in% c("x", "xy")) this.plot <- this.plot + scale_x_log10()

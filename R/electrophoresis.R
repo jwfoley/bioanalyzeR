@@ -15,7 +15,6 @@ rbind.electrophoresis <- function(...) {
 		data = do.call(rbind, lapply(arg.list, function(x) x$data)),
 		assay.info = do.call(c, lapply(arg.list, function(x) x$assay.info)),
 		samples = do.call(rbind, lapply(arg.list, function(x) x$samples)),
-		wells.by.ladder = do.call(c, lapply(arg.list, function(x) x$wells.by.ladder)),
 		peaks = do.call(rbind, lapply(arg.list, function(x) x$peaks)),
 		regions = do.call(rbind, lapply(arg.list, function(x) x$regions)),
 		mobility.functions = do.call(c, lapply(arg.list, function(x) x$mobility.functions)),
@@ -23,39 +22,51 @@ rbind.electrophoresis <- function(...) {
 	), class = "electrophoresis")
 }
 
-#' Check whether data points are from a certain sample
+#' Subset samples an electrophoresis object
 #'
-#' This function takes an electrophoresis object and checks whether each data point is from a specified sample.
+#' This function takes a subset of the samples in an \code{electrophoresis} object.
 #'
 #' @param electrophoresis An \code{electrophoresis} object.
-#' @param which.sample The integer index of a sample in \code{electrophoresis$samples}.
+#' @param ... A logical expression indicating samples to keep, and any other arguments passed to \code{\link{subset}}.
 #'
-#' @return A vector of logicals with length \code{nrow(data)}.
-#'
-#' @seealso \code{\link{from.samples}}, \code{\link{in.peak}}, \code{\link{in.region}}
+#' @return A new \code{electrophoresis} object containing only the data from the subset of samples that match the given expression, with sample indices renumbered and factors releveled.
 #'
 #' @export
-from.sample <- function(electrophoresis, which.sample) {
-	electrophoresis$data$batch == electrophoresis$samples$batch[which.sample] &
-	electrophoresis$data$well.number == electrophoresis$samples$well.number[which.sample]
+subset.electrophoresis <- function(electrophoresis, ...) {
+	nrow.initial <- nrow(electrophoresis$samples)
+	electrophoresis$samples <- subset(electrophoresis$samples, ...)
+	if (nrow(electrophoresis$samples) == nrow.initial) { # shortcut if all samples are kept
+		return(electrophoresis)
+	} else if (nrow(electrophoresis$samples) == 0) { # shortcut if no samples are kept
+		stop("empty subset")	
+	}
+	remaining.samples <- as.integer(rownames(electrophoresis$samples))
+	
+	# remove unwanted data
+	electrophoresis$data <- subset(electrophoresis$data, sample.index %in% remaining.samples)
+	electrophoresis$assay.info <- electrophoresis$assay.info[names(electrophoresis$assay.info) %in% as.character(electrophoresis$samples$batch)]
+	electrophoresis$peaks <- subset(electrophoresis$peaks, sample.index %in% remaining.samples)
+	electrophoresis$regions <- subset(electrophoresis$regions, sample.index %in% remaining.samples)
+#	electrophoresis$mobility.functions <- 
+	electrophoresis$mass.coefficients <- electrophoresis$mass.coefficients[remaining.samples]
+	
+	# renumber sample indices
+	new.indices <- 1:nrow(electrophoresis$samples)
+	names(new.indices) <- rownames(electrophoresis$samples)
+	electrophoresis$data$sample.index <- new.indices[as.character(electrophoresis$data$sample.index)]
+	if (! is.null(electrophoresis$peaks)) electrophoresis$peaks$sample.index <- new.indices[as.character(electrophoresis$peaks$sample.index)]
+	if (! is.null(electrophoresis$regions)) electrophoresis$regions$sample.index <- new.indices[as.character(electrophoresis$regions$sample.index)]
+#	electrophoresis$mobility.functions <-
+	
+	# rename rows
+	rownames(electrophoresis$data) <- 1:nrow(electrophoresis$data)
+	rownames(electrophoresis$samples) <- new.indices
+	if (! is.null(electrophoresis$peaks)) rownames(electrophoresis$peaks) <- 1:nrow(electrophoresis$peaks)
+	if (! is.null(electrophoresis$regions)) rownames(electrophoresis$regions) <- 1:nrow(electrophoresis$regions)
+	
+	electrophoresis
 }
 
-#' Match data points to the samples they are from
-#'
-#' This function takes an electrophoresis object and reports which of the samples each data point belongs to.
-#'
-#' @param electrophoresis An \code{electrophoresis} object.
-#'
-#' @return A vector of integers with length \code{nrow(data)}. Each element is the integer index of the sample in \code{electrophoresis$samples} that the data point belongs to.
-#'
-#' @seealso \code{\link{from.sample}}, \code{\link{in.peaks}}, \code{\link{in.regions}}
-#'
-#' @export
-from.samples <- function(electrophoresis) {
-	result <- rep(NA, nrow(electrophoresis$data))
-	for (sample in 1:nrow(electrophoresis$samples)) result[which(from.sample(electrophoresis, sample))] <- sample
-	result
-}
 
 #' Check whether data points are within a custom region
 #'
@@ -76,7 +87,7 @@ in.custom.region <- function(
 	lower.bound = -Inf,
 	upper.bound = Inf,
 	bound.variable = "length"
-) data[[bound.variable]] >= lower.bound & data[[bound.variable]] <= upper.bound
+) ! is.na(data[[bound.variable]]) & data[[bound.variable]] >= lower.bound & data[[bound.variable]] <= upper.bound
 
 #' Check whether data points are within a reported peak
 #'
@@ -93,8 +104,7 @@ in.custom.region <- function(
 #'
 #' @export
 in.peak <- function(electrophoresis, which.peak) {
-	electrophoresis$data$batch == electrophoresis$peaks$batch[which.peak] &
-	electrophoresis$data$well.number == electrophoresis$peaks$well.number[which.peak] &
+	electrophoresis$data$sample.index == electrophoresis$peaks$sample.index[which.peak] &
 	! is.na(electrophoresis$data$length) &
 	electrophoresis$data$length >= electrophoresis$peaks$lower.length[which.peak] &
 	electrophoresis$data$length <= electrophoresis$peaks$upper.length[which.peak]
@@ -115,8 +125,7 @@ in.peak <- function(electrophoresis, which.peak) {
 #'
 #' @export
 in.region <- function(electrophoresis, which.region) {
-	electrophoresis$data$batch == electrophoresis$regions$batch[which.region] &
-	electrophoresis$data$well.number == electrophoresis$regions$well.number[which.region] &
+	electrophoresis$data$sample.index == electrophoresis$regions$sample.index[which.region] &
 	! is.na(electrophoresis$data$length) &
 	electrophoresis$data$length >= electrophoresis$regions$lower.length[which.region] &
 	electrophoresis$data$length <= electrophoresis$regions$upper.length[which.region]

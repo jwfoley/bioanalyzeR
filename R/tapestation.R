@@ -64,7 +64,7 @@ read.tapestation.gel.image <- function(gel.image.file) {
 	fluorescence.matrix <- 1 - result.rgb[,,1] # only get red fluorescence because all channels are equal in the places we care about; subtract from 1 because it's a negative (red decreases in the protein gels too even though they're blue instead of black)
 	fluorescence.matrix[result.rgb[,,1] != result.rgb[,,2]] <- NA # set non-data pixels (obscured by marker band color) to NA; assume red channel always equals green channel, but not necessary blue because protein gels use blue
 	data.frame(
-		gel.lane =      rep(1:length(x.gel), each = nrow(fluorescence.matrix)),
+		sample.index =  rep(1:length(x.gel), each = nrow(fluorescence.matrix)),
 		distance =      nrow(fluorescence.matrix):1 / nrow(fluorescence.matrix),
 		fluorescence =  as.vector(fluorescence.matrix)
 	)
@@ -115,7 +115,6 @@ read.tapestation.xml <- function(xml.file) {
 		sample.name <- trimws(xmlValue(sample.xml[["Comment"]]))
 		if (sample.name == "") sample.name <- well.number
 		sample.observations <- trimws(xmlValue(sample.xml[["Observations"]]))
-		is.ladder <- sample.observations == "Ladder"
 		if (sample.observations == "Marker(s) not detected") {
 			warning(paste(sample.observations, "for well", well.number, sample.name))
 			return(NULL)
@@ -157,30 +156,39 @@ read.tapestation.xml <- function(xml.file) {
 		)
 		
 		list(
-			sample.info = data.frame(batch, well.number, sample.name, reagent.id, is.ladder, sample.observations, stringsAsFactors = F),
-			peaks = if (is.null(peaks)) NULL else data.frame(batch, well.number, sample.name, reagent.id, is.ladder, sample.observations, peaks, stringsAsFactors = F),
-			regions = if (is.null(regions)) NULL else data.frame(batch, well.number, sample.name, reagent.id, is.ladder, sample.observations, regions, stringsAsFactors = F)
+			samples = data.frame(batch, well.number, sample.name, sample.observations, reagent.id, stringsAsFactors = F),
+			peaks = peaks,
+			regions = regions
 		)
 	})
-	
-	peaks.list <- lapply(result.list, function(x) x$peaks)
-	regions.list <- lapply(result.list, function(x) x$regions)
 	result <- list(
-		samples = do.call(rbind, c(lapply(result.list, function(x) x$sample.info), make.row.names = F)),
-		peaks = if (all(unlist(lapply(peaks.list, is.null)))) NULL else do.call(rbind, c(peaks.list, make.row.names = F)),
-		regions = if (all(unlist(lapply(regions.list, is.null)))) NULL else do.call(rbind, c(regions.list, make.row.names = F)),
+		samples = do.call(rbind, c(lapply(result.list, function(x) x$samples), make.row.names = F)),
+		peaks = do.call(rbind, c(lapply(1:length(result.list), function(i) if (is.null(result.list[[i]]$peaks)) NULL else cbind(sample.index = i, result.list[[i]]$peaks)), make.row.names = F)),
+		regions = do.call(rbind, c(lapply(1:length(result.list), function(i) if (is.null(result.list[[i]]$regions)) NULL else cbind(sample.index = i, result.list[[i]]$regions)), make.row.names = F)),
 		assay.info = assay.info
 	)
 	
 	# convert sample metadata into factors, ensuring all frames have the same levels and the levels are in the observed order
-	for (field in c("batch", "well.number", "sample.name", "reagent.id", "sample.observations")) {
-		result$samples[,field] <- factor(result$samples[,field], levels = unique(result$samples[,field]))
-		result$peaks[,field] <- factor(result$peaks[,field], levels = levels(result$samples[,field]))
-		result$regions[,field] <- factor(result$regions[,field], levels = levels(result$samples[,field]))
-	}
+	for (field in c("batch", "well.number", "sample.name", "reagent.id", "sample.observations")) result$samples[,field] <- factor(result$samples[,field], levels = unique(result$samples[,field]))
 	# convert other text into factors without those restrictions
-	for (field in c("peak.observations", "peak.comment")) result$peaks[,field] <- factor(result$peaks[,field])
-	for (field in c("region.comment")) result$regions[,field] <- factor(result$regions[,field])
+	if (! is.null(result$peaks)) for (field in c("peak.observations", "peak.comment")) result$peaks[,field] <- factor(result$peaks[,field])
+	if (! is.null(result$regions)) for (field in c("region.comment")) result$regions[,field] <- factor(result$regions[,field])
+	
+	# determine ladder scheme
+	ladder.wells <- result$samples$well.number[result$samples$sample.observations == "Ladder"]
+	result$samples$ladder.well <- factor(NA, levels = levels(result$samples$well.number))
+	# scheme: only one ladder for the whole run
+	if (length(ladder.wells) == 1) {
+		result$samples$ladder.well <- ladder.wells
+	# scheme: one electronic ladder for the whole run but it's displayed more than once
+	} else if (
+		length(unique(result$samples$reagent.id[result$samples$well.number %in% ladder.wells])) == 1 &&
+		"Electronic Ladder" %in% result$samples$sample.name[result$samples$well.number %in% ladder.wells] # not all copies get this name for some reason but at least one should
+	) {
+		result$samples$ladder.well <- ladder.wells[1]
+	} else if (all.equal(as.character(result$samples$reagent.id[result$samples$well.number %in% ladder.wells]), levels(result$samples$reagent.id))) { 
+		for (ladder.well in ladder.wells) result$samples$ladder.well[result$samples$reagent.id == result$samples$reagent.id[result$samples$well.number == ladder.well]] <- ladder.well
+	}
 	
 	result
 }
@@ -209,12 +217,11 @@ read.tapestation <- function(xml.file, gel.image.file = NULL, fit = "spline") {
 	stopifnot(length(unique(parsed.data$samples$batch)) == 1)
 	batch <- parsed.data$samples$batch[1]
 	gel.data <- read.tapestation.gel.image(gel.image.file)
-	stopifnot(length(unique(gel.data$gel.lane)) == nrow(parsed.data$samples))
+	stopifnot(length(unique(gel.data$sample.index)) == nrow(parsed.data$samples))
 	result <- structure(list(
-		data = cbind(parsed.data$samples[gel.data$gel.lane,], gel.data[,colnames(gel.data) != "gel.lane"]),
+		data = gel.data,
 		assay.info = list(parsed.data$assay.info),
 		samples = parsed.data$samples,
-		wells.by.ladder = NULL,
 		peaks = parsed.data$peaks,
 		regions = parsed.data$regions,
 		mobility.functions = NULL,
@@ -222,66 +229,47 @@ read.tapestation <- function(xml.file, gel.image.file = NULL, fit = "spline") {
 	), class = "electrophoresis")
 	names(result$assay.info) <- batch
 	
+	# remove duplicate ladders
+	if (sum(result$samples$sample.observations == "Ladder") > 1 && length(unique(result$samples$ladder.well)) == 1) {
+		result <- subset(result, ! (sample.observations == "Ladder" & well.number != ladder.well))
+	}
+	
 	# calculate relative distances
-	lower.marker.peaks <- subset(result$peaks, peak.observations %in% c("Lower Marker", "edited Lower Marker"))
-	marker.distances <- data.frame(lower = sapply(unique(result$peaks$well.number), function(this.well.number) {
-		distance <- subset(lower.marker.peaks, well.number == this.well.number)$distance
+	is.lower.marker <- result$peaks$peak.observations %in% c("Lower Marker", "edited Lower Marker")
+	marker.distances <- data.frame(lower = sapply(1:nrow(result$samples), function(i) {
+		distance <- result$peaks$distance[is.lower.marker & result$peaks$sample.index == i]
 		if (length(distance) == 0) {
 			return(NA)
 		} else if (length(distance) == 1) {
 			return(distance)
 		} else {
-			stop(paste("multiple lower marker peaks for well", this.well.number))
+			stop(paste("multiple lower marker peaks for sample", i))
 		}
-	}), row.names = unique(result$peaks$well.number))
-	upper.marker.peaks <- subset(result$peaks, peak.observations %in% c("Upper Marker", "edited Upper Marker"))
-	if (nrow(upper.marker.peaks) == 0) { # kit lacks upper marker
+	}))
+	is.upper.marker <- result$peaks$peak.observations %in% c("Upper Marker", "edited Upper Marker")
+	if (sum(is.upper.marker) == 0) { # kit lacks upper marker
 		marker.distances$upper <- 0 # effectively normalizes only to lower marker
 	} else {
-		marker.distances$upper <- sapply(rownames(marker.distances), function(this.well.number) {
-			distance <- subset(upper.marker.peaks, well.number == this.well.number)$distance
+		marker.distances$upper <- sapply(1:nrow(result$samples), function(i) {
+			distance <- result$peaks$distance[is.upper.marker & result$peaks$sample.index == i]
 			if (length(distance) == 0) {
 				return(NA)
 			} else if (length(distance) == 1) {
 				return(distance)
 			} else {
-				stop(paste("multiple lower marker peaks for well", this.well.number))
+				stop(paste("multiple upper marker peaks for sample", i))
 			}
 		})
 	}
 	marker.distances$range <- marker.distances$lower - marker.distances$upper
-	result$data$relative.distance <- (result$data$distance - marker.distances$upper[result$data$well.number]) / marker.distances$range[result$data$well.number]
-	result$peaks$relative.distance <- (result$peaks$distance - marker.distances$upper[result$peaks$well.number]) / marker.distances$range[result$peaks$well.number]
-	result$peaks$lower.relative.distance <- (result$peaks$lower.distance - marker.distances$upper[result$peaks$well.number]) / marker.distances$range[result$peaks$well.number]
-	result$peaks$upper.relative.distance <- (result$peaks$upper.distance - marker.distances$upper[result$peaks$well.number]) / marker.distances$range[result$peaks$well.number]
+	result$data$relative.distance <- (result$data$distance - marker.distances$upper[result$data$sample.index]) / marker.distances$range[result$data$sample.index]
+	result$peaks$relative.distance <- (result$peaks$distance - marker.distances$upper[result$peaks$sample.index]) / marker.distances$range[result$peaks$sample.index]
+	result$peaks$lower.relative.distance <- (result$peaks$lower.distance - marker.distances$upper[result$peaks$sample.index]) / marker.distances$range[result$peaks$sample.index]
+	result$peaks$upper.relative.distance <- (result$peaks$upper.distance - marker.distances$upper[result$peaks$sample.index]) / marker.distances$range[result$peaks$sample.index]
 	
-	# determine ladder scheme
-	ladder.wells <- as.character(subset(result$samples, is.ladder)$well.number)
-	result$wells.by.ladder <- list(list())
-	names(result$wells.by.ladder) <- batch
-	rows.by.ladder <- list()
-	# scheme: no ladder	
-	if (length(ladder.wells) == 0) {
-		warning("warning: no ladder specified so lengths and molarities are not calculated")
-	# scheme: only one ladder for the whole run
-	} else if (length(ladder.wells) == 1) {
-		result$wells.by.ladder[[1]][[ladder.wells]] <- unique(result$data$well.number)
-		rows.by.ladder[[ladder.wells]] <- 1:nrow(result$data) # all rows of the frame are associated with this ladder
-	# scheme: one electronic ladder for the whole run but it's displayed more than once
-	} else if (
-		length(unique(subset(result$peaks, well.number %in% ladder.wells)$reagent.id)) == 1 &&
-		unique(subset(result$peaks, well.number %in% ladder.wells)$sample.name) == "Electronic Ladder"
-	) {
-		result$wells.by.ladder[[1]][[ladder.wells[1]]] <- unique(result$data$well.number)
-		rows.by.ladder[[ladder.wells[1]]] <- 1:nrow(result$data) # all rows of the frame are associated with this ladder
-	# scheme: one ladder per reagent.id (ScreenTape)
-	} else if (all.equal(unique(result$peaks$reagent.id), unique(subset(result$peaks, well.number %in% ladder.wells)$reagent.id))) { # 
-		rows.by.ladder <- lapply(ladder.wells, function(well) which(result$data$reagent.id == unique(subset(result$peaks, well.number == well)$reagent.id)))
-		names(rows.by.ladder) <- ladder.wells
-		result$wells.by.ladder[[1]] <- lapply(rows.by.ladder, function(x) unique(result$data[x,]$well.number))
-	# scheme: something unexpected
-	}	else {
-		warning("warning: unknown ladder scheme so lengths and molarities are not calculated")
+	# abort early if there aren't ladders to use
+	if (sum(! is.na(result$samples$ladder.well)) == 0) {
+		warning("unknown ladder scheme so lengths and molarities are not calculated")
 		return(result)
 	}
 	
@@ -297,23 +285,23 @@ read.tapestation <- function(xml.file, gel.image.file = NULL, fit = "spline") {
 	}
 	result$mobility.functions <- list(list())
 	names(result$mobility.functions) <- batch
-	result$mass.coefficients <- list(rep(NA, nrow(result$samples)))
-	names(result$mass.coefficients) <- batch
-	names(result$mass.coefficients[[1]]) <- result$samples$well.number
-	data.calibration <- cbind(result$data, do.call(rbind, lapply(result$samples$well.number, function(this.well) {
-		result.this.well <- subset(result$data, well.number == this.well)
+	result$mass.coefficients <- rep(NA, nrow(result$samples))
+	data.calibration <- cbind(result$data, do.call(rbind, lapply(1:nrow(result$samples), function(i) {
+		which.this.sample <- result$data$sample.index == i
 		data.frame(
-			delta.fluorescence = c(NA, diff(result.this.well$fluorescence)),
-			delta.distance = c(NA, -diff(result.this.well$distance))
+			delta.fluorescence = c(NA, diff(result$data$fluorescence[which.this.sample])),
+			delta.distance = c(NA, -diff(result$data$distance[which.this.sample]))
 		)
 	})))
 	# estimate area under each measurement with the trapezoidal rule; to simplify math, each point's sum is for the trapezoid to the left of it
 	data.calibration$area <- (2 * data.calibration$fluorescence - data.calibration$delta.fluorescence) * data.calibration$delta.distance
-	for (ladder.well in names(rows.by.ladder)) { # use names(rows.by.ladder) because it only exists if we're in a recognized scheme
-		peaks.ladder <- subset(result$peaks, well.number == ladder.well)
-		which.rows <- rows.by.ladder[[ladder.well]]
-		which.peaks <- which(result$peaks$well.number %in% result$wells.by.ladder[[1]][[ladder.well]])
-		which.regions <- which(result$regions$well.number %in% result$wells.by.ladder[[1]][[ladder.well]])
+	for (ladder.well in unique(result$samples$ladder.well)) {
+		which.ladder.index <- which(result$samples$well.number == ladder.well)
+		peaks.ladder <- subset(result$peaks, sample.index == which.ladder.index)
+		which.samples <- which(result$samples$ladder.well == ladder.well)
+		which.rows <- which(result$data$sample.index %in% which.samples)
+		which.peaks <- which(result$peaks$sample.index %in% which.samples)
+		which.regions <- which(result$regions$sample.index %in% which.samples)
 		
 		# fit standard curve for molecule length vs. migration distance
 		# do this in relative-distance space so it's effectively recalibrated for each sample's markers
@@ -350,20 +338,18 @@ read.tapestation <- function(xml.file, gel.image.file = NULL, fit = "spline") {
 		# this is done by fitting a one-parameter model on the non-marker peaks of the ladder, because the marker peaks in all samples are unreadable (blocked by green and purple bands)
 		# preferably it would be scaled to each sample's own markers, but that's impossible because the markers are unreadable! and we can't even use their Agilent-reported molarity estimates or areas to scale relative to the ladder because those are always normalized to the upper marker! (which is often the one that's contaminated by sample anyway)
 		# so all we can do is normalize to the ladder's non-marker peaks, therefore each sample will be randomly off by some constant scaling factor, but at least molarity comparisons within a sample ought to be accurate
-		peaks.ladder$area <- sapply(1:nrow(peaks.ladder), function(i) sum(subset(data.calibration, well.number == ladder.well & distance >= peaks.ladder$lower.distance[i] & distance <= peaks.ladder$upper.distance[i])$area))
+		peaks.ladder$area <- sapply(1:nrow(peaks.ladder), function(i) sum(subset(data.calibration, sample.index == which.ladder.index & distance >= peaks.ladder$lower.distance[i] & distance <= peaks.ladder$upper.distance[i])$area))
 		mass.coefficient <- lm(concentration ~ area - 1, data = peaks.ladder)$coefficients[1]
-		result$mass.coefficients[[1]][result$wells.by.ladder[[1]][[ladder.well]]] <- mass.coefficient
+		result$mass.coefficients[which.samples] <- mass.coefficient
 		result$data$concentration[which.rows] <- mass.coefficient * data.calibration$area[which.rows]
 		result$data$molarity[which.rows] <- result$data$concentration[which.rows] / molecular.weight(result$data$length[which.rows], parsed.data$assay.info$assay.type) * 1E6 # we're converting ng/uL to nmol/L or pg/uL to pmol/L so we need to scale by 1E6
 	}
 	
 	# convert inferred relative distances of regions back to raw distances
 	if (! is.null(result$regions)) {
-		result$regions$lower.distance <- result$regions$lower.relative.distance * marker.distances$range[result$regions$well.number] + marker.distances$upper[result$regions$well.number]
-		result$regions$upper.distance <- result$regions$upper.relative.distance * marker.distances$range[result$regions$well.number] + marker.distances$upper[result$regions$well.number]
+		result$regions$lower.distance <- result$regions$lower.relative.distance * marker.distances$range[result$regions$sample.index] + marker.distances$upper[result$regions$sample.index]
+		result$regions$upper.distance <- result$regions$upper.relative.distance * marker.distances$range[result$regions$sample.index] + marker.distances$upper[result$regions$sample.index]
 	}
-	
-	rownames(result$data) <- NULL # clean up row names again
 		
 	result
 }

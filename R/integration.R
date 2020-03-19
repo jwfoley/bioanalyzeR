@@ -49,7 +49,7 @@ integrate.custom <- function(
 	sum.variable = "molarity"
 ) {
 	in.this.region <- in.custom.region(electrophoresis$data, lower.bound, upper.bound, bound.variable)
-	sapply(1:nrow(electrophoresis$samples), function(sample) sum(electrophoresis$data[[sum.variable]][in.this.region & from.sample(electrophoresis, sample)]))
+	sapply(1:nrow(electrophoresis$samples), function(sample) sum(electrophoresis$data[[sum.variable]][in.this.region & electrophoresis$data$sample.index == sample]))
 }
 
 #' Compare sums within regions
