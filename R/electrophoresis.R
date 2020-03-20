@@ -14,6 +14,7 @@ tapestation.first.char <- rawToChar(as.raw(c(239, 187, 191))) # byte order mark 
 #' @export
 rbind.electrophoresis <- function(...) {
 	arg.list <- list(...)
+	if (length(arg.list) == 1) return(arg.list[[1]]) # shortcut if only one input
 	
  	# increment the sample indexes in the data so they'll match the new table 
 	for (i in 1:(length(arg.list) - 1)) for (j in (i + 1):length(arg.list)) {

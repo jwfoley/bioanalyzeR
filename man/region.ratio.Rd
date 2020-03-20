@@ -4,14 +4,21 @@
 \alias{region.ratio}
 \title{Compare sums within regions}
 \usage{
-region.ratio(electrophoresis, bounds, ...)
+region.ratio(
+  electrophoresis,
+  bounds,
+  bound.variable = "length",
+  sum.variable = "molarity"
+)
 }
 \arguments{
 \item{electrophoresis}{An \code{electrophoresis} object.}
 
 \item{bounds}{A list of two or more pairs (vectors) of boundaries, e.g. \code{list(c(100, 200), c(200, 500), c(500, 700)}.}
 
-\item{...}{Additional arguments passed to \code{\link{integrate.rawdata}}. In particular use \code{bound.variable} to set the boundary variable and \code{sum.variable} for the variable to sum.}
+\item{bound.variable}{Which variable the boundaries refer to.}
+
+\item{sum.variable}{Which variable to sum in each region.}
 }
 \value{
 A matrix of ratios of sums within the regions, each region relative to the first region, for each sample.

@@ -63,7 +63,6 @@ labeller.electrophoresis <- function(electrophoresis) function(factor.frame) {
 #' @param log Which variables to log-transform (\code{"x"}, \code{"y"}, or \code{"xy"}).
 #' @param facets Faceting formula to use. Picks \code{\link{facet_wrap}} or \code{\link{facet_grid}} depending on whether the formula is one- or two-sided. If \code{NULL}, overlay all samples in one color-coded graph, as in the Agilent software's comparison mode.
 #' @param scales Scaling rules for the facets, passed to \code{\link{facet_wrap}}.
-#' @param scales Scaling rules for the facets, passed to \code{\link{facet_wrap}}.
 #' @param geom Name of the geom to draw. Currently only \code{"line"} (\code{\link{geom_line}}, to get continuous lines) and \code{"area"} (\code{\link{geom_area}}, to fill the area under the curves) are supported.
 #' @param include.ladder If \code{FALSE}, graph only the actual samples and not the ladder(s) wells.
 #' @param between.markers If \code{TRUE}, graph only data between the marker peaks.

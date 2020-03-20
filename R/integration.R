@@ -11,7 +11,7 @@
 integrate.peaks <- function(
 	electrophoresis,
 	sum.variable = "molarity"
-) sapply(1:nrow(electrophoresis$peaks), function(peak) sum(electrophoresis$data[[sum.variable]][which(in.peak(electrophoresis, peak))]))
+) matrix(sapply(1:nrow(electrophoresis$peaks), function(peak) sum(electrophoresis$data[[sum.variable]][which(in.peak(electrophoresis, peak))])), dimnames = list(NULL, sum.variable))
 
 #' Integrate a variable in each region
 #'
@@ -26,7 +26,7 @@ integrate.peaks <- function(
 integrate.regions <- function(
 	electrophoresis,
 	sum.variable = "molarity"
-) sapply(1:nrow(electrophoresis$regions), function(region) sum(electrophoresis$data[[sum.variable]][which(in.region(electrophoresis, region))]))
+) matrix(sapply(1:nrow(electrophoresis$regions), function(region) sum(electrophoresis$data[[sum.variable]][which(in.region(electrophoresis, region))])), dimnames = list(NULL, sum.variable))
 
 #' Integrate a variable in a custom region
 #'
@@ -49,7 +49,7 @@ integrate.custom <- function(
 	sum.variable = "molarity"
 ) {
 	in.this.region <- in.custom.region(electrophoresis$data, lower.bound, upper.bound, bound.variable)
-	sapply(1:nrow(electrophoresis$samples), function(sample) sum(electrophoresis$data[[sum.variable]][in.this.region & electrophoresis$data$sample.index == sample]))
+	matrix(sapply(1:nrow(electrophoresis$samples), function(sample) sum(electrophoresis$data[[sum.variable]][in.this.region & electrophoresis$data$sample.index == sample])), dimnames = list(NULL, paste0(sum.variable, " in ", bound.variable, " ", lower.bound, "-", upper.bound)))
 }
 
 #' Compare sums within regions
@@ -58,7 +58,8 @@ integrate.custom <- function(
 #'
 #' @param electrophoresis An \code{electrophoresis} object.
 #' @param bounds A list of two or more pairs (vectors) of boundaries, e.g. \code{list(c(100, 200), c(200, 500), c(500, 700)}.
-#' @param ... Additional arguments passed to \code{\link{integrate.rawdata}}. In particular use \code{bound.variable} to set the boundary variable and \code{sum.variable} for the variable to sum.
+#' @param bound.variable Which variable the boundaries refer to.
+#' @param sum.variable Which variable to sum in each region.
 #'
 #' @return A matrix of ratios of sums within the regions, each region relative to the first region, for each sample.
 #'
@@ -68,13 +69,12 @@ integrate.custom <- function(
 region.ratio <- function(
 	electrophoresis,
 	bounds,
-	...
+	bound.variable = "length",
+	sum.variable = "molarity"
 ) {
 	stopifnot(length(bounds) >= 1)
-	sum.matrix <- sapply(bounds, function(bound.pair) integrate.custom(electrophoresis, lower.bound = bound.pair[1], upper.bound = bound.pair[2], ...))
-	result <- as.matrix(sum.matrix[,-1] / sum.matrix[,1])
-	colnames(result) <- sapply(bounds[-1], function(bound.pair) paste0(bound.pair[1], "-", bound.pair[2], " / ", bounds[[1]][1], "-", bounds[[1]][2]))
-	result
+	sum.matrix <- sapply(bounds, function(bound.pair) integrate.custom(electrophoresis, lower.bound = bound.pair[1], upper.bound = bound.pair[2], bound.variable = bound.variable, sum.variable = sum.variable))
+	matrix(sum.matrix[,-1] / sum.matrix[,1], dimnames = list(NULL, sapply(bounds[-1], function(bound.pair) paste0(sum.variable, " ratio in ", bound.variable, " ", bound.pair[1], "-", bound.pair[2], "/", bounds[[1]][1], "-", bounds[[1]][2]))))
 }
 
 #' Ratio of good inserts to adapter dimers
