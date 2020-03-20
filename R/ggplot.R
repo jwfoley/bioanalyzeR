@@ -41,18 +41,17 @@ variable.label <- function(electrophoresis, variable) switch(variable,
 
 #' Labeller for electrophoresis samples
 #'
-#' This is a labeller function compatible with \code{\link{facet_wrap}} and \code{\link{facet_grid}}. It allows you to facet the data from an \code{electrophoresis} object on \code{batch * well.number}, to keep the samples in the observed order, but replaces the facet labels with the annotated sample names.
+#' This is a labeller function compatible with \code{\link{facet_wrap}} and \code{\link{facet_grid}}. It allows you to facet the data from an \code{electrophoresis} object on \code{sample.index}, to keep the samples in the observed order, but replaces the facet labels with the annotated sample names.
 #'
 #' @param electrophoresis An \code{electrophoresis} object whose \code{samples} member contains all the samples in your plot.
 #'
 #' @export
-labeller.electrophoresis <- function(electrophoresis) function(factor.frame) list(
-	apply(factor.frame, 1, function(labels) {
-		which.sample <- which(electrophoresis$samples$batch == labels[1] & electrophoresis$samples$well.number == labels[2])
-		stopifnot(length(which.sample) == 1)	
-		as.character(electrophoresis$samples$sample.name[which.sample])
-	})
-)
+labeller.electrophoresis <- function(electrophoresis) function(factor.frame) {
+	stopifnot(ncol(factor.frame) == 1)
+	stopifnot(class(factor.frame[,1]) == "integer")
+	list(as.character(electrophoresis$samples$sample.name[factor.frame[,1]]))
+}
+
 
 #' Plot electrophoresis data
 #'
@@ -112,6 +111,9 @@ qplot.electrophoresis <- function(electrophoresis,
 		}
 	}
 	
+	# annotate data with metadata
+	electrophoresis$data <- cbind(electrophoresis$data, electrophoresis$samples[electrophoresis$data$sample.index,])
+	
 	# create plot but don't add the geom yet
 	this.plot <- ggplot(electrophoresis$data)
 	
@@ -138,7 +140,7 @@ qplot.electrophoresis <- function(electrophoresis,
 	}
 	
 	# add faceting
-	if (facet) this.plot <- this.plot + facet_wrap(~ sample.index, scales = scales)
+	if (facet) this.plot <- this.plot + facet_wrap(~ sample.index, scales = scales, labeller = labeller.electrophoresis(electrophoresis))
 	
 	# apply log transformations
 	if (log %in% c("x", "xy")) this.plot <- this.plot + scale_x_log10()
