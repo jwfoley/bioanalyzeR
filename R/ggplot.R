@@ -171,25 +171,28 @@ qplot.electrophoresis <- function(electrophoresis,
 #'
 #' @export
 stdcrv.mobility <- function(electrophoresis, n.simulate = 100, line.color = "red") { # returns a ggplot object, which can be extended by adding more features
-	ladder.data <- subset(cbind(electrophoresis$data, peak = in.peaks(electrophoresis)), is.ladder & ! is.na(peak))
+	which.ladders <- which(electrophoresis$samples$well.number == electrophoresis$samples$ladder.well)
+	ladder.data <- subset(cbind(electrophoresis$data, peak = in.peaks(electrophoresis)), sample.index %in% which.ladders & ! is.na(peak))
 	ladder.data$true.length <- electrophoresis$peaks$length[ladder.data$peak]
-	good.peaks <- subset(electrophoresis$peaks, ! is.na(length))
+	ladder.peaks <- subset(electrophoresis$peaks, sample.index %in% which.ladders & ! is.na(length))
 	
 	# determine which kind of data we have
 	possible.x.names <- c("aligned.time", "relative.distance")
 	x.name <- possible.x.names[possible.x.names %in% colnames(electrophoresis$data)]
 	stopifnot(length(x.name) == 1)	
 	
-	simulated.data <- do.call(rbind, lapply(names(electrophoresis$wells.by.ladder), function(batch) do.call(rbind, lapply(names(electrophoresis$wells.by.ladder[[batch]]), function(ladder.well) {
-		x.range <- range(subset(good.peaks, batch == batch & well.number == ladder.well)[[x.name]])
+	simulated.data <- do.call(rbind, lapply(which.ladders, function(ladder.index) {
+		x.range <- range(ladder.peaks[[x.name]][ladder.peaks$sample.index == ladder.index])
 		x.diff <- diff(x.range)
-		result <- data.frame(batch, well.number = ladder.well, x = x.range[1] + x.diff * (0:(n.simulate - 1) / (n.simulate - 1)))
-		result$estimated.length <- electrophoresis$mobility.functions[[batch]][[ladder.well]](result$x)
+		batch <- electrophoresis$samples$batch[ladder.index]
+		well.number <- electrophoresis$samples$well.number[ladder.index]
+		result <- data.frame(batch, well.number, x = x.range[1] + x.diff * (0:(n.simulate - 1) / (n.simulate - 1)))
+		result$estimated.length <- electrophoresis$mobility.functions[[batch]][[well.number]](result$x)
 		result
-	}))))
+	}))
 	this.plot <- ggplot(ladder.data, aes_(x = as.name("true.length"), y = as.name(x.name), color = as.name("fluorescence"))) +
 		geom_point() + 
-		geom_point(aes_(x = as.name("length"), y = as.name(x.name)), data = subset(good.peaks, is.ladder), color = line.color) + # overlay the reported peak positions
+		geom_point(aes_(x = as.name("length"), y = as.name(x.name)), data = ladder.peaks, color = line.color) + # overlay the reported peak positions
 		geom_line(aes(x = estimated.length, y = x), data = simulated.data, col = line.color) + # overlay the simulated data from the mobility function
 		xlab(paste("true", variable.label(electrophoresis, "length"))) +
 		ylab(variable.label(electrophoresis, x.name)) +
