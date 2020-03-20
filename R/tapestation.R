@@ -161,18 +161,20 @@ read.tapestation.xml <- function(xml.file) {
 			regions = regions
 		)
 	})
+	has.peaks <- ! all(sapply(result.list, function(x) is.null(x$peaks)))
+	has.regions <- ! all(sapply(result.list, function(x) is.null(x$regions)))
 	result <- list(
 		samples = do.call(rbind, c(lapply(result.list, function(x) x$samples), make.row.names = F)),
-		peaks = do.call(rbind, c(lapply(1:length(result.list), function(i) if (is.null(result.list[[i]]$peaks)) NULL else cbind(sample.index = i, result.list[[i]]$peaks)), make.row.names = F)),
-		regions = do.call(rbind, c(lapply(1:length(result.list), function(i) if (is.null(result.list[[i]]$regions)) NULL else cbind(sample.index = i, result.list[[i]]$regions)), make.row.names = F)),
+		peaks = if (! has.peaks) NULL else do.call(rbind, c(lapply(1:length(result.list), function(i) if (is.null(result.list[[i]]$peaks)) NULL else cbind(sample.index = i, result.list[[i]]$peaks)), make.row.names = F)),
+		regions = if (! has.regions) NULL else do.call(rbind, c(lapply(1:length(result.list), function(i) if (is.null(result.list[[i]]$regions)) NULL else cbind(sample.index = i, result.list[[i]]$regions)), make.row.names = F)),
 		assay.info = assay.info
 	)
 	
 	# convert sample metadata into factors, ensuring all frames have the same levels and the levels are in the observed order
 	for (field in c("batch", "well.number", "sample.name", "reagent.id", "sample.observations")) result$samples[,field] <- factor(result$samples[,field], levels = unique(result$samples[,field]))
 	# convert other text into factors without those restrictions
-	if (! is.null(result$peaks)) for (field in c("peak.observations", "peak.comment")) result$peaks[,field] <- factor(result$peaks[,field])
-	if (! is.null(result$regions)) for (field in c("region.comment")) result$regions[,field] <- factor(result$regions[,field])
+	if (has.peaks) for (field in c("peak.observations", "peak.comment")) result$peaks[,field] <- factor(result$peaks[,field])
+	if (has.regions) for (field in c("region.comment")) result$regions[,field] <- factor(result$regions[,field])
 	
 	# determine ladder scheme
 	ladder.wells <- result$samples$well.number[result$samples$sample.observations == "Ladder"]
