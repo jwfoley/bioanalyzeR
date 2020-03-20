@@ -1,3 +1,6 @@
+bioanalyzer.first.char <- "<" # XML opening bracket that distinguishes Bioanalyzer XML exports
+tapestation.first.char <- rawToChar(as.raw(c(239, 187, 191))) # byte order mark that distinguishes TapeStation XML exports
+
 #' Combine multiple electrophoresis objects
 #'
 #' This function combines multiple \code{electrophoresis} objects into one so you can analyze and graph multiple batches together.
@@ -11,6 +14,14 @@
 #' @export
 rbind.electrophoresis <- function(...) {
 	arg.list <- list(...)
+	
+ 	# increment the sample indexes in the data so they'll match the new table 
+	for (i in 1:(length(arg.list) - 1)) for (j in (i + 1):length(arg.list)) {
+		arg.list[[j]]$data$sample.index <- arg.list[[j]]$data$sample.index + nrow(arg.list[[i]]$samples)
+		if (! is.null(arg.list[[j]]$peaks)) arg.list[[j]]$peaks$sample.index <- arg.list[[j]]$peaks$sample.index + nrow(arg.list[[i]]$samples)
+		if (! is.null(arg.list[[j]]$regions)) arg.list[[j]]$regions$sample.index <- arg.list[[j]]$regions$sample.index + nrow(arg.list[[i]]$samples)
+	}
+	
 	structure(list(
 		data = do.call(rbind, lapply(arg.list, function(x) x$data)),
 		assay.info = do.call(c, lapply(arg.list, function(x) x$assay.info)),
@@ -21,6 +32,30 @@ rbind.electrophoresis <- function(...) {
 		mass.coefficients = do.call(c, lapply(arg.list, function(x) x$mass.coefficients))
 	), class = "electrophoresis")
 }
+
+#' Read files into an electrophoresis object
+#'
+#' This function reads one or more XML files exported from the Agilent software (and accompanying PNG files if from a TapeStation) and calls the appropriate function to read them into an \code{electrophoresis} object.
+#'
+#' Multiple input files are combined with \code{\link{rbind.electrophoresis}}.
+#'
+#' Warning: The filename of each TapeStation gel image must be the same as the corresponding XML file, e.g. \code{run1.png} goes with \code{run1.xml}.
+#'
+#' @param ... One or more XML files.
+#' @param fit The method used to fit the mobility model of molecule length vs. migration distance, one of \code{"interpolation"} (linear interpolation via \code{\link{approxfun}}), \code{"spline"} (splines via \code{\link{splinefun}}), or \code{"regression"} (log-linear regression via \code{\link{lm}} with the model \code{relative.distance ~ log(length)}).
+#'
+#' @seealso \code{\link{read.bioanalyzer}}, \code{\link{read.tapestation}}
+#'
+#' @export
+read.electrophoresis <- function(..., fit = "spline") do.call(rbind, lapply(list(...), function(xml.file) {
+	first.char <- readChar(xml.file, 1)
+	if (first.char == bioanalyzer.first.char)
+		read.bioanalyzer(xml.file, fit = fit)
+	else if (first.char == tapestation.first.char)
+		read.tapestation(xml.file, fit = fit)
+	else
+		stop("unrecognized XML file format")
+}))
 
 #' Subset samples an electrophoresis object
 #'

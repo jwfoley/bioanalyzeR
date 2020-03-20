@@ -23,5 +23,5 @@ This function reads TapeStation run data from an exported XML file and a PNG gel
 Spline fitting seems to perform reasonably well on all data. Agilent appears to use linear interpolation with DNA data and log-linear regression on RNA data, so you could choose those options if you want to reproduce the results of the software more precisely. However, linear interpolation creates sudden spikes in the derivative that make the concentration and molarity estimates unstable; spline fitting is basically a smoother version of that. Log-linear regression is the standard theoretical approach but does not actually fit the data very well; more sophisticated parametric models may be added in the future.
 }
 \seealso{
-\code{\link{read.bioanalyzer}}, \code{\link{read.tapestation.gel.image}}, \code{\link{read.tapestation.xml.file}}
+\code{\link{read.electrophoresis}}, \code{\link{read.bioanalyzer}}, \code{\link{read.tapestation.gel.image}}, \code{\link{read.tapestation.xml.file}}
 }

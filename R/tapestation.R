@@ -208,7 +208,7 @@ read.tapestation.xml <- function(xml.file) {
 #'
 #' @return An \code{electrophoresis} object containing the data from this TapeStation run.
 #' 
-#' @seealso \code{\link{read.bioanalyzer}}, \code{\link{read.tapestation.gel.image}}, \code{\link{read.tapestation.xml.file}}
+#' @seealso \code{\link{read.electrophoresis}}, \code{\link{read.bioanalyzer}}, \code{\link{read.tapestation.gel.image}}, \code{\link{read.tapestation.xml.file}}
 #'
 #' @export
 read.tapestation <- function(xml.file, gel.image.file = NULL, fit = "spline") {

@@ -9,7 +9,7 @@
 #'
 #' @return An \code{electrophoresis} object containing the data from this Bioanalyzer run.
 #' 
-#' @seealso \code{\link{read.tapestation}}
+#' @seealso \code{\link{read.electrophoresis}}, \code{\link{read.tapestation}}
 #'
 #' @export
 #' @importFrom XML xmlRoot xmlParse xmlValue xmlToDataFrame xmlApply
