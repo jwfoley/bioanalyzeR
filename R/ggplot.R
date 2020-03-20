@@ -225,12 +225,12 @@ qc.electrophoresis <- function(electrophoresis, variable, log = TRUE) {
 			x.name <- possible.x.names[possible.x.names %in% colnames(electrophoresis$data)]
 			stopifnot(length(x.name) == 1)	
 			
-			peaks <- cbind(electrophoresis$peaks, estimated.variable = NA)
-			for (batch in names(electrophoresis$wells.by.ladder)) for (ladder.well in names(electrophoresis$wells.by.ladder[[batch]])) {
-				which.peaks <- peaks$well.number %in% electrophoresis$wells.by.ladder[[batch]][[ladder.well]]
-				peaks$estimated.variable[which.peaks] <- electrophoresis$mobility.functions[[batch]][[ladder.well]](peaks[[x.name]][which.peaks])
+			result <- cbind(electrophoresis$peaks, estimated.variable = NA)
+			for (i in 1:nrow(electrophoresis$samples)) {
+				which.peaks <- result$sample.index == i
+				result$estimated.variable[which.peaks] <- electrophoresis$mobility.functions[[electrophoresis$samples$batch[i]]][[electrophoresis$samples$ladder.well[i]]](result[[x.name]][which.peaks])
 			}
-			peaks
+			result
 		},
 		
 		concentration = cbind(electrophoresis$peaks, estimated.variable = integrate.peaks(electrophoresis, "concentration")),
@@ -246,7 +246,7 @@ qc.electrophoresis <- function(electrophoresis, variable, log = TRUE) {
 		geom_smooth(method = "lm") +
 		xlab(paste("software-reported", variable.label(electrophoresis, variable))) +
 		ylab(paste("estimated", variable.label(electrophoresis, variable))) +
-		facet_wrap(~ batch * well.number, labeller = labeller.electrophoresis(electrophoresis))
+		facet_wrap(~ sample.index, labeller = labeller.electrophoresis(electrophoresis))
 	
 	if (log) result <- result + scale_x_log10() + scale_y_log10()
 	
