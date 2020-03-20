@@ -61,7 +61,8 @@ labeller.electrophoresis <- function(electrophoresis) function(factor.frame) {
 #' @param x The variable to use as the x-value of each point in the graph. Can be one of \code{"time"}, \code{"aligned.time"}, \code{"distance"}, \code{"relative.distance"}, or \code{"length"}.
 #' @param y The variable to use as the y-value of each point in the graph. Can be one of \code{"fluorescence"}, \code{"concentration"}, or \code{"molarity"}.
 #' @param log Which variables to log-transform (\code{"x"}, \code{"y"}, or \code{"xy"}).
-#' @param facet If \code{TRUE}, display each sample in a separate facet via \code{\link{facet_wrap}}, as in the Agilent software's usual display mode. If \code{FALSE}, overlay all samples in one graph and color-coded, as in the Agilent software's comparison mode.
+#' @param facets Faceting formula to use. Picks \code{\link{facet_wrap}} or \code{\link{facet_grid}} depending on whether the formula is one- or two-sided. If \code{NULL}, overlay all samples in one color-coded graph, as in the Agilent software's comparison mode.
+#' @param scales Scaling rules for the facets, passed to \code{\link{facet_wrap}}.
 #' @param scales Scaling rules for the facets, passed to \code{\link{facet_wrap}}.
 #' @param geom Name of the geom to draw. Currently only \code{"line"} (\code{\link{geom_line}}, to get continuous lines) and \code{"area"} (\code{\link{geom_area}}, to fill the area under the curves) are supported.
 #' @param include.ladder If \code{FALSE}, graph only the actual samples and not the ladder(s) wells.
@@ -78,7 +79,7 @@ qplot.electrophoresis <- function(electrophoresis,
 	x = "length",
 	y = "molarity",
 	log = "",
-	facet = TRUE,
+	facets = ~ sample.index,
 	scales = "fixed",
 	geom = "line",
 	include.ladder = FALSE,
@@ -118,29 +119,33 @@ qplot.electrophoresis <- function(electrophoresis,
 	this.plot <- ggplot(electrophoresis$data)
 	
 	# add regions
-	if (facet & ! is.na(region.alpha) & ! is.null(electrophoresis$regions)) this.plot <- this.plot + geom_rect(aes_(xmin = as.name(paste0("lower.", x)), xmax = as.name(paste0("upper.", x)), ymin = -Inf, ymax = Inf), data = electrophoresis$regions, alpha = region.alpha)
+	if (! is.null(facets) & ! is.na(region.alpha) & ! is.null(electrophoresis$regions)) this.plot <- this.plot + geom_rect(aes_(xmin = as.name(paste0("lower.", x)), xmax = as.name(paste0("upper.", x)), ymin = -Inf, ymax = Inf), data = electrophoresis$regions, alpha = region.alpha)
 	
 	# finally add the geom (after the regions so it's in front)
 	this.plot <- this.plot + switch(geom,
-		line = geom_line(if (facet)
+		line = geom_line(if (! is.null(facets))
 			aes_(x = as.name(x), y = as.name(y)) 
 		else 
 			aes_(x = as.name(x), y = as.name(y), color = as.name("sample.name"))
 		),
-		area = if (facet)
+		area = if (! is.null(facets))
 			geom_area(aes_(x = as.name(x), y = as.name(y))) 
 		else
 			geom_area(aes_(x = as.name(x), y = as.name(y), fill = as.name("sample.name")), alpha = area.alpha)
 	)
 	
 	# add peaks
-	if (facet & ! is.na(peak.fill) & ! is.null(electrophoresis$peaks)) {
+	if (! is.null(facets) & ! is.na(peak.fill) & ! is.null(electrophoresis$peaks)) {
 		peak.data <- subset(cbind(electrophoresis$data, peak = in.peaks(electrophoresis)), ! is.na(peak))
 		this.plot <- this.plot + geom_area(aes_(x = as.name(x), y = as.name(y), group = as.name("peak")), data = peak.data, fill = peak.fill)
 	}
 	
 	# add faceting
-	if (facet) this.plot <- this.plot + facet_wrap(~ sample.index, scales = scales, labeller = labeller.electrophoresis(electrophoresis))
+	if (! is.null(facets)) this.plot <- this.plot +
+		if (length(facets) == 2) # one-sided formula
+			facet_wrap(facets, scales = scales, labeller = if (facets == ~ sample.index) labeller.electrophoresis(electrophoresis) else "label_value")
+		else
+			facet_grid(facets, scales = scales)
 	
 	# apply log transformations
 	if (log %in% c("x", "xy")) this.plot <- this.plot + scale_x_log10()

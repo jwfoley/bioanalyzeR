@@ -9,7 +9,7 @@ qplot.electrophoresis(
   x = "length",
   y = "molarity",
   log = "",
-  facet = TRUE,
+  facets = ~sample.index,
   scales = "fixed",
   geom = "line",
   include.ladder = FALSE,
@@ -28,7 +28,7 @@ qplot.electrophoresis(
 
 \item{log}{Which variables to log-transform (\code{"x"}, \code{"y"}, or \code{"xy"}).}
 
-\item{facet}{If \code{TRUE}, display each sample in a separate facet via \code{\link{facet_wrap}}, as in the Agilent software's usual display mode. If \code{FALSE}, overlay all samples in one graph and color-coded, as in the Agilent software's comparison mode.}
+\item{facets}{Faceting formula to use. Picks \code{\link{facet_wrap}} or \code{\link{facet_grid}} depending on whether the formula is one- or two-sided. If \code{NULL}, overlay all samples in one color-coded graph, as in the Agilent software's comparison mode.}
 
 \item{scales}{Scaling rules for the facets, passed to \code{\link{facet_wrap}}.}
 
