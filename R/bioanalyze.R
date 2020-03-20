@@ -141,8 +141,9 @@ read.bioanalyzer <- function(xml.file, fit = "spline") {
 		standard.curve.function <- function(aligned.time) exp((1 / aligned.time - mobility.model$coefficients[1]) / mobility.model$coefficients[2])
 		standard.curve.inverse <- function(length) 1/(mobility.model$coefficients[1] + log(length) * mobility.model$coefficients[2])
 	}
-	result$mobility.functions <- list(standard.curve.function)
-	names(result$mobility.functions) <- which.ladder
+	result$mobility.functions <- list(list(standard.curve.function))
+	names(result$mobility.functions[[1]]) <- which.ladder
+	names(result$mobility.functions) <- batch
 	
 	# apply mobility function
 	result$data$length <- standard.curve.function(result$data$aligned.time)

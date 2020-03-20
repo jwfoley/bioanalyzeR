@@ -184,8 +184,8 @@ stdcrv.mobility <- function(electrophoresis, n.simulate = 100, line.color = "red
 	simulated.data <- do.call(rbind, lapply(which.ladders, function(ladder.index) {
 		x.range <- range(ladder.peaks[[x.name]][ladder.peaks$sample.index == ladder.index])
 		x.diff <- diff(x.range)
-		batch <- electrophoresis$samples$batch[ladder.index]
-		well.number <- electrophoresis$samples$well.number[ladder.index]
+		batch <- as.character(electrophoresis$samples$batch[ladder.index])
+		well.number <- as.character(electrophoresis$samples$well.number[ladder.index])
 		result <- data.frame(batch, well.number, x = x.range[1] + x.diff * (0:(n.simulate - 1) / (n.simulate - 1)))
 		result$estimated.length <- electrophoresis$mobility.functions[[batch]][[well.number]](result$x)
 		result
@@ -228,7 +228,7 @@ qc.electrophoresis <- function(electrophoresis, variable, log = TRUE) {
 			result <- cbind(electrophoresis$peaks, estimated.variable = NA)
 			for (i in 1:nrow(electrophoresis$samples)) {
 				which.peaks <- result$sample.index == i
-				result$estimated.variable[which.peaks] <- electrophoresis$mobility.functions[[electrophoresis$samples$batch[i]]][[electrophoresis$samples$ladder.well[i]]](result[[x.name]][which.peaks])
+				result$estimated.variable[which.peaks] <- electrophoresis$mobility.functions[[as.character(electrophoresis$samples$batch[i])]][[as.character(electrophoresis$samples$ladder.well[i])]](result[[x.name]][which.peaks])
 			}
 			result
 		},
