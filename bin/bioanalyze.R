@@ -16,7 +16,7 @@ files$add_argument("--output_file", "-o",
 	metavar = "OUTPUT_FILE.tsv"
 )
 files$add_argument("--plot_file", "-p",
-	help = "path of file to write plots (PDF)",
+	help = "path of file to write plot(s) (PDF)",
 	metavar = "PLOT_FILE.pdf"
 )
 files$add_argument("--dimensions", "-d",
