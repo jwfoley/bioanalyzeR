@@ -24,6 +24,11 @@ files$add_argument("--dimensions", "-d",
 	metavar = "WxH",
 	default = "8x6"
 )
+files$add_argument("--fit",
+	help = "mobility standard curve method",
+	default = "spline",
+	choices = c("spline", "interpolation", "regression")
+)
 
 plotting <- parser$add_argument_group("plotting", "Settings for the electropherogram plot. See help(qplot.electrophoresis) for more information.")
 plotting$add_argument("-x", help = "x-variable",
@@ -120,7 +125,7 @@ qc$add_argument("--qc",
 
 args <- parser$parse_args()
 
-data <- do.call(read.electrophoresis, as.list(args$xml_files))
+data <- do.call(read.electrophoresis, c(as.list(args$xml_files), fit = args$fit))
 
 # integration and table generation
 result <- data$samples

@@ -15,7 +15,7 @@
 #' @importFrom XML xmlRoot xmlParse xmlValue xmlToDataFrame xmlApply
 #' @importFrom base64enc base64decode
 read.bioanalyzer <- function(xml.file, fit = "spline") {
-	stopifnot(fit %in% c("linear", "spline", "regression"))
+	stopifnot(fit %in% c("interpolation", "spline", "regression"))
 	
 	batch <- sub("\\.xml$", "", basename(xml.file))
 	xml.root <- xmlRoot(xmlParse(xml.file))
@@ -129,7 +129,7 @@ read.bioanalyzer <- function(xml.file, fit = "spline") {
 	
 	# fit standard curve for molecule length
 	# do this with aligned times so it's effectively recalibrated for each sample's markers
-	if (fit == "interpolate") {
+	if (fit == "interpolation") {
 		warning("linear interpolation gives ugly results for molarity estimation")
 		standard.curve.function <- approxfun(peaks.ladder$aligned.time, peaks.ladder$length)
 		standard.curve.inverse <- approxfun(peaks.ladder$length, peaks.ladder$aligned.time)
