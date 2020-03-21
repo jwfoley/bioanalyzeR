@@ -25,7 +25,7 @@ files$add_argument("--dimensions", "-d",
 	default = "8x6"
 )
 
-plotting <- parser$add_argument_group("plotting", "Settings for the electropherogram plot. See help(plot.electrophoresis) for more information.")
+plotting <- parser$add_argument_group("plotting", "Settings for the electropherogram plot. See help(qplot.electrophoresis) for more information.")
 plotting$add_argument("-x", help = "x-variable",
 	default = "length",
 	metavar = "VARIABLE"
