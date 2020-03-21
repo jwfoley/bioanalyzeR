@@ -14,11 +14,8 @@ Simple R functions for importing and analyzing electrophoresis data from an Agil
 
 # Reading input data
 
-## `read.bioanalyzer`
-Reads data from a Bioanalyzer XML files (see below for how to export those) into an S3 object of class `electrophoresis` containing the raw data and varous metadata. 
-
-## `read.tapestation`
-Reads data from a TapeStation run, requiring both an XML metadata file and a PNG gel-image file (see below for how to export those), into an S3 object of class `electrophoresis` containing the raw data and varous metadata.
+## `read.electrophoresis`
+Read data from one or more Bioanalyzer or Tapestation runs, given the path of the exported XML file(s) (and corresponding PNG files for TapeStation) and combine into one data set of class `electrophoresis`.
 
 ## The `electrophoresis` class
 This is a generalized data structure for the data and metadata of one or more Bioanalyzer or TapeStation runs. The members are:
@@ -38,10 +35,9 @@ This is a generalized data structure for the data and metadata of one or more Bi
 	* `well.number` - the well number in which the sample was loaded
 	* `sample.name` - the name of the sample
 	* `reagent.id` (TapeStation) - the name of the ScreenTape used for this sample
-	* `is.ladder` - a Boolean indicating whether this sample is a ladder of standards for calibration
 	* `sample.observations` - notes about this sample supplied by the user or the Agilent software
 	* `sample.comment` - notes about this sample supplied by the user
-* `wells.by.ladder` - a list of which wells in each batch correspond to a given ladder (the TapeStation may run a separate ladder on each tape)
+	* `ladder.well` - which well contains the ladder that calibrates this sample
 * `peaks` - a data frame of peaks reported by the Agilent software, annotated with their lower and upper boundaries in various scales
 * `regions` - a data frame of regions of interest reported by the Agilent software, annotated with their lower and upper boundaries in varous scales
 * `mobility functions` - a list of model functions, one per ladder used for calibration, to convert migration speed measurements (aligned time or relative distance) into estimated molecule lengths
@@ -62,28 +58,30 @@ Check the fit of the mobility model (molecule length vs. migration speed) by plo
 Compare the estimated molecule lengths, concentrations, or molarities from this package with the values reported by the Agilent software.
 
 
-# Manipulating and analyzing the data
+# Manipulating the data
 
-## Combining data: `rbind.electrophoresis`
+## `rbind.electrophoresis`
 Combine multiple `electrophoresis` objects into one.
 
-## Summing data
+## `subset.electrophoresis`
+Subset an `electrophoresis` object by some variable of the samples.
 
-### `integrate.peaks`
+
+# Analyzing the data
+
+## `integrate.peaks`
 Computes the sum of some variable in each peak in the peak table.
 
-### `integrate.regions`
+## `integrate.regions`
 Computes the sum of some variable in each region in the region table.
 
-### `integrate.custom`
+## `integrate.custom`
 Computes the sum of some variable within a single pair of boundaries, individually for each sample.
 
-## Comparing regions
-
-### `region.ratio`
+## `region.ratio`
 Computes the ratio of sums within two or more regions in each sample.
 
-### `illumina.library.ratio`
+## `illumina.library.ratio`
 Shortcut for Illumina sequencing libraries: Computes the molar ratio of good inserts to adapter dimers for each sample.
 
 
