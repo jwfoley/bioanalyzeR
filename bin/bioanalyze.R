@@ -3,7 +3,7 @@
 library(bioanalyzeR)
 library(argparse)
 
-parser <- ArgumentParser(description = "Simple electrophoresis analysis")
+parser <- ArgumentParser(description = "Simple automation of bioanalyzeR functions.")
 
 files <- parser$add_argument_group("files", "Filenames and settings for input/output.")
 files$add_argument("xml_files",
