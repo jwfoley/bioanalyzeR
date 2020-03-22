@@ -2,6 +2,7 @@
 
 S3method(rbind,electrophoresis)
 S3method(subset,electrophoresis)
+export(dv200)
 export(illumina.library.ratio)
 export(in.custom.region)
 export(in.peak)

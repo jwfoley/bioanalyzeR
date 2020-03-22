@@ -124,6 +124,10 @@ integration$add_argument("--region_ratio", "-r",
 	nargs = "*",
 	metavar = "MIN-MAX"
 )
+integration$add_argument("--dv200",
+	help = "compute DV200",
+	action = "store_true"
+)
 integration$add_argument("--illumina",
 	help = "compute Illumina library ratio",
 	action = "store_true"
@@ -165,6 +169,7 @@ if (! is.null(args$region_ratio)) {
 	bounds.list <- lapply(strsplit(args$region_ratio, "-"), as.numeric)
 	result <- data.frame(result, region.ratio(data, bounds = bounds.list, bound.variable = args$bound_variable, sum.variable = args$sum_variable), check.names = F, stringsAsFactors = F)
 }
+if (args$dv200) result <- data.frame(result, dv200(data), check.names = F, stringsAsFactors = F)
 if (args$illumina) result <- data.frame(result, illumina.library.ratio(data), check.names = F, stringsAsFactors = F)
 write.table(result, file = if (is.null(args$output_file)) stdout() else args$output_file, quote = F, sep = "\t", row.names = F)
 

@@ -23,3 +23,6 @@ illumina.library.ratio(
 \description{
 For Illumina sequencing libraries, compute the molar ratio of molecules with desirably long inserts to undesirable adapter dimers in each sample.
 }
+\seealso{
+\code{\link{region.ratio}}, \code{\link{dv200}}
+}

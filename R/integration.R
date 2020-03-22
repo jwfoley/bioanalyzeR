@@ -63,7 +63,7 @@ integrate.custom <- function(
 #'
 #' @return A matrix of ratios of sums within the regions, each region relative to the first region, for each sample.
 #'
-#' @seealso \code{\link{illumina.library.ratio}}
+#' @seealso \code{\link{dv200}}, \code{\link{illumina.library.ratio}}
 #'
 #' @export
 region.ratio <- function(
@@ -77,6 +77,39 @@ region.ratio <- function(
 	matrix(sum.matrix[,-1] / sum.matrix[,1], dimnames = list(NULL, sapply(bounds[-1], function(bound.pair) paste0(sum.variable, " ratio in ", bound.variable, " ", bound.pair[1], "-", bound.pair[2], "/", bounds[[1]][1], "-", bounds[[1]][2]))))
 }
 
+#' DV200 analysis
+#'
+#' Calculate the proportion of fragments above 200 bases (DV200). Only fragments between the lower and upper markers are considered.
+#'
+#' Note: Despite unclear wording, Agilent calculates DV200 as a proportion of total mass (concentration), rather than a proportion of molecules (molarity). For some purposes molar DV200 may be more relevant, but current protocols refer to the default DV200 based on mass.
+#'
+#' @param electrophoresis An \code{electrophoresis} object.
+#' @param prop.variable Which variable to use for the proportion.
+#'
+#' @seealso \code{\link{region.ratio}}, \code{\link{illumina.library.ratio}}
+#'
+#' @export
+dv200 <- function(electrophoresis, prop.variable = "concentration") {
+	# remove data outside the space between markers
+	for (i in 1:nrow(electrophoresis$peaks)) {
+		if (electrophoresis$peaks$peak.observations[i] == "Lower Marker") {
+			electrophoresis$data <- subset(electrophoresis$data, ! (
+				sample.index == electrophoresis$peaks$sample.index[i] &
+				length <= electrophoresis$peaks$upper.length[i]
+			))
+		} else if (electrophoresis$peaks$peak.observations[i] == "Upper Marker") {
+			electrophoresis$data <- subset(electrophoresis$data, ! (
+				sample.index == electrophoresis$peaks$sample.index[i] &
+				length >= electrophoresis$peaks$lower.length[i]
+			))
+		}
+	}
+	result <- region.ratio(electrophoresis, bounds = list(c(-Inf, Inf), c(200, Inf)), sum.variable = prop.variable)
+	colnames(result) <- if (prop.variable == "molarity") "molar DV200" else "DV200"
+	result
+}
+
+
 #' Ratio of good inserts to adapter dimers
 #'
 #' For Illumina sequencing libraries, compute the molar ratio of molecules with desirably long inserts to undesirable adapter dimers in each sample.
@@ -85,6 +118,8 @@ region.ratio <- function(
 #' @param min.sequenceable The shortest length of molecules that are likely to produce data on the sequencer (ignore shorter molecules that are probably just unclusterable free primers or adapters).
 #' @param min.good.insert The shortest length of a desirable molecule (adapter length plus insert length).
 #' @param max.sequenceable The longest length of molecules that are likely to produce data on the sequencer (ignore molecules that are too long for clustering).
+#'
+#' @seealso \code{\link{region.ratio}}, \code{\link{dv200}}
 #'
 #' @export
 illumina.library.ratio <- function(
