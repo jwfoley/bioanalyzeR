@@ -45,7 +45,7 @@ read.bioanalyzer <- function(xml.file, fit = "spline") {
 			is.ladder <- (trimws(xmlValue(this.sample[["Category"]])) == "Ladder")
 			sample.comment <- trimws(xmlValue(this.sample[["Comment"]]))
 			sample.observations <- trimws(xmlValue(this.sample[["ResultFlagCommonLabel"]]))
-			RIN <- as.numeric(xmlValue(this.sample[["DAResultStructures"]][["DARRIN"]][["Channel"]][["RIN"]]))
+			suppressWarnings(RIN <- as.numeric(xmlValue(this.sample[["DAResultStructures"]][["DARRIN"]][["Channel"]][["RIN"]])))
 
 			# read peaks
 			peaks.raw <- xmlToDataFrame(this.sample[["DAResultStructures"]][["DARIntegrator"]][["Channel"]][["PeaksMolecular"]], stringsAsFactors = F)
