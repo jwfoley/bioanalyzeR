@@ -42,12 +42,16 @@ plotting$add_argument("-y", help = "y-variable",
 plotting$add_argument("--log", "-l",
 	help = "axes to log-scale",
 	default = "",
-	choices = c("", "x", "y", "xy")
+	choices = c("x", "y", "xy")
 )
 plotting$add_argument("--facets", "-f",
 	help = "faceting formula, or 'none'",
 	default = "~ sample.index",
 	metavar = "FORMULA"
+)
+plotting$add_argument("--margins",
+	help = "display marginal facets",
+	action = "store_true"
 )
 plotting$add_argument("--scales", "-s",
 	help = "scaling rules for facets",
@@ -67,6 +71,18 @@ plotting$add_argument("--include_markers",
 	help = "extend range to include marker(s)",
 	action = "store_true"
 )
+plotting$add_argument("--xlim",
+	help = "limits of x-axis",
+	type = "double",
+	nargs = 2,
+	metavar = c("MIN", "MAX")
+)
+plotting$add_argument("--ylim",
+	help = "limits of y-axis",
+	type = "double",
+	nargs = 2,
+	metavar = c("MIN", "MAX")
+)
 plotting$add_argument("--peak_fill",
 	help = "color of peaks",
 	default = "darkred",
@@ -84,17 +100,29 @@ plotting$add_argument("--area_alpha",
 	type = "double",
 	metavar = "ALPHA"
 )
+plotting$add_argument("--title",
+	help = "plot title",
+	metavar = "LABEL"
+)
+plotting$add_argument("--xlab",
+	help = "x-axis label",
+	metavar = "LABEL"
+)
+plotting$add_argument("--ylab",
+	help = "y-axis label",
+	metavar = "LABEL"
+)
 
 integration <- parser$add_argument_group("integration", "Integrate a variable under the curve. See help(integrate.custom) and help(region.ratio) for more information.")
 integration$add_argument("--integrate_region", "-i",
 	help = "integrate within the selected boundaries",
 	nargs = "*",
-	metavar = c("MIN-MAX")
+	metavar = "MIN-MAX"
 )
 integration$add_argument("--region_ratio", "-r",
 	help = "compare region sums",
 	nargs = "*",
-	metavar = c("MIN-MAX")
+	metavar = "MIN-MAX"
 )
 integration$add_argument("--illumina",
 	help = "compute Illumina library ratio",
@@ -155,13 +183,19 @@ if (! is.null(args$plot_file)) {
 			y = args$y,
 			log = args$log,
 			facets = facets,
+			margins = args$margins,
 			scales = args$scales,
 			geom = args$geom,
 			include.ladder = args$include_ladder,
 			between.markers = ! args$include_markers,
+			xlim = if (! is.null(args$xlim)) args$xlim else c(NA, NA),
+			ylim = if (! is.null(args$ylim)) args$ylim else c(NA, NA),
 			peak.fill = args$peak_fill,
 			region.alpha = args$region_alpha,
-			area.alpha = args$area_alpha
+			area.alpha = args$area_alpha,
+			title = args$title,
+			xlab = args$xlab,
+			ylab = args$ylab
 		))
 		if (args$stdcrv) print(stdcrv.mobility(data))
 		for (variable in args$qc) print(qc.electrophoresis(data, variable))

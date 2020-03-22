@@ -10,13 +10,19 @@ qplot.electrophoresis(
   y = "molarity",
   log = "",
   facets = ~sample.index,
+  margins = FALSE,
   scales = "fixed",
   geom = "line",
   include.ladder = FALSE,
   between.markers = TRUE,
+  xlim = c(NA, NA),
+  ylim = c(NA, NA),
   peak.fill = "darkred",
   region.alpha = 0.2,
-  area.alpha = 0.2
+  area.alpha = 0.2,
+  title = NULL,
+  xlab = NULL,
+  ylab = NULL
 )
 }
 \arguments{
@@ -28,7 +34,9 @@ qplot.electrophoresis(
 
 \item{log}{Which variables to log-transform (\code{"x"}, \code{"y"}, or \code{"xy"}).}
 
-\item{facets}{Faceting formula to use. Picks \code{\link{facet_wrap}} or \code{\link{facet_grid}} depending on whether the formula is one- or two-sided. If \code{NULL}, overlay all samples in one color-coded graph, as in the Agilent software's comparison mode.}
+\item{facets}{Faceting formula to use. Picks \code{\link{facet_wrap}} or \code{\link{facet_grid}} depending on whether the formula is one- or two-sided. If \code{NULL}, overlay all samples in one color-coded graph.}
+
+\item{margins}{Display marginal facets (via \code{\link{facet_grid}}) if using a two-side faceting formula.}
 
 \item{scales}{Scaling rules for the facets, passed to \code{\link{facet_wrap}}.}
 
@@ -38,11 +46,15 @@ qplot.electrophoresis(
 
 \item{between.markers}{If \code{TRUE}, graph only data between the marker peaks.}
 
+\item{xlim, }{ylim Limits of x- and y-axes}
+
 \item{peak.fill}{Color to fill the area under reported peaks. Set to \code{NA} to skip plotting the peaks.}
 
 \item{region.alpha}{Alpha-transparency of the highlight in the reported regions of interested. Set to \code{NA} to skip plotting the regions.}
 
 \item{area.alpha}{Alpha-transparency of the filled areas under the curves, if they are overlaid in one graph (\code{facet = FALSE} and \code{geom = "area"}), to make them visible through one another.}
+
+\item{title, }{xlab, ylab Plot title, x-axis label, and y-axis label.}
 }
 \value{
 A ggplot object containing several layers. You can draw it directly or customize it like any other ggplot object by adding more layers.
