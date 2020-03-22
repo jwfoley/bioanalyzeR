@@ -119,6 +119,8 @@ read.tapestation.xml <- function(xml.file) {
 			warning(paste(sample.observations, "for well", well.number, sample.name))
 			return(NULL)
 		}
+		suppressWarnings(RINe <- as.numeric(xmlValue(sample.xml[["RNA"]][["RINe"]])))
+		suppressWarnings(DIN <- as.numeric(xmlValue(sample.xml[["DIN"]])))
 		
 		reagent.id <- xmlValue(sample.xml[["ScreenTapeID"]])
 		
@@ -156,7 +158,7 @@ read.tapestation.xml <- function(xml.file) {
 		)
 		
 		list(
-			samples = data.frame(batch, well.number, sample.name, sample.observations, reagent.id, stringsAsFactors = F),
+			samples = data.frame(batch, well.number, sample.name, sample.observations, reagent.id, RINe, DIN, stringsAsFactors = F),
 			peaks = peaks,
 			regions = regions
 		)
@@ -169,6 +171,8 @@ read.tapestation.xml <- function(xml.file) {
 		regions = if (! has.regions) NULL else do.call(rbind, c(lapply(1:length(result.list), function(i) if (is.null(result.list[[i]]$regions)) NULL else cbind(sample.index = i, result.list[[i]]$regions)), make.row.names = F)),
 		assay.info = assay.info
 	)
+	if (all(is.na(result$samples$RINe))) result$samples$RINe <- NULL
+	if (all(is.na(result$samples$DIN))) result$samples$DIN <- NULL
 	
 	# convert sample metadata into factors, ensuring all frames have the same levels and the levels are in the observed order
 	for (field in c("batch", "well.number", "sample.name", "reagent.id", "sample.observations")) result$samples[,field] <- factor(result$samples[,field], levels = unique(result$samples[,field]))
