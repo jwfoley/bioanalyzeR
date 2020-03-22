@@ -45,6 +45,7 @@ read.bioanalyzer <- function(xml.file, fit = "spline") {
 			is.ladder <- (trimws(xmlValue(this.sample[["Category"]])) == "Ladder")
 			sample.comment <- trimws(xmlValue(this.sample[["Comment"]]))
 			sample.observations <- trimws(xmlValue(this.sample[["ResultFlagCommonLabel"]]))
+			RIN <- as.numeric(xmlValue(this.sample[["DAResultStructures"]][["DARRIN"]][["Channel"]][["RIN"]]))
 
 			# read peaks
 			peaks.raw <- xmlToDataFrame(this.sample[["DAResultStructures"]][["DARIntegrator"]][["Channel"]][["PeaksMolecular"]], stringsAsFactors = F)
@@ -88,7 +89,7 @@ read.bioanalyzer <- function(xml.file, fit = "spline") {
 			
 			list(
 				data = raw.data,
-				samples = data.frame(batch, well.number, sample.name, sample.observations, sample.comment, is.ladder, stringsAsFactors = F),
+				samples = data.frame(batch, well.number, sample.name, sample.observations, sample.comment, RIN, is.ladder, stringsAsFactors = F),
 				peaks = peaks,
 				alignment.values = c(alignment.coefficient, alignment.offset)
 			)
@@ -103,6 +104,7 @@ read.bioanalyzer <- function(xml.file, fit = "spline") {
 		mobility.functions = NULL,
 		mass.coefficients = NULL
 	), class = "electrophoresis")
+	if (all(is.na(result$samples$RIN))) result$samples$RIN <- NULL
 	alignment.values <- lapply(result.list, function(x) x$alignment.values)
 		
 	# construct assay.info
@@ -123,7 +125,7 @@ read.bioanalyzer <- function(xml.file, fit = "spline") {
 	# analyze ladder
 	which.ladder <- which(result$samples$is.ladder)
 	stopifnot(length(which.ladder) == 1)
-	result$samples <- result$samples[,! names(result$samples) == "is.ladder"]
+	result$samples$is.ladder <- NULL
 	peaks.ladder <- subset(result$peaks, sample.index == which.ladder & peak.observations %in% c("Lower Marker", "Ladder Peak", "Upper Marker"))
 	result$samples$ladder.well <- factor(which.ladder, levels = levels(result$samples$well.number))
 	
