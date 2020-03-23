@@ -4,12 +4,14 @@
 \alias{variable.label}
 \title{Variable labels for electrophoresis data}
 \usage{
-variable.label(electrophoresis, variable)
+variable.label(electrophoresis, variable, variable2 = NULL)
 }
 \arguments{
 \item{electrophoresis}{An \code{electrophoresis} object.}
 
 \item{variable}{The name of the variable to convert into a label. One of \code{"time"}, \code{"aligned.time"}, \code{"distance"}, \code{"relative.distance"}, \code{"fluorescence"}, \code{"length"}, \code{"concentration"}, \code{"molarity"}.}
+
+\item{variable2}{Optionally, the name of a second variable that is the denominator of the first (e.g. molarity per length).}
 }
 \value{
 A \code{"character"} object containing a descriptive, human-readable label including the correct units (e.g. ng/µl, nM) specified in the original metadata.

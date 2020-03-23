@@ -7,10 +7,12 @@
 #' @param electrophoresis An \code{electrophoresis} object.
 #' @param variable The name of the variable to convert into a label. One of \code{"time"}, \code{"aligned.time"}, \code{"distance"}, \code{"relative.distance"}, \code{"fluorescence"}, \code{"length"}, \code{"concentration"}, \code{"molarity"}.
 #'
+#' @param variable2 Optionally, the name of a second variable that is the denominator of the first (e.g. molarity per length).
+#'
 #' @return A \code{"character"} object containing a descriptive, human-readable label including the correct units (e.g. ng/µl, nM) specified in the original metadata.
 #'
 #' @export
-variable.label <- function(electrophoresis, variable) switch(variable,
+variable.label <- function(electrophoresis, variable, variable2 = NULL) if (is.null(variable2)) switch(variable,
 	time =               "time (s)",
 	aligned.time =       "aligned time relative to markers (s)",
 	distance =           "distance migrated",
@@ -37,7 +39,7 @@ variable.label <- function(electrophoresis, variable) switch(variable,
 			"molarity"
 		}
 	},	
-)
+) else paste(variable.label(electrophoresis, variable), "per", variable.label(electrophoresis, variable2))
 
 #' Labeller for electrophoresis samples
 #'
@@ -52,10 +54,30 @@ labeller.electrophoresis <- function(electrophoresis) function(factor.frame) {
 	list(as.character(electrophoresis$samples$sample.name[factor.frame[,1]]))
 }
 
+#' Scale data by a differential
+#'
+#' Given an x-variable and a y-variable, this function scales the y-values from the observed data points by the differentials of the x-values. The resulting values of y/dx can then be used to make visually accurate graphs.
+#'
+#' @param electrophoresis An \code{electrophoresis} object.
+#' @param x The name of the x-variable in \code{electrophoresis$data}.
+#' @param y The name of the y-variable in \code{electrophoresis$data}.
+#'
+#' @return A vector of the y-values, one for each row of \code{electrophoresis$data}, divided by the differentials of the corresponding x-values.
+#'
+#' @export
+scale.by.differential <- function(electrophoresis, x, y) {
+	stopifnot(all(diff(electrophoresis$data$sample.index) %in% c(0, 1))) # assume data points from each sample are contiguous and ordered by sample
+	delta.x <- do.call(c, lapply(unique(electrophoresis$data$sample.index), function(i) c(NA, diff(electrophoresis$data[electrophoresis$data$sample.index == i,x])))) # apply by sample to make sure we don't get a weird delta at the sample boundary
+	if (all(delta.x < 0, na.rm = T)) delta.x <- -delta.x else stopifnot(all(delta.x > 0, na.rm)) # assume data points are monotonic; if negative (like migration distance) make them positive so the math comes out clean
+	
+	electrophoresis$data[[y]] / delta.x
+}
 
 #' Plot electrophoresis data
 #'
 #' This function is a shortcut to plot the data from an \code{electrophoresis} object, wrapping \code{\link{ggplot}} similarly to \code{\link{qplot}}. The result is analogous to electropherograms produced by the Agilent software.
+#'
+#' Before plotting, the y-variable is scaled by the differentials in the x-value. Thus the units of the y-axis are divided by the units of the x-axis, e.g. molarity per length. This ensures that the area under the curve (width times height) represents the desired variable in the correct units. For example, if the x-variable is length in bp, the graph will be equivalent to a histogram with one bar for each possible molecule length in base pairs.
 #'
 #' @param electrophoresis An \code{electrophoresis} object.
 #' @param x The variable to use as the x-value of each point in the graph. Can be one of \code{"time"}, \code{"aligned.time"}, \code{"distance"}, \code{"relative.distance"}, or \code{"length"}.
@@ -125,6 +147,9 @@ qplot.electrophoresis <- function(electrophoresis,
 	if (! is.null(electrophoresis$peaks)) electrophoresis$peaks <- cbind(electrophoresis$peaks, electrophoresis$samples[electrophoresis$peaks$sample.index,])
 	if (! is.null(electrophoresis$regions)) electrophoresis$regions <- cbind(electrophoresis$regions, electrophoresis$samples[electrophoresis$regions$sample.index,])
 	
+	# scale y-values to dx
+	electrophoresis$data$y.scaled <- scale.by.differential(electrophoresis, x, y)
+	
 	# create plot but don't add the geom yet
 	this.plot <- ggplot(electrophoresis$data)
 	
@@ -134,20 +159,20 @@ qplot.electrophoresis <- function(electrophoresis,
 	# finally add the geom (after the regions so it's in front)
 	this.plot <- this.plot + switch(geom,
 		line = geom_line(if (! is.null(facets))
-			aes_(x = as.name(x), y = as.name(y))
+			aes_(x = as.name(x), y = as.name("y.scaled"))
 		else 
-			aes_(x = as.name(x), y = as.name(y), color = as.name("sample.name"))
+			aes_(x = as.name(x), y = as.name("y.scaled"), color = as.name("sample.name"))
 		),
 		area = if (! is.null(facets))
-			geom_area(aes_(x = as.name(x), y = as.name(y)))
+			geom_area(aes_(x = as.name(x), y = as.name("y.scaled")))
 		else
-			geom_area(aes_(x = as.name(x), y = as.name(y), fill = as.name("sample.name")), alpha = area.alpha)
+			geom_area(aes_(x = as.name(x), y = as.name("y.scaled"), fill = as.name("sample.name")), alpha = area.alpha)
 	)
 	
 	# add peaks
 	if (! is.null(facets) & ! is.na(peak.fill) & ! is.null(electrophoresis$peaks)) {
 		peak.data <- subset(cbind(electrophoresis$data, peak = in.peaks(electrophoresis)), ! is.na(peak))
-		this.plot <- this.plot + geom_area(aes_(x = as.name(x), y = as.name(y), group = as.name("peak")), data = peak.data, fill = peak.fill)
+		this.plot <- this.plot + geom_area(aes_(x = as.name(x), y = as.name("y.scaled"), group = as.name("peak")), data = peak.data, fill = peak.fill)
 	}
 	
 	# add faceting
@@ -168,7 +193,7 @@ qplot.electrophoresis <- function(electrophoresis,
 	# set labels and other settings for specific x & y variables
 	this.plot <- this.plot + labs(
 		x = if (! is.null(xlab)) xlab else variable.label(electrophoresis, x),
-		y = if (! is.null(ylab)) ylab else variable.label(electrophoresis, y),
+		y = if (! is.null(ylab)) ylab else variable.label(electrophoresis, y, x),
 		title = title
 	)
 	if (x %in% c("distance", "relative.distance")) this.plot <- this.plot + scale_x_reverse()
