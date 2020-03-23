@@ -68,7 +68,7 @@ labeller.electrophoresis <- function(electrophoresis) function(factor.frame) {
 scale.by.differential <- function(electrophoresis, x, y) {
 	stopifnot(all(diff(electrophoresis$data$sample.index) %in% c(0, 1))) # assume data points from each sample are contiguous and ordered by sample
 	delta.x <- do.call(c, lapply(unique(electrophoresis$data$sample.index), function(i) c(NA, diff(electrophoresis$data[electrophoresis$data$sample.index == i,x])))) # apply by sample to make sure we don't get a weird delta at the sample boundary
-	if (all(delta.x < 0, na.rm = T)) delta.x <- -delta.x else stopifnot(all(delta.x > 0, na.rm)) # assume data points are monotonic; if negative (like migration distance) make them positive so the math comes out clean
+	if (all(delta.x < 0, na.rm = T)) delta.x <- -delta.x else stopifnot(all(delta.x > 0, na.rm = T)) # assume data points are monotonic; if negative (like migration distance) make them positive so the math comes out clean
 	
 	electrophoresis$data[[y]] / delta.x
 }
