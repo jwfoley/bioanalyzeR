@@ -81,8 +81,14 @@ subset.electrophoresis <- function(electrophoresis, ...) {
 	# remove unwanted data
 	electrophoresis$data <- subset(electrophoresis$data, sample.index %in% remaining.samples)
 	electrophoresis$assay.info <- electrophoresis$assay.info[names(electrophoresis$assay.info) %in% as.character(electrophoresis$samples$batch)]
-	if (! is.null(electrophoresis$peaks)) electrophoresis$peaks <- subset(electrophoresis$peaks, sample.index %in% remaining.samples)
-	if (! is.null(electrophoresis$regions)) electrophoresis$regions <- subset(electrophoresis$regions, sample.index %in% remaining.samples)
+	if (! is.null(electrophoresis$peaks)) {
+		electrophoresis$peaks <- subset(electrophoresis$peaks, sample.index %in% remaining.samples)
+		if (nrow(electrophoresis$peaks) == 0) electrophoresis$peaks <- NULL
+	}
+	if (! is.null(electrophoresis$regions)) {
+		electrophoresis$regions <- subset(electrophoresis$regions, sample.index %in% remaining.samples)
+		if (nrow(electrophoresis$regions) == 0) electrophoresis$regions <- NULL
+	}
 #	electrophoresis$mobility.functions <- 
 	if (! is.null(electrophoresis$mass.coefficients)) electrophoresis$mass.coefficients <- electrophoresis$mass.coefficients[remaining.samples]
 	
