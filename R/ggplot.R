@@ -59,7 +59,7 @@ labeller.electrophoresis <- function(electrophoresis) function(factor.frame) {
 #'
 #' This function is a shortcut to plot the data from an \code{electrophoresis} object, wrapping \code{\link{ggplot}} similarly to \code{\link{qplot}}. The result is analogous to electropherograms produced by the Agilent software.
 #'
-#' Before plotting, the y-variable is scaled by the differentials in the x-value. Thus the units of the y-axis are divided by the units of the x-axis, e.g. molarity per length. This ensures that the area under the curve (width times height) represents the desired variable in the correct units. For example, if the x-variable is length in bp, the graph will be equivalent to a histogram with one bar for each possible molecule length in base pairs.
+#' Before plotting, unless the y-variable is fluorescence, it is scaled by the differentials in the x-value. Thus the units of the y-axis are divided by the units of the x-axis, e.g. molarity per length. This ensures that the area under the curve (width times height) represents the desired variable in the correct units. For example, if the x-variable is length in bp, the graph will be equivalent to a histogram with one bar for each possible molecule length in base pairs.
 #'
 #' @param electrophoresis An \code{electrophoresis} object.
 #' @param x The variable to use as the x-value of each point in the graph. Can be one of \code{"time"}, \code{"aligned.time"}, \code{"distance"}, \code{"relative.distance"}, or \code{"length"}.
@@ -122,10 +122,8 @@ qplot.electrophoresis <- function(electrophoresis,
 	if (! is.null(electrophoresis$regions)) electrophoresis$regions <- cbind(electrophoresis$regions, electrophoresis$samples[electrophoresis$regions$sample.index,])
 	
 	# normalize and scale y-values
-	if (normalize) {
-		electrophoresis$data$y.normalized <- normalize.proportion(electrophoresis, y, lower.marker.spread)
-		electrophoresis$data$y.scaled <- scale.by.differential(electrophoresis, x, "y.normalized")
-	} else electrophoresis$data$y.scaled <- scale.by.differential(electrophoresis, x, y)
+	electrophoresis$data$y.to.use <- if (normalize) normalize.proportion(electrophoresis, y, lower.marker.spread) else electrophoresis$data[[y]]
+	electrophoresis$data$y.scaled <- if (y == "fluorescence") electrophoresis$data$y.to.use else scale.by.differential(electrophoresis, x, "y.to.use") # don't scale fluorescence by differentials
 	
 	# create plot but don't add the geom yet
 	this.plot <- ggplot(electrophoresis$data)
@@ -170,7 +168,7 @@ qplot.electrophoresis <- function(electrophoresis,
 	# set labels and other settings for specific x & y variables
 	this.plot <- this.plot + labs(
 		x = if (! is.null(xlab)) xlab else variable.label(electrophoresis, x),
-		y = if (! is.null(ylab)) ylab else variable.label(electrophoresis, (if (normalize) paste("proportion of", y) else y), x),
+		y = if (! is.null(ylab)) ylab else variable.label(electrophoresis, (if (normalize) paste("proportion of", y) else y), if (y == "fluorescence") NULL else x),
 		title = title
 	)
 	if (x %in% c("distance", "relative.distance")) this.plot <- this.plot + scale_x_reverse()
