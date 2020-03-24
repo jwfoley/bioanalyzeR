@@ -261,7 +261,7 @@ qc.electrophoresis <- function(electrophoresis, variable, log = TRUE) {
 	result <- ggplot(peaks, aes_(as.name(variable), as.name("estimated.variable"), color = as.name("peak.observations"))) +
 		geom_abline() +
 		geom_point() +
-		geom_smooth(method = "lm") +
+		geom_smooth(method = "lm", formula = y ~ x) +
 		xlab(paste("software-reported", variable.label(electrophoresis, variable))) +
 		ylab(paste("estimated", variable.label(electrophoresis, variable))) +
 		facet_wrap(~ sample.index, labeller = labeller.electrophoresis(electrophoresis))
