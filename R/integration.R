@@ -83,14 +83,17 @@ region.ratio <- function(
 #'
 #' Note: Despite unclear wording, Agilent calculates DV200 as a proportion of total mass (concentration), rather than a proportion of molecules (molarity). For some purposes molar DV200 may be more relevant, but current protocols refer to the default DV200 based on mass.
 #'
+#' By default \code{lower.marker.spread = 1} (see \code{\link{between.markers}}) for consistency with the Agilent software.
+#'
 #' @param electrophoresis An \code{electrophoresis} object.
 #' @param prop.variable Which variable to use for the proportion.
+#' @param lower.marker.spread Amount to scale the width of the lower marker peak.
 #'
 #' @seealso \code{\link{region.ratio}}, \code{\link{illumina.library.ratio}}
 #'
 #' @export
-dv200 <- function(electrophoresis, prop.variable = "concentration") {
-	electrophoresis$data <- electrophoresis$data[which(between.markers(electrophoresis)),]
+dv200 <- function(electrophoresis, prop.variable = "concentration", lower.marker.spread = 1) {
+	electrophoresis$data <- electrophoresis$data[which(between.markers(electrophoresis, lower.marker.spread)),]
 	result <- region.ratio(electrophoresis, bounds = list(c(-Inf, Inf), c(200, Inf)), sum.variable = prop.variable)
 	colnames(result) <- if (prop.variable == "molarity") "molar DV200" else "DV200"
 	result
