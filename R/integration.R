@@ -11,7 +11,7 @@
 integrate.peaks <- function(
 	electrophoresis,
 	sum.variable = "molarity"
-) matrix(sapply(1:nrow(electrophoresis$peaks), function(peak) sum(electrophoresis$data[[sum.variable]][which(in.peak(electrophoresis, peak))])), dimnames = list(NULL, sum.variable))
+) sapply(1:nrow(electrophoresis$peaks), function(peak) sum(electrophoresis$data[[sum.variable]][which(in.peak(electrophoresis, peak))]))
 
 #' Integrate a variable in each region
 #'
@@ -26,7 +26,7 @@ integrate.peaks <- function(
 integrate.regions <- function(
 	electrophoresis,
 	sum.variable = "molarity"
-) matrix(sapply(1:nrow(electrophoresis$regions), function(region) sum(electrophoresis$data[[sum.variable]][which(in.region(electrophoresis, region))])), dimnames = list(NULL, sum.variable))
+) sapply(1:nrow(electrophoresis$regions), function(region) sum(electrophoresis$data[[sum.variable]][which(in.region(electrophoresis, region))]))
 
 #' Integrate a variable in a custom region
 #'
@@ -49,7 +49,7 @@ integrate.custom <- function(
 	sum.variable = "molarity"
 ) {
 	in.this.region <- in.custom.region(electrophoresis$data, lower.bound, upper.bound, bound.variable)
-	matrix(sapply(1:nrow(electrophoresis$samples), function(sample) sum(electrophoresis$data[[sum.variable]][in.this.region & electrophoresis$data$sample.index == sample])), dimnames = list(NULL, paste0(sum.variable, " in ", bound.variable, " ", lower.bound, "-", upper.bound)))
+	sapply(1:nrow(electrophoresis$samples), function(sample) sum(electrophoresis$data[[sum.variable]][in.this.region & electrophoresis$data$sample.index == sample]))
 }
 
 #' Compare sums within regions
@@ -92,12 +92,7 @@ region.ratio <- function(
 #' @seealso \code{\link{region.ratio}}, \code{\link{illumina.library.ratio}}
 #'
 #' @export
-dv200 <- function(electrophoresis, prop.variable = "concentration", lower.marker.spread = 1) {
-	electrophoresis$data <- electrophoresis$data[which(between.markers(electrophoresis, lower.marker.spread)),]
-	result <- region.ratio(electrophoresis, bounds = list(c(-Inf, Inf), c(200, Inf)), sum.variable = prop.variable)
-	colnames(result) <- if (prop.variable == "molarity") "molar DV200" else "DV200"
-	result
-}
+dv200 <- function(electrophoresis, prop.variable = "concentration", lower.marker.spread = 1) region.ratio(electrophoresis$data[which(between.markers(electrophoresis, lower.marker.spread)),], bounds = list(c(-Inf, Inf), c(200, Inf)), sum.variable = prop.variable)
 
 
 #' Ratio of good inserts to adapter dimers
