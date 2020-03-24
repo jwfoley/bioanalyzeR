@@ -12,7 +12,7 @@ in.region(electrophoresis, which.region)
 \item{which.region}{The integer index of a region in \code{electrophoresis$regions}.}
 }
 \value{
-A vector of logicals with length \code{nrow(data)}.
+A vector of logicals with length \code{nrow(electrophoresis$data)}.
 }
 \description{
 This function takes an electrophoresis object and checks whether each data point is within a specified region.

@@ -19,5 +19,5 @@ This function takes an electrophoresis object and reports which of the peaks eac
 Warning: If peaks in the reported table overlap, any data point in more than one peak will only be matched to the last peak it belongs to.
 }
 \seealso{
-\code{\link{in.regions}}, \code{\link{in.peak}}
+\code{\link{in.regions}}, \code{\link{in.peak}}, \code{\link{between.markers}}
 }

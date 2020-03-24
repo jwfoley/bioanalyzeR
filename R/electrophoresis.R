@@ -109,6 +109,24 @@ subset.electrophoresis <- function(electrophoresis, ...) {
 	electrophoresis
 }
 
+#' Get the original x-variable
+#'
+#' This function takes an \code{electrophoresis} object and returns the name of the x-value that was used to fit the mobility model.
+#'
+#' The result should only be either \code{"aligned time"} for Bioanalyzer data or \code{"relative.distance"} for TapeStation data.
+#'
+#' @param electrophoresis An \code{electrophoresis} object.
+#'
+#' @return A character giving the name of the x-value.
+#'
+#' @export
+get.x.name <- function(electrophoresis) {
+	possible.x.names <- c("aligned.time", "relative.distance")
+	result <- possible.x.names[possible.x.names %in% colnames(electrophoresis$data)]
+	stopifnot(length(result) == 1)
+	result
+}
+
 
 #' Check whether data points are within a custom region
 #'
@@ -161,7 +179,7 @@ in.peak <- function(electrophoresis, which.peak) {
 #' @param electrophoresis An \code{electrophoresis} object.
 #' @param which.region The integer index of a region in \code{electrophoresis$regions}.
 #'
-#' @return A vector of logicals with length \code{nrow(data)}.
+#' @return A vector of logicals with length \code{nrow(electrophoresis$data)}.
 #'
 #' @seealso \code{\link{in.peak}}, \code{\link{in.custom.region}}, \code{\link{in.regions}}
 #'
@@ -183,7 +201,7 @@ in.region <- function(electrophoresis, which.region) {
 #'
 #' @return A vector of integers with length \code{nrow(data)}. Each element is either the integer index of the peak in \code{electrophoresis$peaks} that the data point belongs to, or NA if it is not in any of the annotated peaks.
 #'
-#' @seealso \code{\link{in.regions}}, \code{\link{in.peak}}
+#' @seealso \code{\link{in.regions}}, \code{\link{in.peak}}, \code{\link{between.markers}}
 #'
 #' @export
 in.peaks <- function(electrophoresis) {
@@ -208,6 +226,35 @@ in.peaks <- function(electrophoresis) {
 in.regions <- function(electrophoresis) {
 	result <- rep(NA, nrow(electrophoresis$data))
 	if (! is.null(electrophoresis$regions)) for (i in 1:nrow(electrophoresis$regions)) result[which(in.region(electrophoresis, i))] <- i
+	result
+}
+
+#' Check whether data points are between markers
+#'
+#' This function takes an electrophoresis object and reports whether each data point is between the lower and upper length markers.
+#'
+#' Observations are considered to be between the markers if they are above the upper boundary of the lower marker and the lower boundary of the upper marker, as reported in the Agilent software's peak detection. If there is no upper marker, all points above the upper boundary of the lower marker are considered to be between the markers.
+#'
+#' @param electrophoresis
+#'
+#' @return A vector of logicals with length \code{nrow{electrophoresis$data}}.
+#'
+#' @seealso \code{\link{\in.peaks}}
+#'
+#' @export
+between.markers <- function(electrophoresis) {
+	x.name <- get.x.name(electrophoresis)
+	result <- rep(F, nrow(electrophoresis$data))
+	# first set all points above the lower marker to TRUE
+	for (lower.marker in which(electrophoresis$peaks$peak.observations %in% c("Lower Marker", "edited Lower Marker"))) result[electrophoresis$data$sample.index == electrophoresis$peaks$sample.index[lower.marker] & (
+		if (x.name == "relative.distance") electrophoresis$data[[x.name]] < electrophoresis$peaks[[paste0("lower.", x.name)]][lower.marker]
+		else electrophoresis$data[[x.name]] > electrophoresis$peaks[[paste0("upper.", x.name)]][lower.marker]
+	)] <- T
+	# then set all points in or above the upper marker, if there is one, to FALSE
+	for (upper.marker in which(electrophoresis$peaks$peak.observations %in% c("Upper Marker", "edited Upper Marker"))) result[electrophoresis$data$sample.index == electrophoresis$peaks$sample.index[upper.marker] & (
+		if (x.name == "relative.distance") electrophoresis$data[[x.name]] < electrophoresis$peaks[[paste0("upper.", x.name)]][upper.marker]
+		else electrophoresis$data[[x.name]] > electrophoresis$peaks[[paste0("lower.", x.name)]][upper.marker]
+	)] <- F
 	result
 }
 

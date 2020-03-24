@@ -90,20 +90,7 @@ region.ratio <- function(
 #'
 #' @export
 dv200 <- function(electrophoresis, prop.variable = "concentration") {
-	# remove data outside the space between markers
-	for (i in 1:nrow(electrophoresis$peaks)) {
-		if (electrophoresis$peaks$peak.observations[i] == "Lower Marker") {
-			electrophoresis$data <- subset(electrophoresis$data, ! (
-				sample.index == electrophoresis$peaks$sample.index[i] &
-				length <= electrophoresis$peaks$upper.length[i]
-			))
-		} else if (electrophoresis$peaks$peak.observations[i] == "Upper Marker") {
-			electrophoresis$data <- subset(electrophoresis$data, ! (
-				sample.index == electrophoresis$peaks$sample.index[i] &
-				length >= electrophoresis$peaks$lower.length[i]
-			))
-		}
-	}
+	electrophoresis$data <- electrophoresis$data[which(between.markers(electrophoresis)),]
 	result <- region.ratio(electrophoresis, bounds = list(c(-Inf, Inf), c(200, Inf)), sum.variable = prop.variable)
 	colnames(result) <- if (prop.variable == "molarity") "molar DV200" else "DV200"
 	result

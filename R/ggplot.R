@@ -64,6 +64,8 @@ labeller.electrophoresis <- function(electrophoresis) function(factor.frame) {
 #'
 #' @return A vector of the y-values, one for each row of \code{electrophoresis$data}, divided by the differentials of the corresponding x-values.
 #'
+#' @seealso \code{\link{normalize.proportion}}
+#'
 #' @export
 scale.by.differential <- function(electrophoresis, x, y) {
 	stopifnot(all(diff(electrophoresis$data$sample.index) %in% c(0, 1))) # assume data points from each sample are contiguous and ordered by sample
@@ -72,6 +74,7 @@ scale.by.differential <- function(electrophoresis, x, y) {
 	
 	electrophoresis$data[[y]] / delta.x
 }
+
 
 #' Plot electrophoresis data
 #'
@@ -128,19 +131,7 @@ qplot.electrophoresis <- function(electrophoresis,
 	if (log %in% c("y", "xy")) electrophoresis$data <- electrophoresis$data[electrophoresis$data[[y]] > 0,]
 	
 	# remove data outside the space between markers
-	if (between.markers) for (i in 1:nrow(electrophoresis$peaks)) {
-		if (electrophoresis$peaks$peak.observations[i] == "Lower Marker") {
-			electrophoresis$data <- subset(electrophoresis$data, ! (
-				sample.index == electrophoresis$peaks$sample.index[i] &
-				length <= electrophoresis$peaks$upper.length[i]
-			))
-		} else if (electrophoresis$peaks$peak.observations[i] == "Upper Marker") {
-			electrophoresis$data <- subset(electrophoresis$data, ! (
-				sample.index == electrophoresis$peaks$sample.index[i] &
-				length >= electrophoresis$peaks$lower.length[i]
-			))
-		}
-	}
+	if (between.markers) electrophoresis$data <- electrophoresis$data[which(between.markers(electrophoresis)),]
 	
 	# annotate data with metadata
 	electrophoresis$data <- cbind(electrophoresis$data, electrophoresis$samples[electrophoresis$data$sample.index,])
@@ -219,15 +210,11 @@ qplot.electrophoresis <- function(electrophoresis,
 #'
 #' @export
 stdcrv.mobility <- function(electrophoresis, n.simulate = 100, line.color = "red") { # returns a ggplot object, which can be extended by adding more features
+	x.name <- get.x.name(electrophoresis)
 	which.ladders <- which(electrophoresis$samples$well.number == electrophoresis$samples$ladder.well)
 	ladder.data <- subset(cbind(electrophoresis$data, peak = in.peaks(electrophoresis)), sample.index %in% which.ladders & ! is.na(peak))
 	ladder.data$true.length <- electrophoresis$peaks$length[ladder.data$peak]
 	ladder.peaks <- subset(electrophoresis$peaks, sample.index %in% which.ladders & ! is.na(length))
-	
-	# determine which kind of data we have
-	possible.x.names <- c("aligned.time", "relative.distance")
-	x.name <- possible.x.names[possible.x.names %in% colnames(electrophoresis$data)]
-	stopifnot(length(x.name) == 1)	
 	
 	simulated.data <- do.call(rbind, lapply(which.ladders, function(ladder.index) {
 		x.range <- range(ladder.peaks[[x.name]][ladder.peaks$sample.index == ladder.index])
@@ -269,10 +256,7 @@ stdcrv.mobility <- function(electrophoresis, n.simulate = 100, line.color = "red
 qc.electrophoresis <- function(electrophoresis, variable, log = TRUE) {
 	peaks <- switch(variable,
 		length = {
-			possible.x.names <- c("aligned.time", "relative.distance")
-			x.name <- possible.x.names[possible.x.names %in% colnames(electrophoresis$data)]
-			stopifnot(length(x.name) == 1)	
-			
+			x.name <- get.x.name(electrophoresis)			
 			result <- cbind(electrophoresis$peaks, estimated.variable = NA)
 			for (i in 1:nrow(electrophoresis$samples)) {
 				which.peaks <- result$sample.index == i
