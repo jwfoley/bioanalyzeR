@@ -75,6 +75,12 @@ plotting$add_argument("--include_markers",
 	help = "extend range to include marker(s)",
 	action = "store_true"
 )
+plotting$add_argument("--lower_marker_spread",
+	help = "amount to extend lower marker",
+	default = 5,
+	type = "double",
+	metavar = "PROPORTION"
+)_
 plotting$add_argument("--xlim",
 	help = "limits of x-axis",
 	type = "double",
@@ -198,6 +204,7 @@ if (! is.null(args$plot_file)) {
 			geom = args$geom,
 			include.ladder = args$include_ladder,
 			between.markers = ! args$include_markers,
+			lower.marker.spread = args$lower_marker_spread,
 			xlim = if (! is.null(args$xlim)) args$xlim else c(NA, NA),
 			ylim = if (! is.null(args$ylim)) args$ylim else c(NA, NA),
 			peak.fill = args$peak_fill,

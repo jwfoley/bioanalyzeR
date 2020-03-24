@@ -72,6 +72,7 @@ labeller.electrophoresis <- function(electrophoresis) function(factor.frame) {
 #' @param geom Name of the geom to draw. Currently only \code{"line"} (\code{\link{geom_line}}, to get continuous lines) and \code{"area"} (\code{\link{geom_area}}, to fill the area under the curves) are supported.
 #' @param include.ladder If \code{FALSE}, graph only the actual samples and not the ladder(s) wells.
 #' @param between.markers If \code{TRUE}, graph only data between the marker peaks.
+#' @param lower.marker.spread If excluding marker peaks, extend the lower marker peak by this amount (via \code{\link{between.markers}}).
 #' @param xlim, ylim Limits of x- and y-axes 
 #' @param peak.fill Color to fill the area under reported peaks. Set to \code{NA} to skip plotting the peaks.
 #' @param region.alpha Alpha-transparency of the highlight in the reported regions of interested. Set to \code{NA} to skip plotting the regions.
@@ -93,6 +94,7 @@ qplot.electrophoresis <- function(electrophoresis,
 	geom = "line",
 	include.ladder = FALSE,
 	between.markers = TRUE,
+	lower.marker.spread = 5,
 	xlim = c(NA, NA),
 	ylim = c(NA, NA),
 	peak.fill = "darkred",
@@ -106,13 +108,13 @@ qplot.electrophoresis <- function(electrophoresis,
 	# remove ladders
 	if (! include.ladder) electrophoresis <- subset(electrophoresis, well.number != ladder.well)
 	
+	# remove data outside the space between markers
+	if (between.markers) electrophoresis$data <- electrophoresis$data[which(between.markers(electrophoresis, lower.marker.spread)),]
+	
 	# remove data in unusable ranges
 	electrophoresis$data <- electrophoresis$data[! is.na(electrophoresis$data[[x]]) & ! is.na(electrophoresis$data[[y]]),]
 	if (log %in% c("x", "xy")) electrophoresis$data <- electrophoresis$data[electrophoresis$data[[x]] > 0,]
 	if (log %in% c("y", "xy")) electrophoresis$data <- electrophoresis$data[electrophoresis$data[[y]] > 0,]
-	
-	# remove data outside the space between markers
-	if (between.markers) electrophoresis$data <- electrophoresis$data[which(between.markers(electrophoresis)),]
 	
 	# annotate data with metadata
 	electrophoresis$data <- cbind(electrophoresis$data, electrophoresis$samples[electrophoresis$data$sample.index,])
