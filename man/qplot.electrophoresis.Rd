@@ -15,7 +15,7 @@ qplot.electrophoresis(
   scales = "fixed",
   geom = "line",
   include.ladder = FALSE,
-  between.markers = TRUE,
+  include.markers = FALSE,
   lower.marker.spread = 5,
   xlim = c(NA, NA),
   ylim = c(NA, NA),
@@ -48,7 +48,7 @@ qplot.electrophoresis(
 
 \item{include.ladder}{If \code{FALSE}, graph only the actual samples and not the ladder(s) wells.}
 
-\item{between.markers}{If \code{TRUE}, graph only data between the marker peaks.}
+\item{include.markers}{If \code{FALSE}, graph only data between the marker peaks.}
 
 \item{lower.marker.spread}{If excluding marker peaks, extend the lower marker peak by this amount (via \code{\link{between.markers}}).}
 

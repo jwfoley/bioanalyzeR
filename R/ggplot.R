@@ -71,7 +71,7 @@ labeller.electrophoresis <- function(electrophoresis) function(factor.frame) {
 #' @param scales Scaling rules for the facets, passed to \code{\link{facet_wrap}}.
 #' @param geom Name of the geom to draw. Currently only \code{"line"} (\code{\link{geom_line}}, to get continuous lines) and \code{"area"} (\code{\link{geom_area}}, to fill the area under the curves) are supported.
 #' @param include.ladder If \code{FALSE}, graph only the actual samples and not the ladder(s) wells.
-#' @param between.markers If \code{TRUE}, graph only data between the marker peaks.
+#' @param include.markers If \code{FALSE}, graph only data between the marker peaks.
 #' @param lower.marker.spread If excluding marker peaks, extend the lower marker peak by this amount (via \code{\link{between.markers}}).
 #' @param xlim, ylim Limits of x- and y-axes 
 #' @param peak.fill Color to fill the area under reported peaks. Set to \code{NA} to skip plotting the peaks.
@@ -93,7 +93,7 @@ qplot.electrophoresis <- function(electrophoresis,
 	scales = "fixed",
 	geom = "line",
 	include.ladder = FALSE,
-	between.markers = TRUE,
+	include.markers = FALSE,
 	lower.marker.spread = 5,
 	xlim = c(NA, NA),
 	ylim = c(NA, NA),
@@ -109,7 +109,7 @@ qplot.electrophoresis <- function(electrophoresis,
 	if (! include.ladder) electrophoresis <- subset(electrophoresis, well.number != ladder.well)
 	
 	# remove data outside the space between markers
-	if (between.markers) electrophoresis$data <- electrophoresis$data[which(between.markers(electrophoresis, lower.marker.spread)),]
+	if (! include.markers) electrophoresis$data <- electrophoresis$data[which(between.markers(electrophoresis, lower.marker.spread)),]
 	
 	# remove data in unusable ranges
 	electrophoresis$data <- electrophoresis$data[! is.na(electrophoresis$data[[x]]) & ! is.na(electrophoresis$data[[y]]),]

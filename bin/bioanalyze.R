@@ -203,7 +203,7 @@ if (! is.null(args$plot_file)) {
 			scales = args$scales,
 			geom = args$geom,
 			include.ladder = args$include_ladder,
-			between.markers = ! args$include_markers,
+			include.markers = args$include_markers,
 			lower.marker.spread = args$lower_marker_spread,
 			xlim = if (! is.null(args$xlim)) args$xlim else c(NA, NA),
 			ylim = if (! is.null(args$ylim)) args$ylim else c(NA, NA),
