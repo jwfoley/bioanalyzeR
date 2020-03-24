@@ -72,7 +72,7 @@ labeller.electrophoresis <- function(electrophoresis) function(factor.frame) {
 #' @param geom Name of the geom to draw. Currently only \code{"line"} (\code{\link{geom_line}}, to get continuous lines) and \code{"area"} (\code{\link{geom_area}}, to fill the area under the curves) are supported.
 #' @param include.ladder If \code{FALSE}, graph only the actual samples and not the ladder(s) wells.
 #' @param include.markers If \code{FALSE}, graph only data between the marker peaks.
-#' @param lower.marker.spread If excluding marker peaks, extend the lower marker peak by this amount (via \code{\link{between.markers}}).
+#' @param lower.marker.spread If normalizing the totals or excluding marker peaks, extend the lower marker peak by this amount (via \code{\link{between.markers}}).
 #' @param xlim, ylim Limits of x- and y-axes 
 #' @param peak.fill Color to fill the area under reported peaks. Set to \code{NA} to skip plotting the peaks.
 #' @param region.alpha Alpha-transparency of the highlight in the reported regions of interested. Set to \code{NA} to skip plotting the regions.
@@ -123,7 +123,7 @@ qplot.electrophoresis <- function(electrophoresis,
 	
 	# normalize and scale y-values
 	if (normalize) {
-		electrophoresis$data$y.normalized <- normalize.proportion(electrophoresis, y)
+		electrophoresis$data$y.normalized <- normalize.proportion(electrophoresis, y, lower.marker.spread)
 		electrophoresis$data$y.scaled <- scale.by.differential(electrophoresis, x, "y.normalized")
 	} else electrophoresis$data$y.scaled <- scale.by.differential(electrophoresis, x, y)
 	

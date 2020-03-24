@@ -50,7 +50,7 @@ qplot.electrophoresis(
 
 \item{include.markers}{If \code{FALSE}, graph only data between the marker peaks.}
 
-\item{lower.marker.spread}{If excluding marker peaks, extend the lower marker peak by this amount (via \code{\link{between.markers}}).}
+\item{lower.marker.spread}{If normalizing the totals or excluding marker peaks, extend the lower marker peak by this amount (via \code{\link{between.markers}}).}
 
 \item{xlim, }{ylim Limits of x- and y-axes}
 

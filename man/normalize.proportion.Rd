@@ -4,12 +4,14 @@
 \alias{normalize.proportion}
 \title{Normalize data to proportions}
 \usage{
-normalize.proportion(electrophoresis, variable)
+normalize.proportion(electrophoresis, variable, lower.marker.spread = 5)
 }
 \arguments{
 \item{electrophoresis}{An \code{electrophoresis} object.}
 
 \item{variable}{The name of a variable in \code{electrophoresis$data}.}
+
+\item{lower.marker.spread}{Proportion to scale the width of the lower marker peak (passed to \code{\link{between.markers}}).}
 }
 \value{
 A vector whose length equals \code{nrow(electrophoresis$data)}, in which each value is an observation of the given variable normalized by the total for that sample, or NA if the observation is not between the markers.

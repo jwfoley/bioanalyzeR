@@ -123,13 +123,14 @@ illumina.library.ratio <- function(
 #'
 #' @param electrophoresis An \code{electrophoresis} object.
 #' @param variable The name of a variable in \code{electrophoresis$data}.
+#' @param lower.marker.spread Proportion to scale the width of the lower marker peak (passed to \code{\link{between.markers}}).
 #'
 #' @return A vector whose length equals \code{nrow(electrophoresis$data)}, in which each value is an observation of the given variable normalized by the total for that sample, or NA if the observation is not between the markers.
 #'
 #' @seealso \code{\link{scale.by.differential}}
 #'
 #' @export
-normalize.proportion <- function(electrophoresis, variable) {
+normalize.proportion <- function(electrophoresis, variable, lower.marker.spread = 5) {
 	which.usable <- which(between.markers(electrophoresis) & ! is.na(electrophoresis$data[[variable]]))
 	subset.usable <- electrophoresis$data[which.usable,]
 	sample.sums <- sapply(1:nrow(electrophoresis$samples), function(sample) sum(subset.usable[[variable]][subset.usable$sample.index == sample]))
