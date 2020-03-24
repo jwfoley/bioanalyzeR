@@ -116,3 +116,27 @@ illumina.library.ratio <- function(
 	max.sequenceable =  700
 ) region.ratio(electrophoresis, bounds = list(c(min.sequenceable, min.good.insert), c(min.good.insert, max.sequenceable)))
 
+
+#' Normalize data to proportions
+#'
+#' For a given variable, normalize the data values in an \code{electrophoresis} object to proportions of the total. After normalization the sum of the variable for each sample is 1.
+#'
+#' Only data points between the markers are considered in the total. If there is no upper marker, all data points above the lower marker are considered.
+#'
+#' @param electrophoresis An \code{electrophoresis} object.
+#' @param variable The name of a variable in \code{electrophoresis$data}.
+#'
+#' @return A vector whose length equals \code{nrow(electrophoresis$data)}, in which each value is an observation of the given variable normalized by the total for that sample, or NA if the observation is not between the markers.
+#'
+#' @seealso \code{\link{scale.by.differential}}
+#'
+#' @export
+normalize.proportion <- function(electrophoresis, variable) {
+	which.usable <- which(between.markers(electrophoresis) & ! is.na(electrophoresis$data[[variable]]))
+	subset.usable <- electrophoresis$data[which.usable,]
+	sample.sums <- sapply(1:nrow(electrophoresis$samples), function(sample) sum(subset.usable[[variable]][subset.usable$sample.index == sample]))
+	result <- rep(NA, nrow(electrophoresis$data))
+	result[which.usable] <- subset.usable[[variable]] / sample.sums[subset.usable$sample.index]
+	result
+}
+

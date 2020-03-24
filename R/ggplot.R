@@ -38,7 +38,8 @@ variable.label <- function(electrophoresis, variable, variable2 = NULL) if (is.n
 			warning("incompatible molarity units")
 			"molarity"
 		}
-	},	
+	},
+	variable # if not found just return the original variable name	
 ) else paste(variable.label(electrophoresis, variable), "per", variable.label(electrophoresis, variable2))
 
 #' Labeller for electrophoresis samples
@@ -54,28 +55,6 @@ labeller.electrophoresis <- function(electrophoresis) function(factor.frame) {
 	list(as.character(electrophoresis$samples$sample.name[factor.frame[,1]]))
 }
 
-#' Scale data by a differential
-#'
-#' Given an x-variable and a y-variable, this function scales the y-values from the observed data points by the differentials of the x-values. The resulting values of y/dx can then be used to make visually accurate graphs.
-#'
-#' @param electrophoresis An \code{electrophoresis} object.
-#' @param x The name of the x-variable in \code{electrophoresis$data}.
-#' @param y The name of the y-variable in \code{electrophoresis$data}.
-#'
-#' @return A vector of the y-values, one for each row of \code{electrophoresis$data}, divided by the differentials of the corresponding x-values.
-#'
-#' @seealso \code{\link{normalize.proportion}}
-#'
-#' @export
-scale.by.differential <- function(electrophoresis, x, y) {
-	stopifnot(all(diff(electrophoresis$data$sample.index) %in% c(0, 1))) # assume data points from each sample are contiguous and ordered by sample
-	delta.x <- do.call(c, lapply(unique(electrophoresis$data$sample.index), function(i) c(NA, diff(electrophoresis$data[electrophoresis$data$sample.index == i,x])))) # apply by sample to make sure we don't get a weird delta at the sample boundary
-	if (all(delta.x < 0, na.rm = T)) delta.x <- -delta.x else stopifnot(all(delta.x > 0, na.rm = T)) # assume data points are monotonic; if negative (like migration distance) make them positive so the math comes out clean
-	
-	electrophoresis$data[[y]] / delta.x
-}
-
-
 #' Plot electrophoresis data
 #'
 #' This function is a shortcut to plot the data from an \code{electrophoresis} object, wrapping \code{\link{ggplot}} similarly to \code{\link{qplot}}. The result is analogous to electropherograms produced by the Agilent software.
@@ -86,6 +65,7 @@ scale.by.differential <- function(electrophoresis, x, y) {
 #' @param x The variable to use as the x-value of each point in the graph. Can be one of \code{"time"}, \code{"aligned.time"}, \code{"distance"}, \code{"relative.distance"}, or \code{"length"}.
 #' @param y The variable to use as the y-value of each point in the graph. Can be one of \code{"fluorescence"}, \code{"concentration"}, or \code{"molarity"}.
 #' @param log Which variables to log-transform (\code{"x"}, \code{"y"}, or \code{"xy"}).
+#' @param normalize Normalize the y-value in each sample with \code{\link{normalize.proportion}}.
 #' @param facets Faceting formula to use. Picks \code{\link{facet_wrap}} or \code{\link{facet_grid}} depending on whether the formula is one- or two-sided. If \code{NULL}, overlay all samples in one color-coded graph.
 #' @param margins Display marginal facets (via \code{\link{facet_grid}}) if using a two-side faceting formula.
 #' @param scales Scaling rules for the facets, passed to \code{\link{facet_wrap}}.
@@ -106,6 +86,7 @@ qplot.electrophoresis <- function(electrophoresis,
 	x = "length",
 	y = "molarity",
 	log = "",
+	normalize = FALSE,
 	facets = ~ sample.index,
 	margins = FALSE,
 	scales = "fixed",
@@ -138,8 +119,11 @@ qplot.electrophoresis <- function(electrophoresis,
 	if (! is.null(electrophoresis$peaks)) electrophoresis$peaks <- cbind(electrophoresis$peaks, electrophoresis$samples[electrophoresis$peaks$sample.index,])
 	if (! is.null(electrophoresis$regions)) electrophoresis$regions <- cbind(electrophoresis$regions, electrophoresis$samples[electrophoresis$regions$sample.index,])
 	
-	# scale y-values to dx
-	electrophoresis$data$y.scaled <- scale.by.differential(electrophoresis, x, y)
+	# normalize and scale y-values
+	if (normalize) {
+		electrophoresis$data$y.normalized <- normalize.proportion(electrophoresis, y)
+		electrophoresis$data$y.scaled <- scale.by.differential(electrophoresis, x, "y.normalized")
+	} else electrophoresis$data$y.scaled <- scale.by.differential(electrophoresis, x, y)
 	
 	# create plot but don't add the geom yet
 	this.plot <- ggplot(electrophoresis$data)
@@ -184,7 +168,7 @@ qplot.electrophoresis <- function(electrophoresis,
 	# set labels and other settings for specific x & y variables
 	this.plot <- this.plot + labs(
 		x = if (! is.null(xlab)) xlab else variable.label(electrophoresis, x),
-		y = if (! is.null(ylab)) ylab else variable.label(electrophoresis, y, x),
+		y = if (! is.null(ylab)) ylab else variable.label(electrophoresis, (if (normalize) paste("proportion of", y) else y), x),
 		title = title
 	)
 	if (x %in% c("distance", "relative.distance")) this.plot <- this.plot + scale_x_reverse()

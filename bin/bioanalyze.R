@@ -44,6 +44,10 @@ plotting$add_argument("--log", "-l",
 	default = "",
 	choices = c("x", "y", "xy")
 )
+plotting$add_argument("--normalize", "-n",
+	help = "normalize y-axis per sample",
+	action = "store_true"
+)
 plotting$add_argument("--facets", "-f",
 	help = "faceting formula, or 'none'",
 	default = "~ sample.index",
@@ -187,6 +191,7 @@ if (! is.null(args$plot_file)) {
 			x = args$x,
 			y = args$y,
 			log = args$log,
+			normalize = args$normalize,
 			facets = facets,
 			margins = args$margins,
 			scales = args$scales,

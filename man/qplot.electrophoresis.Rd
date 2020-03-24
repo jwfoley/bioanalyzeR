@@ -9,6 +9,7 @@ qplot.electrophoresis(
   x = "length",
   y = "molarity",
   log = "",
+  normalize = FALSE,
   facets = ~sample.index,
   margins = FALSE,
   scales = "fixed",
@@ -33,6 +34,8 @@ qplot.electrophoresis(
 \item{y}{The variable to use as the y-value of each point in the graph. Can be one of \code{"fluorescence"}, \code{"concentration"}, or \code{"molarity"}.}
 
 \item{log}{Which variables to log-transform (\code{"x"}, \code{"y"}, or \code{"xy"}).}
+
+\item{normalize}{Normalize the y-value in each sample with \code{\link{normalize.proportion}}.}
 
 \item{facets}{Faceting formula to use. Picks \code{\link{facet_wrap}} or \code{\link{facet_grid}} depending on whether the formula is one- or two-sided. If \code{NULL}, overlay all samples in one color-coded graph.}
 

@@ -258,3 +258,24 @@ between.markers <- function(electrophoresis) {
 	result
 }
 
+#' Scale data by a differential
+#'
+#' Given an x-variable and a y-variable, this function scales the y-values from the observed data points by the differentials of the x-values. The resulting values of y/dx can then be used to make visually accurate graphs.
+#'
+#' @param electrophoresis An \code{electrophoresis} object.
+#' @param x The name of the x-variable in \code{electrophoresis$data}.
+#' @param y The name of the y-variable in \code{electrophoresis$data}.
+#'
+#' @return A vector of the y-values, one for each row of \code{electrophoresis$data}, divided by the differentials of the corresponding x-values.
+#'
+#' @seealso \code{\link{normalize.proportion}}
+#'
+#' @export
+scale.by.differential <- function(electrophoresis, x, y) {
+	stopifnot(all(diff(electrophoresis$data$sample.index) %in% c(0, 1))) # assume data points from each sample are contiguous and ordered by sample
+	delta.x <- do.call(c, lapply(unique(electrophoresis$data$sample.index), function(i) c(NA, diff(electrophoresis$data[electrophoresis$data$sample.index == i,x])))) # apply by sample to make sure we don't get a weird delta at the sample boundary
+	if (all(delta.x < 0, na.rm = T)) delta.x <- -delta.x else stopifnot(all(delta.x > 0, na.rm = T)) # assume data points are monotonic; if negative (like migration distance) make them positive so the math comes out clean
+	
+	electrophoresis$data[[y]] / delta.x
+}
+
