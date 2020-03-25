@@ -71,13 +71,12 @@ A ggplot object containing several layers. You can draw it directly or customize
 \description{
 This function is a shortcut to plot the data from an \code{electrophoresis} object, wrapping \code{\link{ggplot}} similarly to \code{\link{qplot}}. The result is analogous to electropherograms produced by the Agilent software.
 }
-\details{
-\subsection{Variable transformation}{
+\section{Variable transformation}{
 
 Before plotting, unless the y-variable is fluorescence, it is scaled by the differentials in the x-value. Thus the units of the y-axis are divided by the units of the x-axis, e.g. molarity per length. This ensures that the area under the curve (width times height) represents the desired variable in the correct units. For example, if the x-variable is length in bp, the graph will be equivalent to a histogram with one bar for each possible molecule length in base pairs.
 }
 
-\subsection{Geoms and aesthetics}{
+\section{Geoms and aesthetics}{
 
 The x- and y-variable names must be provided as \code{\link{character}} objects, e.g. \code{"length"} rather than \code{length}. However, additional aesthetics in \code{...} are passed directly to \code{\link[ggplot2]{aes}} so they must be provided as the variable names themselves, e.g. \code{color = sample.observations} rather than \code{color = "sample.observations"}.
 
@@ -87,7 +86,7 @@ If \code{peak.fill} is not NA and \code{facets} is not null and \code{electropho
 
 If \code{region.alpha} is not NA and \code{facets} is not null and \code{electrophoresis$regions} is not null, then the plot gets a \code{\link[ggplot2]{geom_rect}} with \code{ymin = -Inf, ymax = Inf} and \code{xmin} and \code{xmax} set to the lower and upper boundaries of the regions, while \code{alpha = region.alpha}.
 }
-}
+
 \seealso{
 \code{\link{sparkline.electrophoresis}}
 }

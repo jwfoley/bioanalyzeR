@@ -59,10 +59,10 @@ labeller.electrophoresis <- function(electrophoresis) function(factor.frame) {
 #'
 #' This function is a shortcut to plot the data from an \code{electrophoresis} object, wrapping \code{\link{ggplot}} similarly to \code{\link{qplot}}. The result is analogous to electropherograms produced by the Agilent software.
 #'
-#' ## Variable transformation
+#' @section Variable transformation:
 #' Before plotting, unless the y-variable is fluorescence, it is scaled by the differentials in the x-value. Thus the units of the y-axis are divided by the units of the x-axis, e.g. molarity per length. This ensures that the area under the curve (width times height) represents the desired variable in the correct units. For example, if the x-variable is length in bp, the graph will be equivalent to a histogram with one bar for each possible molecule length in base pairs.
 #'
-#' ## Geoms and aesthetics
+#' @section Geoms and aesthetics:
 #' The x- and y-variable names must be provided as \code{\link{character}} objects, e.g. \code{"length"} rather than \code{length}. However, additional aesthetics in \code{...} are passed directly to \code{\link[ggplot2]{aes}} so they must be provided as the variable names themselves, e.g. \code{color = sample.observations} rather than \code{color = "sample.observations"}.
 #'
 #' Both of the supported geoms for the main data, \code{\link[ggplot2]{geom_line}} and \code{\link[ggplot2]{geom_area}}, are given the specified x-variable as \code{x} and the appropriately transformed y-variable as \code{y}, as well as \code{group = sample.index} to ensure overlaid samples are plotted distinctly. If \code{facets} is null, then the geom is also given either \code{color = sample.name} (if \code{geom == "line"}) or \code{fill = sample.name} (if \code{geom == "area"}) to color-code overlaid samples. Thus if replicates of the same sample have the same name, they will also have the same color.
@@ -94,7 +94,6 @@ labeller.electrophoresis <- function(electrophoresis) function(factor.frame) {
 #'
 #' @seealso \code{\link{sparkline.electrophoresis}}
 #'
-#' @md
 #' @export
 #' @import ggplot2
 qplot.electrophoresis <- function(electrophoresis,
