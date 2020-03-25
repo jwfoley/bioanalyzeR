@@ -242,7 +242,7 @@ in.regions <- function(electrophoresis) {
 #'
 #' @return A vector of logicals with length \code{nrow{electrophoresis$data}}.
 #'
-#' @seealso \code{\link{\in.peaks}}
+#' @seealso \code{\link{in.peaks}}
 #'
 #' @export
 between.markers <- function(electrophoresis, lower.marker.spread = 5) {

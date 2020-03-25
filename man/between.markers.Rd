@@ -23,5 +23,5 @@ Observations are considered to be between the markers if they are above the uppe
 The peak boundaries reported by Agilent tend to be too narrow for the lower marker and leave some residual fluorescence that can greatly distort some calculations, so by default this function overrides the
 }
 \seealso{
-\code{\link{\in.peaks}}
+\code{\link{in.peaks}}
 }
