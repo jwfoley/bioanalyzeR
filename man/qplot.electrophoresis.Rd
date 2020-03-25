@@ -88,3 +88,6 @@ If \code{peak.fill} is not NA and \code{facets} is not null and \code{electropho
 If \code{region.alpha} is not NA and \code{facets} is not null and \code{electrophoresis$regions} is not null, then the plot gets a \code{\link[ggplot2]{geom_rect}} with \code{ymin = -Inf, ymax = Inf} and \code{xmin} and \code{xmax} set to the lower and upper boundaries of the regions, while \code{alpha = region.alpha}.
 }
 }
+\seealso{
+\code{\link{sparkline.electrophoresis}}
+}

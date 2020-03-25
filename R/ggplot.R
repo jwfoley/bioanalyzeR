@@ -92,6 +92,8 @@ labeller.electrophoresis <- function(electrophoresis) function(factor.frame) {
 #'
 #' @return A ggplot object containing several layers. You can draw it directly or customize it like any other ggplot object by adding more layers.
 #'
+#' @seealso \code{\link{sparkline.electrophoresis}}
+#'
 #' @md
 #' @export
 #' @import ggplot2
@@ -191,6 +193,45 @@ qplot.electrophoresis <- function(electrophoresis,
 	
 	this.plot
 }
+
+#' Sparklines of electrophoresis data
+#'
+#' This function is a shortcut that calls \code{\link{qplot.electrophoresis}} with customized settings to generate sparklines.
+#'
+#' In addition to the hardcoded default arguments for \code{\link{qplot.electrophoresis}}, the following settings are added with \code{\link[ggplot2]{theme}}: \preformatted{
+#' axis.text.y = element_blank(),
+#' axis.ticks.y = element_blank(),
+#' panel.grid = element_blank(),
+#' panel.background = element_blank(),
+#' strip.background = element_blank(),
+#' strip.text.y = element_text(angle = 0)
+#'}
+#'
+#' @param ... Arguments passed to \code{\link{qplot.electrophoresis}}.
+#' @param facets Passed to \code{\link{qplot.electrophoresis}} but the default is hardcoded for one column of sparklines.
+#' @param scales,geom,peak.fill Passed to \code{\link{qplot.electrophoresis}} but the defaults are hardcoded for sparklines and probably do not make sense to change.
+#'
+#' @references
+#' Tufte, Edward R. (1983) The Visual Display of Quantitative Information. Cheshire, Conn.: Graphics Press.
+#'
+#' @seealso \code{\link{qplot.electrophoresis}}
+#'
+#' @import ggplot2
+#' @export
+sparkline.electrophoresis <- function(
+	...,
+	facets = sample.index ~ .,
+	scales = "free_y",
+	geom = "line",
+	peak.fill = NA
+) qplot.electrophoresis(..., facets = facets, geom = geom, peak.fill = peak.fill) + theme(
+	axis.text.y = element_blank(),
+	axis.ticks.y = element_blank(),
+	panel.grid = element_blank(),
+	panel.background = element_blank(),
+	strip.background = element_blank(),
+	strip.text.y = element_text(angle = 0)
+)
 
 #' Plot mobility standard curves
 #'
