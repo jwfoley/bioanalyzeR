@@ -8,6 +8,7 @@ qplot.electrophoresis(
   electrophoresis,
   x = "length",
   y = "molarity",
+  ...,
   log = "",
   normalize = FALSE,
   facets = ~sample.index,
@@ -30,9 +31,11 @@ qplot.electrophoresis(
 \arguments{
 \item{electrophoresis}{An \code{electrophoresis} object.}
 
-\item{x}{The variable to use as the x-value of each point in the graph. Can be one of \code{"time"}, \code{"aligned.time"}, \code{"distance"}, \code{"relative.distance"}, or \code{"length"}.}
+\item{x}{The name of the variable to use as the x-value of each point in the graph as a character. Can be one of \code{"time"}, \code{"aligned.time"}, \code{"distance"}, \code{"relative.distance"}, or \code{"length"}.}
 
-\item{y}{The variable to use as the y-value of each point in the graph. Can be one of \code{"fluorescence"}, \code{"concentration"}, or \code{"molarity"}.}
+\item{y}{The name of the variable to use as the y-value of each point in the graph, as a character. Can be one of \code{"fluorescence"}, \code{"concentration"}, or \code{"molarity"}.}
+
+\item{...}{Additional aesthetics passed to the geom for the main data (not the peaks or regions).}
 
 \item{log}{Which variables to log-transform (\code{"x"}, \code{"y"}, or \code{"xy"}).}
 
@@ -70,4 +73,6 @@ This function is a shortcut to plot the data from an \code{electrophoresis} obje
 }
 \details{
 Before plotting, unless the y-variable is fluorescence, it is scaled by the differentials in the x-value. Thus the units of the y-axis are divided by the units of the x-axis, e.g. molarity per length. This ensures that the area under the curve (width times height) represents the desired variable in the correct units. For example, if the x-variable is length in bp, the graph will be equivalent to a histogram with one bar for each possible molecule length in base pairs.
+
+The x- and y-variable names must be provided as \code{\link{character}} objects, e.g. \code{"length"} rather than \code{length}. However, additional aesthetics in \code{...} are passed directly to \code{\link[ggplot2]{aes}} so they must be provided as the variable names themselves, e.g. \code{color = sample.observations} rather than \code{color = "sample.observations"}.
 }

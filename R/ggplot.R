@@ -61,9 +61,12 @@ labeller.electrophoresis <- function(electrophoresis) function(factor.frame) {
 #'
 #' Before plotting, unless the y-variable is fluorescence, it is scaled by the differentials in the x-value. Thus the units of the y-axis are divided by the units of the x-axis, e.g. molarity per length. This ensures that the area under the curve (width times height) represents the desired variable in the correct units. For example, if the x-variable is length in bp, the graph will be equivalent to a histogram with one bar for each possible molecule length in base pairs.
 #'
+#' The x- and y-variable names must be provided as \code{\link{character}} objects, e.g. \code{"length"} rather than \code{length}. However, additional aesthetics in \code{...} are passed directly to \code{\link[ggplot2]{aes}} so they must be provided as the variable names themselves, e.g. \code{color = sample.observations} rather than \code{color = "sample.observations"}.
+#'
 #' @param electrophoresis An \code{electrophoresis} object.
-#' @param x The variable to use as the x-value of each point in the graph. Can be one of \code{"time"}, \code{"aligned.time"}, \code{"distance"}, \code{"relative.distance"}, or \code{"length"}.
-#' @param y The variable to use as the y-value of each point in the graph. Can be one of \code{"fluorescence"}, \code{"concentration"}, or \code{"molarity"}.
+#' @param x The name of the variable to use as the x-value of each point in the graph as a character. Can be one of \code{"time"}, \code{"aligned.time"}, \code{"distance"}, \code{"relative.distance"}, or \code{"length"}.
+#' @param y The name of the variable to use as the y-value of each point in the graph, as a character. Can be one of \code{"fluorescence"}, \code{"concentration"}, or \code{"molarity"}.
+#' @param ... Additional aesthetics passed to the geom for the main data (not the peaks or regions).
 #' @param log Which variables to log-transform (\code{"x"}, \code{"y"}, or \code{"xy"}).
 #' @param normalize Normalize the y-value in each sample with \code{\link{normalize.proportion}}.
 #' @param facets Faceting formula to use. Picks \code{\link{facet_wrap}} or \code{\link{facet_grid}} depending on whether the formula is one- or two-sided. If \code{NULL}, overlay all samples in one color-coded graph.
@@ -86,6 +89,7 @@ labeller.electrophoresis <- function(electrophoresis) function(factor.frame) {
 qplot.electrophoresis <- function(electrophoresis,
 	x = "length",
 	y = "molarity",
+	...,
 	log = "",
 	normalize = FALSE,
 	facets = ~ sample.index,
@@ -122,8 +126,11 @@ qplot.electrophoresis <- function(electrophoresis,
 	if (! is.null(electrophoresis$regions)) electrophoresis$regions <- cbind(electrophoresis$regions, electrophoresis$samples[electrophoresis$regions$sample.index,])
 	
 	# normalize and scale y-values
-	electrophoresis$data$y.to.use <- if (normalize) normalize.proportion(electrophoresis, y, lower.marker.spread) else electrophoresis$data[[y]]
-	electrophoresis$data$y.scaled <- if (y == "fluorescence") electrophoresis$data$y.to.use else scale.by.differential(electrophoresis, x, "y.to.use") # don't scale fluorescence by differentials
+	electrophoresis$data$y.normalized <- if (normalize) normalize.proportion(electrophoresis, y, lower.marker.spread) else electrophoresis$data[[y]]
+	electrophoresis$data$y.scaled <- if (y == "fluorescence") electrophoresis$data$y.normalized else scale.by.differential(electrophoresis, x, "y.normalized") # don't scale fluorescence by differentials
+	
+	# also rename x-variable so aesthetics are easy
+	electrophoresis$data$x.value <- electrophoresis$data[[x]]
 	
 	# create plot but don't add the geom yet
 	this.plot <- ggplot(electrophoresis$data)
@@ -134,20 +141,20 @@ qplot.electrophoresis <- function(electrophoresis,
 	# finally add the geom (after the regions so it's in front)
 	this.plot <- this.plot + switch(geom,
 		line = geom_line(if (! is.null(facets))
-			aes_(x = as.name(x), y = as.name("y.scaled"))
+			aes(x = x.value, y = y.scaled, group = sample.index, ...)
 		else 
-			aes_(x = as.name(x), y = as.name("y.scaled"), color = as.name("sample.name"))
+			aes(x = x.value, y = y.scaled, group = sample.index, color = sample.name, ...)
 		),
 		area = if (! is.null(facets))
-			geom_area(aes_(x = as.name(x), y = as.name("y.scaled")))
+			geom_area(aes(x = x.value, y = y.scaled, group = sample.index, ...))
 		else
-			geom_area(aes_(x = as.name(x), y = as.name("y.scaled"), fill = as.name("sample.name")), alpha = area.alpha)
+			geom_area(aes(x = x.value, y = y.scaled, group = sample.index, fill = sample.name, ...), alpha = area.alpha)
 	)
 	
 	# add peaks
 	if (! is.null(facets) & ! is.na(peak.fill) & ! is.null(electrophoresis$peaks)) {
 		peak.data <- subset(cbind(electrophoresis$data, peak = in.peaks(electrophoresis)), ! is.na(peak))
-		this.plot <- this.plot + geom_area(aes_(x = as.name(x), y = as.name("y.scaled"), group = as.name("peak")), data = peak.data, fill = peak.fill)
+		this.plot <- this.plot + geom_area(aes(x = x.value, y = y.scaled, group = peak), data = peak.data, fill = peak.fill)
 	}
 	
 	# add faceting
