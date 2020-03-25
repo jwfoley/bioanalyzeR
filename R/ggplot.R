@@ -179,7 +179,7 @@ qplot.electrophoresis <- function(electrophoresis,
 		if (length(facets) == 2) # one-sided formula
 			facet_wrap(facets, scales = scales, labeller = if (facets == ~ sample.index) labeller.electrophoresis(electrophoresis) else "label_value")
 		else
-			facet_grid(facets, margins = margins, scales = scales)
+			facet_grid(facets, margins = margins, scales = scales, labeller = if (facets == (. ~ sample.index) || facets == (sample.index ~ .)) labeller.electrophoresis(electrophoresis) else "label_value")
 	
 	# apply limits
 	if (! all(is.na(xlim))) this.plot <- this.plot + lims(x = xlim)
