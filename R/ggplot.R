@@ -59,31 +59,40 @@ labeller.electrophoresis <- function(electrophoresis) function(factor.frame) {
 #'
 #' This function is a shortcut to plot the data from an \code{electrophoresis} object, wrapping \code{\link{ggplot}} similarly to \code{\link{qplot}}. The result is analogous to electropherograms produced by the Agilent software.
 #'
+#' ## Variable transformation
 #' Before plotting, unless the y-variable is fluorescence, it is scaled by the differentials in the x-value. Thus the units of the y-axis are divided by the units of the x-axis, e.g. molarity per length. This ensures that the area under the curve (width times height) represents the desired variable in the correct units. For example, if the x-variable is length in bp, the graph will be equivalent to a histogram with one bar for each possible molecule length in base pairs.
 #'
+#' ## Geoms and aesthetics
 #' The x- and y-variable names must be provided as \code{\link{character}} objects, e.g. \code{"length"} rather than \code{length}. However, additional aesthetics in \code{...} are passed directly to \code{\link[ggplot2]{aes}} so they must be provided as the variable names themselves, e.g. \code{color = sample.observations} rather than \code{color = "sample.observations"}.
 #'
+#' Both of the supported geoms for the main data, \code{\link[ggplot2]{geom_line}} and \code{\link[ggplot2]{geom_area}}, are given the specified x-variable as \code{x} and the appropriately transformed y-variable as \code{y}, as well as \code{group = sample.index} to ensure overlaid samples are plotted distinctly. If \code{facets} is null, then the geom is also given either \code{color = sample.name} (if \code{geom == "line"}) or \code{fill = sample.name} (if \code{geom == "area"}) to color-code overlaid samples. Thus if replicates of the same sample have the same name, they will also have the same color.
+#'
+#' If \code{peak.fill} is not NA and \code{facets} is not null and \code{electrophoresis$peaks} is not null, then the plot gets an extra \code{\link[ggplot2]{geom_area}} from only the subset of \code{electrophoresis$data} that is within the reported peaks, using the same settings as above except \code{fill = peak.fill}. If you use a faceting formula other than \code{NULL} that allows some samples to be overlaid in the same facet, it may be a good idea to set \code{peak.fill = NA} so their peaks don't overlap.
+#'
+#' If \code{region.alpha} is not NA and \code{facets} is not null and \code{electrophoresis$regions} is not null, then the plot gets a \code{\link[ggplot2]{geom_rect}} with \code{ymin = -Inf, ymax = Inf} and \code{xmin} and \code{xmax} set to the lower and upper boundaries of the regions, while \code{alpha = region.alpha}.
+#'
 #' @param electrophoresis An \code{electrophoresis} object.
-#' @param x The name of the variable to use as the x-value of each point in the graph as a character. Can be one of \code{"time"}, \code{"aligned.time"}, \code{"distance"}, \code{"relative.distance"}, or \code{"length"}.
-#' @param y The name of the variable to use as the y-value of each point in the graph, as a character. Can be one of \code{"fluorescence"}, \code{"concentration"}, or \code{"molarity"}.
+#' @param x The name of the variable to use as the x-value of each point in the graph as a character vector. Usually one of \code{"time"}, \code{"aligned.time"}, \code{"distance"}, \code{"relative.distance"}, or \code{"length"}.
+#' @param y The name of the variable to use as the y-value of each point in the graph, as a character vector. Usually one of \code{"fluorescence"}, \code{"concentration"}, or \code{"molarity"}.
 #' @param ... Additional aesthetics passed to the geom for the main data (not the peaks or regions).
 #' @param log Which variables to log-transform (\code{"x"}, \code{"y"}, or \code{"xy"}).
 #' @param normalize Normalize the y-value in each sample with \code{\link{normalize.proportion}}.
-#' @param facets Faceting formula to use. Picks \code{\link{facet_wrap}} or \code{\link{facet_grid}} depending on whether the formula is one- or two-sided. If \code{NULL}, overlay all samples in one color-coded graph.
-#' @param margins Display marginal facets (via \code{\link{facet_grid}}) if using a two-side faceting formula.
-#' @param scales Scaling rules for the facets, passed to \code{\link{facet_wrap}}.
-#' @param geom Name of the geom to draw. Currently only \code{"line"} (\code{\link{geom_line}}, to get continuous lines) and \code{"area"} (\code{\link{geom_area}}, to fill the area under the curves) are supported.
-#' @param include.ladder If \code{FALSE}, graph only the actual samples and not the ladder(s) wells.
+#' @param facets Faceting formula to use. Picks \code{\link[ggplot2]{facet_wrap}} or \code{\link[ggplot2]{facet_grid}} depending on whether the formula is one- or two-sided. If \code{NULL}, overlay all samples in one color-coded graph.
+#' @param margins Display marginal facets (via \code{\link[ggplot2]{facet_grid}}) if using a two-side faceting formula.
+#' @param scales Scaling rules for the facets, passed to \code{\link[ggplot2]{facet_wrap}}.
+#' @param geom Name of the geom to draw. Only \code{"line"} (\code{\link[ggplot2]{geom_line}}, to get continuous curves) and \code{"area"} (\code{\link[ggplot2]{geom_area}}, to fill the area under the curves) are supported.
+#' @param include.ladder If \code{FALSE}, graph only the actual samples and not the ladder well(s).
 #' @param include.markers If \code{FALSE}, graph only data between the marker peaks.
 #' @param lower.marker.spread If normalizing the totals or excluding marker peaks, extend the lower marker peak by this amount (via \code{\link{between.markers}}).
-#' @param xlim, ylim Limits of x- and y-axes 
+#' @param xlim,ylim Limits of x- and y-axes 
 #' @param peak.fill Color to fill the area under reported peaks. Set to \code{NA} to skip plotting the peaks.
 #' @param region.alpha Alpha-transparency of the highlight in the reported regions of interested. Set to \code{NA} to skip plotting the regions.
 #' @param area.alpha Alpha-transparency of the filled areas under the curves, if they are overlaid in one graph (\code{facet = FALSE} and \code{geom = "area"}), to make them visible through one another.
-#' @param title, xlab, ylab Plot title, x-axis label, and y-axis label.
+#' @param title,xlab,ylab Plot title, x-axis label, and y-axis label.
 #'
 #' @return A ggplot object containing several layers. You can draw it directly or customize it like any other ggplot object by adding more layers.
 #'
+#' @md
 #' @export
 #' @import ggplot2
 qplot.electrophoresis <- function(electrophoresis,
