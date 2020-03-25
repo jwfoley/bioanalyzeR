@@ -140,6 +140,12 @@ qplot.electrophoresis <- function(electrophoresis,
 	electrophoresis$data$y.normalized <- if (normalize) normalize.proportion(electrophoresis, y, lower.marker.spread) else electrophoresis$data[[y]]
 	electrophoresis$data$y.scaled <- if (y == "fluorescence") electrophoresis$data$y.normalized else scale.by.differential(electrophoresis, x, "y.normalized") # don't scale fluorescence by differentials
 	
+	# remove data outside x-limits (after normalization so that's not distorted)
+	electrophoresis$data <- electrophoresis$data[which(
+		(is.na(xlim[1]) | electrophoresis$data[[x]] >= xlim[1]) &
+		(is.na(xlim[2]) | electrophoresis$data[[x]] <= xlim[2])
+	),]
+	
 	# also rename x-variable so aesthetics are easy
 	electrophoresis$data$x.value <- electrophoresis$data[[x]]
 	
@@ -224,7 +230,7 @@ sparkline.electrophoresis <- function(
 	scales = "free_y",
 	geom = "line",
 	peak.fill = NA
-) qplot.electrophoresis(..., facets = facets, geom = geom, peak.fill = peak.fill) + theme(
+) qplot.electrophoresis(..., facets = facets, scales = scales, geom = geom, peak.fill = peak.fill) + theme(
 	axis.text.y = element_blank(),
 	axis.ticks.y = element_blank(),
 	panel.grid = element_blank(),
