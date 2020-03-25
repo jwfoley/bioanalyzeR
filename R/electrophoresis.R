@@ -36,17 +36,17 @@ rbind.electrophoresis <- function(...) {
 
 #' Read files into an electrophoresis object
 #'
-#' This function reads one or more XML files exported from the Agilent software (and accompanying PNG files if from a TapeStation) and calls the appropriate function to read them into an \code{electrophoresis} object.
+#' These functions read one or more XML files exported from the Agilent software (and accompanying PNG files if from a TapeStation) and calls the appropriate function to read them into an \code{electrophoresis} object, which is filled out with estimates of molecule length, concentration, and molarity. \code{read.electrophoresis} is the easiest to use as it automatically infers the correct file type.
 #'
-#' Multiple input files are combined with \code{\link{rbind.electrophoresis}}.
+#' Spline fitting seems to perform reasonably well on all data. Agilent appears to use linear interpolation with DNA data and log-linear regression on RNA data, so you could choose those options if you want to reproduce the results of the software more precisely. However, linear interpolation creates sudden spikes in the derivative that make the concentration and molarity estimates unstable; spline fitting is basically a smoother version of that. Log-linear regression is the standard theoretical approach but does not actually fit the data very well; more sophisticated parametric models may be added in the future.
 #'
-#' Warning: The filename of each TapeStation gel image must be the same as the corresponding XML file, e.g. \code{run1.png} goes with \code{run1.xml}.
-#'
-#' @param ... One or more XML files.
+#' @param xml.file The filename of an XML file exported from the Bioanalyzer or TapeStation software. The filename is expected to end in \code{.xml} and the name before that extension is used as the name of the batch.
+#' @param gel.image.file The filename of a TapeStation gel image with blue highlight, in PNG format. If \code{NULL}, the gel image file is expected to have the same name as the XML file with a different extension, e.g. \code{experiment1.xml} and \code{experiment1.png}, so if you name your files in that pattern you don't need to fill out this argument.
+#' @param ... One or more XML files exported from the Bioanalyzer or TapeStation software. TapeStation XML files must have corresponding PNG files with matching names.
 #' @param fit The method used to fit the mobility model of molecule length vs. migration distance, one of \code{"interpolation"} (linear interpolation via \code{\link{approxfun}}), \code{"spline"} (splines via \code{\link{splinefun}}), or \code{"regression"} (log-linear regression via \code{\link{lm}} with the model \code{relative.distance ~ log(length)}).
 #'
-#' @seealso \code{\link{read.bioanalyzer}}, \code{\link{read.tapestation}}
-#'
+#' @name read.electrophoresis
+#' 
 #' @export
 read.electrophoresis <- function(..., fit = "spline") do.call(rbind, lapply(list(...), function(xml.file) {
 	first.char <- readChar(xml.file, 1)
@@ -149,19 +149,22 @@ in.custom.region <- function(
 	bound.variable = "length"
 ) ! is.na(data[[bound.variable]]) & data[[bound.variable]] >= lower.bound & data[[bound.variable]] <= upper.bound
 
-#' Check whether data points are within a reported peak
-#'
-#' This function takes an electrophoresis object and checks whether each data point is within a specified peak.
-#'
-#' Because each peak in the table belongs to a specific sample, only data points from that sample are \code{TRUE}.
+#' Check whether data points are within a reported peak or region
+#' 
+#' These functions take an electrophoresis object and check whether each data point is within a specified peak or region.
 #'
 #' @param electrophoresis An \code{electrophoresis} object.
 #' @param which.peak The integer index of a peak in \code{electrophoresis$peaks}.
+#' @param which.region The integer index of a region in \code{electrophoresis$regions}.
+#' 
+#' @return A vector of logicals with length \code{nrow(electrophoresis$data)}.
 #'
-#' @return A vector of logicals with length \code{nrow(data)}.
+#' @seealso \code{\link{in.custom.region}}, \code{\link{in.peaks}}, \code{\link{in.regions}}
 #'
-#' @seealso \code{\link{in.region}}, \code{\link{in.custom.region}}, \code{\link{in.peaks}}
-#'
+#' @name in.peak.region
+NULL
+
+#' @rdname in.peak.region
 #' @export
 in.peak <- function(electrophoresis, which.peak) {
 	electrophoresis$data$sample.index == electrophoresis$peaks$sample.index[which.peak] &
@@ -170,19 +173,7 @@ in.peak <- function(electrophoresis, which.peak) {
 	electrophoresis$data$length <= electrophoresis$peaks$upper.length[which.peak]
 }
 
-#' Check whether data points are within a reported region
-#'
-#' This function takes an electrophoresis object and checks whether each data point is within a specified region.
-#'
-#' Because each region in the table belongs to a specific sample, only data points from that sample are \code{TRUE}.
-#'
-#' @param electrophoresis An \code{electrophoresis} object.
-#' @param which.region The integer index of a region in \code{electrophoresis$regions}.
-#'
-#' @return A vector of logicals with length \code{nrow(electrophoresis$data)}.
-#'
-#' @seealso \code{\link{in.peak}}, \code{\link{in.custom.region}}, \code{\link{in.regions}}
-#'
+#' @rdname in.peak.region
 #' @export
 in.region <- function(electrophoresis, which.region) {
 	electrophoresis$data$sample.index == electrophoresis$regions$sample.index[which.region] &
@@ -191,18 +182,22 @@ in.region <- function(electrophoresis, which.region) {
 	electrophoresis$data$length <= electrophoresis$regions$upper.length[which.region]
 }
 
-#' Match data points to the peaks they are in
+#' Match data points to the peaks or regions they are in
 #'
-#' This function takes an electrophoresis object and reports which of the peaks each data point belongs to, if any.
+#' These functions take an electrophoresis object and report which of the peaks or regions each data point belongs to, if any.
 #'
-#' Warning: If peaks in the reported table overlap, any data point in more than one peak will only be matched to the last peak it belongs to.
+#' Warning: If peaks or regions in the reported table overlap, any data point in more than one peak or region will only be matched to the last peak or region it belongs to.
 #'
 #' @param electrophoresis An \code{electrophoresis} object.
 #'
-#' @return A vector of integers with length \code{nrow(data)}. Each element is either the integer index of the peak in \code{electrophoresis$peaks} that the data point belongs to, or NA if it is not in any of the annotated peaks.
+#' @return A vector of integers with length \code{nrow(data)}. Each element is either the integer index of the peak in \code{electrophoresis$peaks} or region in \code{electrophoresis$regions} that the data point belongs to, or NA if it is not in any of the annotated peaks or regions.
 #'
-#' @seealso \code{\link{in.regions}}, \code{\link{in.peak}}, \code{\link{between.markers}}
+#' @seealso \code{\link{in.peak}}, \code{\link{in.region}}, \code{\link{between.markers}}
 #'
+#' @name in.peaks.regions
+NULL
+
+#' @rdname in.peaks.regions
 #' @export
 in.peaks <- function(electrophoresis) {
 	result <- rep(NA, nrow(electrophoresis$data))
@@ -210,18 +205,7 @@ in.peaks <- function(electrophoresis) {
 	result
 }
 
-#' Match data points to the regions they are in
-#'
-#' This function takes an electrophoresis object and reports which of the regions each data point belongs to, if any.
-#'
-#' Warning: If regions in the reported table overlap, any data point in more than one region will only be matched to the last region it belongs to.
-#'
-#' @param electrophoresis An \code{electrophoresis} object.
-#'
-#' @return A vector of integers with length \code{nrow(data)}. Each element is either the integer index of the region in \code{electrophoresis$regions} that the data point belongs to, or NA if it is not in any of the annotated regions.
-#'
-#' @seealso \code{\link{in.peaks}}, \code{\link{in.region}}
-#'
+#' @rdname in.peaks.regions
 #' @export
 in.regions <- function(electrophoresis) {
 	result <- rep(NA, nrow(electrophoresis$data))
@@ -242,7 +226,7 @@ in.regions <- function(electrophoresis) {
 #'
 #' @return A vector of logicals with length \code{nrow{electrophoresis$data}}.
 #'
-#' @seealso \code{\link{in.peaks}}
+#' @seealso \code{\link{in.peaks}}, \code{\link{in.regions}}
 #'
 #' @export
 between.markers <- function(electrophoresis, lower.marker.spread = 5) {

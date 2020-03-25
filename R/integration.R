@@ -1,27 +1,23 @@
-#' Integrate a variable under each peak
+#' Integrate a variable in each peak or region
 #'
-#' Compute the sum of some electrophoresis variable between the boundaries of each reported peak in an \code{electrophoresis} object.
+#' Compute the sum of some electrophoresis variable between the boundaries of each reported peak or region in an \code{electrophoresis} object.
 #'
 #' @param electrophoresis An \code{electrophoresis} object.
 #' @param sum.variable Which variable to sum in each peak.
 #'
-#' @seealso \code{\link{integrate.regions}}, \code{\link{integrate.custom}}
+#' @seealso \code{\link{integrate.custom}}
 #'
+#' @name integrate.peaks.regions
+NULL
+
+#' @rdname integrate.peaks.regions
 #' @export
 integrate.peaks <- function(
 	electrophoresis,
 	sum.variable = "molarity"
 ) sapply(1:nrow(electrophoresis$peaks), function(peak) sum(electrophoresis$data[[sum.variable]][which(in.peak(electrophoresis, peak))]))
 
-#' Integrate a variable in each region
-#'
-#' Compute the sum of some electrophoresis variable between the boundaries of each region of interest in an \code{electrophoresis} object.
-#'
-#' @param electrophoresis An \code{electrophoresis} object.
-#' @param sum.variable Which variable to sum in each region.
-#'
-#' @seealso \code{\link{integrate.peaks}}, \code{\link{integrate.custom}}
-#'
+#' @rdname integrate.peaks.regions
 #' @export
 integrate.regions <- function(
 	electrophoresis,
@@ -63,7 +59,7 @@ integrate.custom <- function(
 #'
 #' @return A matrix of ratios of sums within the regions, each region relative to the first region, for each sample.
 #'
-#' @seealso \code{\link{dv200}}, \code{\link{illumina.library.ratio}}
+#' @seealso \code{\link{integrate.custom}}, \code{\link{dv200}}, \code{\link{illumina.library.ratio}}
 #'
 #' @export
 region.ratio <- function(
