@@ -24,7 +24,7 @@ region.ratio(
 A matrix of ratios of sums within the regions, each region relative to the first region, for each sample.
 }
 \description{
-Given two or more regions (pairs of lower and upper bounds), calculate the ratio of the integrated sum of each additional region relative to the integrated sum of the first region.  The ratio is compuate individually for each sample.
+Given two or more regions (pairs of lower and upper bounds), calculate the ratio of the integrated sum of each additional region relative to the integrated sum of the first region.  The ratio is computed individually for each sample.
 }
 \seealso{
 \code{\link{integrate.custom}}, \code{\link{dv200}}, \code{\link{illumina.library.ratio}}

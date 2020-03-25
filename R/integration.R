@@ -50,7 +50,7 @@ integrate.custom <- function(
 
 #' Compare sums within regions
 #'
-#' Given two or more regions (pairs of lower and upper bounds), calculate the ratio of the integrated sum of each additional region relative to the integrated sum of the first region.  The ratio is compuate individually for each sample.
+#' Given two or more regions (pairs of lower and upper bounds), calculate the ratio of the integrated sum of each additional region relative to the integrated sum of the first region.  The ratio is computed individually for each sample.
 #'
 #' @param electrophoresis An \code{electrophoresis} object.
 #' @param bounds A list of two or more pairs (vectors) of boundaries, e.g. \code{list(c(100, 200), c(200, 500), c(500, 700)}.
