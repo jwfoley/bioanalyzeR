@@ -80,7 +80,7 @@ plotting$add_argument("--lower_marker_spread",
 	default = 5,
 	type = "double",
 	metavar = "PROPORTION"
-)_
+)
 plotting$add_argument("--xlim",
 	help = "limits of x-axis",
 	type = "double",
