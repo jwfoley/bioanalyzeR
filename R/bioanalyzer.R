@@ -6,7 +6,7 @@
 read.bioanalyzer <- function(xml.file, fit = "spline") {
 	stopifnot(fit %in% c("interpolation", "spline", "regression"))
 	
-	batch <- sub("\\.xml$", "", basename(xml.file))
+	batch <- sub("\\..*", "", basename(xml.file))
 	xml.root <- xmlRoot(xmlParse(xml.file))
 	chip.root <- xml.root[["Chips"]][["Chip"]]
 	assay.info <- list(

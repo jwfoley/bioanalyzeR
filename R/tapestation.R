@@ -86,7 +86,7 @@ read.tapestation.gel.image <- function(gel.image.file) {
 #' @export
 #' @importFrom XML xmlRoot xmlParse xmlValue xmlApply xmlChildren xmlToDataFrame
 read.tapestation.xml <- function(xml.file) {
- 	batch <- sub("\\.xml$", "", basename(xml.file))
+ 	batch <- sub("\\..*", "", basename(xml.file))
  	xml.root <- xmlRoot(xmlParse(xml.file))
  	
  	assay.info <- list(
@@ -205,7 +205,7 @@ read.tapestation.xml <- function(xml.file) {
 #' @export
 read.tapestation <- function(xml.file, gel.image.file = NULL, fit = "spline") {
 	stopifnot(fit %in% c("interpolation", "spline", "regression"))
-	if (is.null(gel.image.file)) gel.image.file <- sub("\\.xml$", ".png", xml.file)
+	if (is.null(gel.image.file)) gel.image.file <- sub("\\..*", ".png", xml.file)
 	
 	parsed.data <- read.tapestation.xml(xml.file)
 	stopifnot(length(unique(parsed.data$samples$batch)) == 1)
