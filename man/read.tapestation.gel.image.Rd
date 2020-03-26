@@ -7,7 +7,7 @@
 read.tapestation.gel.image(gel.image.file)
 }
 \arguments{
-\item{gel.image.file}{The filename of a TapeStation gel image with blue highlight, in PNG format.}
+\item{gel.image.file}{The filename of a TapeStation gel image with blue highlight, in PNG format. The filename can be a URL.}
 }
 \value{
 A data frame with one row for each vertical pixel of each gel lane.

@@ -22,7 +22,7 @@ find.matching.pixels <- function(rgb.image, rgb.values) {
 #'
 #' Note: This function attempts to find the marker bands by their special color. But because this color is overlaid on the gel image, it is impossible to read the fluorescence intensity inside the markers, so it is reported as NA.
 #'
-#' @param gel.image.file The filename of a TapeStation gel image with blue highlight, in PNG format.
+#' @param gel.image.file The filename of a TapeStation gel image with blue highlight, in PNG format. The filename can be a URL.
 #'
 #' @return A data frame with one row for each vertical pixel of each gel lane.
 #' 
@@ -31,7 +31,8 @@ find.matching.pixels <- function(rgb.image, rgb.values) {
 #' @export
 #' @importFrom png readPNG
 read.tapestation.gel.image <- function(gel.image.file) {
-	gel.image.rgb <- readPNG(gel.image.file) # this is in the form (y, x, channel); [1,1,] is the upper left corner
+	gel.image.rgb <- readPNG(readBin(file(gel.image.file, "rb", raw = T), what = "raw", n = 1E10)) # workaround to allow URLs (1E10 should be a safe overestimate of the maximum size)
+	# note: this is in the form (y, x, channel); [1,1,] is the upper left corner
 	
 	# find lower marker
 	pixel.is.lower.marker <- find.matching.pixels(gel.image.rgb, RGB.LOWER.MARKER)
@@ -77,7 +78,7 @@ read.tapestation.gel.image <- function(gel.image.file) {
 #'
 #' Because the XML file contains only metadata and not the raw fluorescence data, this function is less useful by itself than when it is called inside \code{\link{read.tapestation}}.
 #'
-#' @param xml.file The filename of an XML file exported from the TapeStation software. The filename is expected to end in \code{.xml} and the name before that extension is used as the name of the batch.
+#' @param xml.file The filename of an XML file exported from the TapeStation software. The file may be compressed with \code{gzip} and the filename is expected to end in \code{.xml} or \code{.xml.gz}; the name before that extension is used as the name of the batch. The filename can be a remote URL.
 #'
 #' @return A list of some of the components of an \code{electrophoresis} object
 #' 
@@ -86,7 +87,7 @@ read.tapestation.gel.image <- function(gel.image.file) {
 #' @export
 #' @importFrom XML xmlRoot xmlParse xmlValue xmlApply xmlChildren xmlToDataFrame
 read.tapestation.xml <- function(xml.file) {
- 	batch <- sub("\\..*", "", basename(xml.file))
+ 	batch <- sub("\\.xml(\\.gz)?$", "", basename(xml.file))
  	xml.root <- xmlRoot(xmlParse(xml.file))
  	
  	assay.info <- list(
@@ -205,7 +206,7 @@ read.tapestation.xml <- function(xml.file) {
 #' @export
 read.tapestation <- function(xml.file, gel.image.file = NULL, fit = "spline") {
 	stopifnot(fit %in% c("interpolation", "spline", "regression"))
-	if (is.null(gel.image.file)) gel.image.file <- sub("\\..*", ".png", xml.file)
+	if (is.null(gel.image.file)) gel.image.file <- sub("\\.xml(\\.gz)?$", ".png", xml.file)
 	
 	parsed.data <- read.tapestation.xml(xml.file)
 	stopifnot(length(unique(parsed.data$samples$batch)) == 1)

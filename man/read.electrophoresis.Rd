@@ -14,7 +14,7 @@ read.electrophoresis(..., fit = "spline")
 read.tapestation(xml.file, gel.image.file = NULL, fit = "spline")
 }
 \arguments{
-\item{xml.file}{The filename of an XML file exported from the Bioanalyzer or TapeStation software. The XML file may be compressed with `gzip`. The filename (without the file extension) is used as the name of the batch.}
+\item{xml.file}{The filename of an XML file exported from the Bioanalyzer or TapeStation software. The XML file may be compressed with `gzip` and the filename can be a remote URL. The filename is expected to end in \code{.xml} or \code{.xml.gz} and the name before that extension is used as the name of the batch.}
 
 \item{fit}{The method used to fit the mobility model of molecule length vs. migration distance, one of \code{"interpolation"} (linear interpolation via \code{\link{approxfun}}), \code{"spline"} (splines via \code{\link{splinefun}}), or \code{"regression"} (log-linear regression via \code{\link{lm}} with the model \code{relative.distance ~ log(length)}).}
 
