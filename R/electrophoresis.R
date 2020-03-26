@@ -53,6 +53,7 @@ read.electrophoresis <- function(..., fit = "spline") do.call(rbind, lapply(list
 	xml.con <- file(xml.file)
 	first.char <- readChar(xml.con, 1)
 	if (first.char == gzip.first.char) first.char <- readChar(gzcon(xml.con), 1) # if gzipped, uncompress and try again
+	close(xml.con) # if not explicitly closed, R gives a warning
 	if (first.char == bioanalyzer.first.char)
 		read.bioanalyzer(xml.file, fit = fit)
 	else if (first.char == tapestation.first.char)

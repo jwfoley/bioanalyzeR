@@ -31,7 +31,9 @@ find.matching.pixels <- function(rgb.image, rgb.values) {
 #' @export
 #' @importFrom png readPNG
 read.tapestation.gel.image <- function(gel.image.file) {
-	gel.image.rgb <- readPNG(readBin(file(gel.image.file, "rb", raw = T), what = "raw", n = 1E10)) # workaround to allow URLs (1E10 should be a safe overestimate of the maximum size)
+	gel.image.con <- file(gel.image.file, "rb", raw = T)
+	gel.image.rgb <- readPNG(readBin(gel.image.con, what = "raw", n = 1E10)) # workaround to allow URLs (1E10 should be a safe overestimate of the maximum size)
+	close(gel.image.con) # if not explicitly closed, R gives a warning
 	# note: this is in the form (y, x, channel); [1,1,] is the upper left corner
 	
 	# find lower marker
