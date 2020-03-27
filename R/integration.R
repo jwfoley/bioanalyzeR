@@ -123,7 +123,7 @@ illumina.library.ratio <- function(
 #'
 #' @return A vector whose length equals \code{nrow(electrophoresis$data)}, in which each value is an observation of the given variable normalized by the total for that sample, or NA if the observation is not between the markers.
 #'
-#' @seealso \code{\link{scale.by.differential}}
+#' @seealso \code{\link{differential.scale}}
 #'
 #' @export
 normalize.proportion <- function(electrophoresis, variable, lower.marker.spread = 5) {

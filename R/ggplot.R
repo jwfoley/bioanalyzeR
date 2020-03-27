@@ -138,7 +138,7 @@ qplot.electrophoresis <- function(
 	
 	# normalize and scale y-values
 	electrophoresis$data$y.normalized <- if (normalize) normalize.proportion(electrophoresis, y, lower.marker.spread) else electrophoresis$data[[y]]
-	electrophoresis$data$y.scaled <- if (y == "fluorescence") electrophoresis$data$y.normalized else scale.by.differential(electrophoresis, x, "y.normalized") # don't scale fluorescence by differentials
+	electrophoresis$data$y.scaled <- if (y == "fluorescence") electrophoresis$data$y.normalized else differential.scale(electrophoresis, x, "y.normalized") # don't scale fluorescence by differentials
 	
 	# remove data outside x-limits (after normalization so that's not distorted)
 	electrophoresis$data <- electrophoresis$data[which(

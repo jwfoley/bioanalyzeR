@@ -23,5 +23,5 @@ For a given variable, normalize the data values in an \code{electrophoresis} obj
 Only data points between the markers are considered in the total. If there is no upper marker, all data points above the lower marker are considered.
 }
 \seealso{
-\code{\link{scale.by.differential}}
+\code{\link{differential.scale}}
 }
