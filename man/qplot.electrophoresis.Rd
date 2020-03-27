@@ -7,7 +7,7 @@
 qplot.electrophoresis(
   electrophoresis,
   x = "length",
-  y = "molarity",
+  y = "concentration",
   ...,
   log = "",
   normalize = FALSE,

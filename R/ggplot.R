@@ -96,9 +96,10 @@ labeller.electrophoresis <- function(electrophoresis) function(factor.frame) {
 #'
 #' @export
 #' @import ggplot2
-qplot.electrophoresis <- function(electrophoresis,
+qplot.electrophoresis <- function(
+	electrophoresis,
 	x = "length",
-	y = "molarity",
+	y = "concentration",
 	...,
 	log = "",
 	normalize = FALSE,
