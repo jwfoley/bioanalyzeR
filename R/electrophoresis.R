@@ -1,6 +1,7 @@
-bioanalyzer.first.char <- "<" # XML opening bracket that distinguishes Bioanalyzer XML exports
-tapestation.first.char <- rawToChar(as.raw(c(239, 187, 191))) # byte order mark that distinguishes TapeStation XML exports
-gzip.first.char <- rawToChar(as.raw(31)) # first byte of the gzip magic number
+BIOANALYZER.FIRST.CHAR <- "<" # XML opening bracket that distinguishes Bioanalyzer XML exports
+TAPESTATION.FIRST.CHAR <- rawToChar(as.raw(c(239, 187, 191))) # byte order mark that distinguishes TapeStation XML exports
+GZIP.FIRST.CHAR <- rawToChar(as.raw(31)) # first byte of the gzip magic number
+
 
 #' Combine multiple electrophoresis objects
 #'
@@ -35,6 +36,7 @@ rbind.electrophoresis <- function(...) {
 	), class = "electrophoresis")
 }
 
+
 #' Read files into an electrophoresis object
 #'
 #' These functions read one or more XML files exported from the Agilent software (and accompanying PNG files if from a TapeStation) and calls the appropriate function to read them into an \code{electrophoresis} object, which is filled out with estimates of molecule length, concentration, and molarity. \code{read.electrophoresis} is the easiest to use as it automatically infers the correct file type.
@@ -52,15 +54,16 @@ rbind.electrophoresis <- function(...) {
 read.electrophoresis <- function(..., fit = "spline") do.call(rbind, lapply(list(...), function(xml.file) {
 	xml.con <- file(xml.file)
 	first.char <- readChar(xml.con, 1)
-	if (first.char == gzip.first.char) first.char <- readChar(gzcon(xml.con), 1) # if gzipped, uncompress and try again
+	if (first.char == GZIP.FIRST.CHAR) first.char <- readChar(gzcon(xml.con), 1) # if gzipped, uncompress and try again
 	close(xml.con) # if not explicitly closed, R gives a warning
-	if (first.char == bioanalyzer.first.char)
+	if (first.char == BIOANALYZER.FIRST.CHAR)
 		read.bioanalyzer(xml.file, fit = fit)
-	else if (first.char == tapestation.first.char)
+	else if (first.char == TAPESTATION.FIRST.CHAR)
 		read.tapestation(xml.file, fit = fit)
 	else
 		stop("unrecognized XML file format")
 }))
+
 
 #' Subset samples an electrophoresis object
 #'
@@ -78,7 +81,8 @@ subset.electrophoresis <- function(electrophoresis, ...) {
 	if (nrow(electrophoresis$samples) == nrow.initial) { # shortcut if all samples are kept
 		return(electrophoresis)
 	} else if (nrow(electrophoresis$samples) == 0) { # shortcut if no samples are kept
-		stop("empty subset")	
+		for (member in names(electrophoresis)) electrophoresis[[member]] <- NULL
+		return(electrophoresis)
 	}
 	remaining.samples <- as.integer(rownames(electrophoresis$samples))
 	
@@ -112,6 +116,7 @@ subset.electrophoresis <- function(electrophoresis, ...) {
 	
 	electrophoresis
 }
+
 
 #' Get the original x-variable
 #'
@@ -153,6 +158,7 @@ in.custom.region <- function(
 	bound.variable = "length"
 ) ! is.na(data[[bound.variable]]) & data[[bound.variable]] >= lower.bound & data[[bound.variable]] <= upper.bound
 
+
 #' Check whether data points are within a reported peak or region
 #' 
 #' These functions take an electrophoresis object and check whether each data point is within a specified peak or region.
@@ -168,6 +174,7 @@ in.custom.region <- function(
 #' @name in.peak.region
 NULL
 
+
 #' @rdname in.peak.region
 #' @export
 in.peak <- function(electrophoresis, which.peak) {
@@ -177,6 +184,7 @@ in.peak <- function(electrophoresis, which.peak) {
 	electrophoresis$data$length <= electrophoresis$peaks$upper.length[which.peak]
 }
 
+
 #' @rdname in.peak.region
 #' @export
 in.region <- function(electrophoresis, which.region) {
@@ -185,6 +193,7 @@ in.region <- function(electrophoresis, which.region) {
 	electrophoresis$data$length >= electrophoresis$regions$lower.length[which.region] &
 	electrophoresis$data$length <= electrophoresis$regions$upper.length[which.region]
 }
+
 
 #' Match data points to the peaks or regions they are in
 #'
@@ -201,6 +210,7 @@ in.region <- function(electrophoresis, which.region) {
 #' @name in.peaks.regions
 NULL
 
+
 #' @rdname in.peaks.regions
 #' @export
 in.peaks <- function(electrophoresis) {
@@ -209,6 +219,7 @@ in.peaks <- function(electrophoresis) {
 	result
 }
 
+
 #' @rdname in.peaks.regions
 #' @export
 in.regions <- function(electrophoresis) {
@@ -216,6 +227,7 @@ in.regions <- function(electrophoresis) {
 	if (! is.null(electrophoresis$regions)) for (i in 1:nrow(electrophoresis$regions)) result[which(in.region(electrophoresis, i))] <- i
 	result
 }
+
 
 #' Check whether data points are between markers
 #'
@@ -248,6 +260,7 @@ between.markers <- function(electrophoresis, lower.marker.spread = 5) {
 	result
 }
 
+
 #' Scale data by a differential
 #'
 #' Given an x-variable and a y-variable, this function scales the y-values from the observed data points by the differentials of the x-values. The resulting values of y/dx can then be used to make visually accurate graphs.
@@ -263,7 +276,7 @@ between.markers <- function(electrophoresis, lower.marker.spread = 5) {
 #' @export
 differential.scale <- function(electrophoresis, x, y) {
 	stopifnot(all(diff(electrophoresis$data$sample.index) %in% c(0, 1))) # assume data points from each sample are contiguous and ordered by sample
-	delta.x <- do.call(c, lapply(unique(electrophoresis$data$sample.index), function(i) c(NA, diff(electrophoresis$data[electrophoresis$data$sample.index == i,x])))) # apply by sample to make sure we don't get a weird delta at the sample boundary
+	delta.x <- unlist(by(electrophoresis$data, electrophoresis$data$sample.index, function(data.subset) c(NA, diff(data.subset[[x]])), simplify = F)) # apply by sample to make sure we don't get a weird delta at the sample boundary
 	if (all(delta.x < 0, na.rm = T)) delta.x <- -delta.x else stopifnot(all(delta.x > 0, na.rm = T)) # assume data points are monotonic; if negative (like migration distance) make them positive so the math comes out clean
 	
 	electrophoresis$data[[y]] / delta.x

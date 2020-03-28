@@ -10,6 +10,7 @@
 #' @name integrate.peaks.regions
 NULL
 
+
 #' @rdname integrate.peaks.regions
 #' @export
 integrate.peaks <- function(
@@ -17,12 +18,14 @@ integrate.peaks <- function(
 	sum.variable = "molarity"
 ) sapply(1:nrow(electrophoresis$peaks), function(peak) sum(electrophoresis$data[[sum.variable]][which(in.peak(electrophoresis, peak))]))
 
+
 #' @rdname integrate.peaks.regions
 #' @export
 integrate.regions <- function(
 	electrophoresis,
 	sum.variable = "molarity"
 ) sapply(1:nrow(electrophoresis$regions), function(region) sum(electrophoresis$data[[sum.variable]][which(in.region(electrophoresis, region))]))
+
 
 #' Integrate a variable in a custom region
 #'
@@ -45,8 +48,9 @@ integrate.custom <- function(
 	sum.variable = "molarity"
 ) {
 	in.this.region <- in.custom.region(electrophoresis$data, lower.bound, upper.bound, bound.variable)
-	sapply(1:nrow(electrophoresis$samples), function(sample) sum(electrophoresis$data[[sum.variable]][in.this.region & electrophoresis$data$sample.index == sample]))
+	as.vector(by(electrophoresis$data[in.this.region,], electrophoresis$data$sample.index[in.this.region], function(data.subset) sum(data.subset[[sum.variable]])))
 }
+
 
 #' Compare sums within regions
 #'
@@ -72,6 +76,7 @@ region.ratio <- function(
 	sum.matrix <- sapply(bounds, function(bound.pair) integrate.custom(electrophoresis, lower.bound = bound.pair[1], upper.bound = bound.pair[2], bound.variable = bound.variable, sum.variable = sum.variable))
 	matrix(sum.matrix[,-1] / sum.matrix[,1], dimnames = list(NULL, sapply(bounds[-1], function(bound.pair) paste0(sum.variable, " ratio in ", bound.variable, " ", bound.pair[1], "-", bound.pair[2], "/", bounds[[1]][1], "-", bounds[[1]][2]))))
 }
+
 
 #' DV200 analysis
 #'
@@ -129,7 +134,7 @@ illumina.library.ratio <- function(
 normalize.proportion <- function(electrophoresis, variable, lower.marker.spread = 5) {
 	which.usable <- which(between.markers(electrophoresis) & ! is.na(electrophoresis$data[[variable]]))
 	subset.usable <- electrophoresis$data[which.usable,]
-	sample.sums <- sapply(1:nrow(electrophoresis$samples), function(sample) sum(subset.usable[[variable]][subset.usable$sample.index == sample]))
+	sample.sums <- as.vector(by(subset.usable, subset.usable$sample.index, function(data.subset) sum(data.subset[[variable]])))
 	result <- rep(NA, nrow(electrophoresis$data))
 	result[which.usable] <- subset.usable[[variable]] / sample.sums[subset.usable$sample.index]
 	result

@@ -42,6 +42,7 @@ variable.label <- function(electrophoresis, variable, variable2 = NULL) if (is.n
 	variable # if not found just return the original variable name	
 ) else paste(variable.label(electrophoresis, variable), "per", variable.label(electrophoresis, variable2))
 
+
 #' Labeller for electrophoresis samples
 #'
 #' This is a labeller function compatible with \code{\link{facet_wrap}} and \code{\link{facet_grid}}. It allows you to facet the data from an \code{electrophoresis} object on \code{sample.index}, to keep the samples in the observed order, but replaces the facet labels with the annotated sample names.
@@ -54,6 +55,7 @@ labeller.electrophoresis <- function(electrophoresis) function(factor.frame) {
 	stopifnot(class(factor.frame[,1]) == "integer")
 	list(as.character(electrophoresis$samples$sample.name[factor.frame[,1]]))
 }
+
 
 #' Plot electrophoresis data
 #'
@@ -200,17 +202,18 @@ qplot.electrophoresis <- function(
 	this.plot
 }
 
+
 #' Sparklines of electrophoresis data
 #'
 #' This function is a shortcut that calls \code{\link{qplot.electrophoresis}} with customized settings to generate sparklines.
 #'
 #' In addition to the hardcoded default arguments for \code{\link{qplot.electrophoresis}}, the following settings are added with \code{\link[ggplot2]{theme}}: \preformatted{
-#' axis.text.y = element_blank(),
-#' axis.ticks.y = element_blank(),
-#' panel.grid = element_blank(),
-#' panel.background = element_blank(),
-#' strip.background = element_blank(),
-#' strip.text.y = element_text(angle = 0)
+#' axis.text.y =       element_blank(),
+#' axis.ticks.y =      element_blank(),
+#' panel.grid =        element_blank(),
+#' panel.background =  element_blank(),
+#' strip.background =  element_blank(),
+#' strip.text.y =      element_text(angle = 0)
 #'}
 #'
 #' @param ... Arguments passed to \code{\link{qplot.electrophoresis}}.
@@ -238,6 +241,7 @@ sparkline.electrophoresis <- function(
 	strip.background = element_blank(),
 	strip.text.y = element_text(angle = 0)
 )
+
 
 #' Plot mobility standard curves
 #'
@@ -283,6 +287,7 @@ stdcrv.mobility <- function(electrophoresis, n.simulate = 100, line.color = "red
 	
 	this.plot
 }
+
 
 #' Compare estimates with Agilent software's output
 #'

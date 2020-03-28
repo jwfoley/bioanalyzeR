@@ -24,12 +24,12 @@ This function is a shortcut that calls \code{\link{qplot.electrophoresis}} with 
 }
 \details{
 In addition to the hardcoded default arguments for \code{\link{qplot.electrophoresis}}, the following settings are added with \code{\link[ggplot2]{theme}}: \preformatted{
-axis.text.y = element_blank(),
-axis.ticks.y = element_blank(),
-panel.grid = element_blank(),
-panel.background = element_blank(),
-strip.background = element_blank(),
-strip.text.y = element_text(angle = 0)
+axis.text.y =       element_blank(),
+axis.ticks.y =      element_blank(),
+panel.grid =        element_blank(),
+panel.background =  element_blank(),
+strip.background =  element_blank(),
+strip.text.y =      element_text(angle = 0)
 }
 }
 \references{

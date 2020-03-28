@@ -8,7 +8,6 @@
 #' @return The estimated molecular weight in daltons.
 #'
 #' @references
-#'
 #' Thermo Fisher Scientific: DNA and RNA Molecular Weights and Conversions. Accessed 13 March 2020. \url{https://www.thermofisher.com/us/en/home/references/ambion-tech-support/rna-tools-and-calculators/dna-and-rna-molecular-weights-and-conversions.html}
 #'
 #' @export

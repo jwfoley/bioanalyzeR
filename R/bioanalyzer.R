@@ -86,7 +86,7 @@ read.bioanalyzer <- function(xml.file, fit = "spline") {
 	})
 	result <- structure(list(
 		data = do.call(rbind, c(lapply(1:length(result.list), function(i) cbind(sample.index = i, result.list[[i]]$data)), make.row.names = F)),
-		assay.info = NULL,
+		assay.info = list(assay.info),
 		samples = do.call(rbind, c(lapply(result.list, function(x) x$samples), make.row.names = F)),
 		peaks = do.call(rbind, c(lapply(1:length(result.list), function(i) if (is.null(result.list[[i]]$peaks)) NULL else cbind(sample.index = i, result.list[[i]]$peaks)), make.row.names = F)),
 		regions = NULL,
@@ -95,13 +95,10 @@ read.bioanalyzer <- function(xml.file, fit = "spline") {
 	), class = "electrophoresis")
 	if (all(is.na(result$samples$RIN))) result$samples$RIN <- NULL
 	alignment.values <- lapply(result.list, function(x) x$alignment.values)
-		
-	# construct assay.info
-	result$assay.info <- list(assay.info)
 	names(result$assay.info) <- batch
 	
 	# convert sample metadata into factors, ensuring all frames have the same levels and the levels are in the observed order
-	for (field in c("batch", "well.number", "sample.name", "sample.observations", "sample.comment")) result$samples[,field] <- factor(result$samples[,field], levels = unique(result$samples[,field]))
+	for (field in c("batch", "well.number", "sample.name", "sample.observations", "sample.comment")) result$samples[[field]] <- factor(result$samples[[field]], levels = unique(result$samples[[field]]))
 	
 	# convert other text into factors without those restrictions
 	result$peaks[,"peak.observations"] <- factor(result$peaks[,"peak.observations"])
@@ -109,7 +106,12 @@ read.bioanalyzer <- function(xml.file, fit = "spline") {
 	# read smear regions
 	# they are only defined once for the whole assay, but for compatibility with TapeStation data they must be defined repeatedly for each sample (TapeStation can have different regions for different samples)
 	regions.raw <- xmlToDataFrame(chip.root[["AssayBody"]][["DASampleSetpoints"]][["DAMSmearAnalysis"]][["Channel"]][["RegionsMolecularSetpoints"]], stringsAsFactors = F)
-	if (nrow(regions.raw) > 0) result$regions <- data.frame(sample.index = rep(1:nrow(result$samples), each = nrow(regions.raw)), lower.length = as.numeric(regions.raw$StartBasePair), upper.length = as.numeric(regions.raw$EndBasePair), row.names = NULL)
+	if (nrow(regions.raw) > 0) result$regions <- data.frame(
+		sample.index = rep(1:nrow(result$samples), each = nrow(regions.raw)),
+		lower.length = as.numeric(regions.raw$StartBasePair),
+		upper.length = as.numeric(regions.raw$EndBasePair),
+		row.names = NULL
+	)
 	
 	# analyze ladder
 	which.ladder <- which(result$samples$is.ladder)

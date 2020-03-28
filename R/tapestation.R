@@ -347,7 +347,7 @@ read.tapestation <- function(xml.file, gel.image.file = NULL, fit = "spline") {
 		result$regions$lower.distance <- result$regions$lower.relative.distance * marker.distances$range[result$regions$sample.index] + marker.distances$upper[result$regions$sample.index]
 		result$regions$upper.distance <- result$regions$upper.relative.distance * marker.distances$range[result$regions$sample.index] + marker.distances$upper[result$regions$sample.index]
 	}
-		
+	
 	result
 }
 
