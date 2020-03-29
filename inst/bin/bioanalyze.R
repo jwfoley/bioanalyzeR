@@ -9,7 +9,7 @@ files <- parser$add_argument_group("files", "Filenames and settings for input/ou
 files$add_argument("xml_files",
 	nargs = "+",
 	help = "one or more XML files exported from the Bioanalyzer or TapeStation software",
-	metavar = "INPUT_FILE.xml"
+	metavar = "INPUT_FILE.xml[.gz]"
 )
 files$add_argument("--output_file", "-o",
 	help = "path of file to write sample table (TSV)",
@@ -193,7 +193,8 @@ if (! is.null(args$plot_file)) {
 	
 	write(paste("writing", args$plot_file), stderr())
 	pdf(args$plot_file, width = dimensions[1], height = dimensions[2])
-		print(qplot.electrophoresis(data,
+		print(qplot.electrophoresis(
+			data,
 			x = args$x,
 			y = args$y,
 			log = args$log,
