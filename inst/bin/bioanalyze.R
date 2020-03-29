@@ -174,13 +174,14 @@ result <- data$samples
 if (! is.null(args$integrate_region)) {
 	bounds.list <- lapply(strsplit(args$integrate_region, "-"), as.numeric)
 	result <- do.call(data.frame, c(result, lapply(bounds.list, function(bounds.pair) integrate.custom(data, lower.bound = bounds.pair[1], upper.bound = bounds.pair[2], bound.variable = args$bound_variable, sum.variable = args$sum_variable)), check.names = F, stringsAsFactors = F))
+	colnames(result)[(ncol(result) - length(bounds.list) + 1):ncol(result)] <- sapply(args$integrate_region, function(bounds) paste(args$sum_variable, "in", bounds))
 }
 if (! is.null(args$region_ratio)) {
 	bounds.list <- lapply(strsplit(args$region_ratio, "-"), as.numeric)
 	result <- data.frame(result, do.call(region.ratio, c(list(data), bounds.list, list(bound.variable = args$bound_variable, sum.variable = args$sum_variable))), check.names = F, stringsAsFactors = F)
 }
-if (args$dv200) result <- data.frame(result, dv200(data), check.names = F, stringsAsFactors = F)
-if (args$illumina) result <- data.frame(result, illumina.library.ratio(data), check.names = F, stringsAsFactors = F)
+if (args$dv200) result <- data.frame(result, DV200 = dv200(data), check.names = F, stringsAsFactors = F)
+if (args$illumina) result <- data.frame(result, `Illumina library ratio` = illumina.library.ratio(data), check.names = F, stringsAsFactors = F)
 write.table(result, file = if (is.null(args$output_file)) stdout() else args$output_file, quote = F, sep = "\t", row.names = F)
 
 if (! is.null(args$plot_file)) {
