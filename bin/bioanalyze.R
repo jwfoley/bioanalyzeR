@@ -36,7 +36,7 @@ plotting$add_argument("-x", help = "x-variable",
 	metavar = "VARIABLE"
 )
 plotting$add_argument("-y", help = "y-variable",
-	default = "molarity",
+	default = "concentration",
 	metavar = "VARIABLE"
 )
 plotting$add_argument("--log", "-l",
@@ -149,7 +149,7 @@ integration$add_argument("--bound_variable",
 )
 integration$add_argument("--sum_variable",
 	help = "variable to integrate",
-	default = "molarity",
+	default = "concentration",
 	metavar = "VARIABLE"
 )
 

@@ -15,7 +15,7 @@ NULL
 #' @export
 integrate.peaks <- function(
 	electrophoresis,
-	sum.variable = "molarity"
+	sum.variable = "concentration"
 ) sapply(1:nrow(electrophoresis$peaks), function(peak) sum(electrophoresis$data[[sum.variable]][which(in.peak(electrophoresis, peak))]))
 
 
@@ -23,7 +23,7 @@ integrate.peaks <- function(
 #' @export
 integrate.regions <- function(
 	electrophoresis,
-	sum.variable = "molarity"
+	sum.variable = "concentration"
 ) sapply(1:nrow(electrophoresis$regions), function(region) sum(electrophoresis$data[[sum.variable]][which(in.region(electrophoresis, region))]))
 
 
@@ -45,7 +45,7 @@ integrate.custom <- function(
 	lower.bound = -Inf,
 	upper.bound = Inf,
 	bound.variable = "length",
-	sum.variable = "molarity"
+	sum.variable = "concentration"
 ) {
 	in.this.region <- in.custom.region(electrophoresis$data, lower.bound, upper.bound, bound.variable)
 	as.vector(by(electrophoresis$data[in.this.region,], electrophoresis$data$sample.index[in.this.region], function(data.subset) sum(data.subset[[sum.variable]])))
@@ -70,7 +70,7 @@ region.ratio <- function(
 	electrophoresis,
 	bounds,
 	bound.variable = "length",
-	sum.variable = "molarity"
+	sum.variable = "concentration"
 ) {
 	stopifnot(length(bounds) >= 1)
 	sum.matrix <- sapply(bounds, function(bound.pair) integrate.custom(electrophoresis, lower.bound = bound.pair[1], upper.bound = bound.pair[2], bound.variable = bound.variable, sum.variable = sum.variable))
@@ -113,7 +113,7 @@ illumina.library.ratio <- function(
 	min.sequenceable =  100,
 	min.good.insert =   200,
 	max.sequenceable =  700
-) region.ratio(electrophoresis, bounds = list(c(min.sequenceable, min.good.insert), c(min.good.insert, max.sequenceable)))
+) region.ratio(electrophoresis, bounds = list(c(min.sequenceable, min.good.insert), c(min.good.insert, max.sequenceable)), sum.variable = "molarity")
 
 
 #' Normalize data to proportions
