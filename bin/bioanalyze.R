@@ -177,7 +177,7 @@ if (! is.null(args$integrate_region)) {
 }
 if (! is.null(args$region_ratio)) {
 	bounds.list <- lapply(strsplit(args$region_ratio, "-"), as.numeric)
-	result <- data.frame(result, region.ratio(data, bounds = bounds.list, bound.variable = args$bound_variable, sum.variable = args$sum_variable), check.names = F, stringsAsFactors = F)
+	result <- data.frame(result, do.call(region.ratio, c(list(data), bounds.list, list(bound.variable = args$bound_variable, sum.variable = args$sum_variable))), check.names = F, stringsAsFactors = F)
 }
 if (args$dv200) result <- data.frame(result, dv200(data), check.names = F, stringsAsFactors = F)
 if (args$illumina) result <- data.frame(result, illumina.library.ratio(data), check.names = F, stringsAsFactors = F)

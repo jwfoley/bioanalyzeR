@@ -57,7 +57,7 @@ integrate.custom <- function(
 #' Given two or more regions (pairs of lower and upper bounds), calculate the ratio of the integrated sum of each additional region relative to the integrated sum of the first region.  The ratio is computed individually for each sample.
 #'
 #' @param electrophoresis An \code{electrophoresis} object.
-#' @param bounds A list of two or more pairs (vectors) of boundaries, e.g. \code{list(c(100, 200), c(200, 500), c(500, 700)}.
+#' @param ... Two or more pairs (vectors) of boundaries, e.g. \code{c(100, 200), c(200, 500), c(500, 700)}.
 #' @param bound.variable Which variable the boundaries refer to.
 #' @param sum.variable Which variable to sum in each region.
 #'
@@ -68,13 +68,14 @@ integrate.custom <- function(
 #' @export
 region.ratio <- function(
 	electrophoresis,
-	bounds,
+	...,
 	bound.variable = "length",
 	sum.variable = "concentration"
 ) {
-	stopifnot(length(bounds) >= 1)
+	bounds <- list(...)
+	stopifnot(length(bounds) > 1)
 	sum.matrix <- sapply(bounds, function(bound.pair) integrate.custom(electrophoresis, lower.bound = bound.pair[1], upper.bound = bound.pair[2], bound.variable = bound.variable, sum.variable = sum.variable))
-	matrix(sum.matrix[,-1] / sum.matrix[,1], dimnames = list(NULL, sapply(bounds[-1], function(bound.pair) paste0(sum.variable, " ratio in ", bound.variable, " ", bound.pair[1], "-", bound.pair[2], "/", bounds[[1]][1], "-", bounds[[1]][2]))))
+	matrix(sum.matrix[,-1] / sum.matrix[,1], nrow = nrow(sum.matrix), dimnames = list(NULL, sapply(bounds[-1], function(bound.pair) paste0(sum.variable, " ratio in ", bound.variable, " ", bound.pair[1], "-", bound.pair[2], "/", bounds[[1]][1], "-", bounds[[1]][2]))))
 }
 
 
@@ -93,7 +94,7 @@ region.ratio <- function(
 #' @seealso \code{\link{region.ratio}}, \code{\link{illumina.library.ratio}}
 #'
 #' @export
-dv200 <- function(electrophoresis, prop.variable = "concentration", lower.marker.spread = 1) region.ratio(electrophoresis$data[which(between.markers(electrophoresis, lower.marker.spread)),], bounds = list(c(-Inf, Inf), c(200, Inf)), sum.variable = prop.variable)
+dv200 <- function(electrophoresis, prop.variable = "concentration", lower.marker.spread = 1) region.ratio(electrophoresis$data[which(between.markers(electrophoresis, lower.marker.spread)),], c(-Inf, Inf), c(200, Inf), sum.variable = prop.variable)
 
 
 #' Ratio of good inserts to adapter dimers
@@ -113,7 +114,7 @@ illumina.library.ratio <- function(
 	min.sequenceable =  100,
 	min.good.insert =   200,
 	max.sequenceable =  700
-) region.ratio(electrophoresis, bounds = list(c(min.sequenceable, min.good.insert), c(min.good.insert, max.sequenceable)), sum.variable = "molarity")
+) region.ratio(electrophoresis, c(min.sequenceable, min.good.insert), c(min.good.insert, max.sequenceable), sum.variable = "molarity")
 
 
 #' Normalize data to proportions

@@ -6,7 +6,7 @@
 \usage{
 region.ratio(
   electrophoresis,
-  bounds,
+  ...,
   bound.variable = "length",
   sum.variable = "concentration"
 )
@@ -14,7 +14,7 @@ region.ratio(
 \arguments{
 \item{electrophoresis}{An \code{electrophoresis} object.}
 
-\item{bounds}{A list of two or more pairs (vectors) of boundaries, e.g. \code{list(c(100, 200), c(200, 500), c(500, 700)}.}
+\item{...}{Two or more pairs (vectors) of boundaries, e.g. \code{c(100, 200), c(200, 500), c(500, 700)}.}
 
 \item{bound.variable}{Which variable the boundaries refer to.}
 
