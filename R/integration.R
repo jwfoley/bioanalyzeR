@@ -94,7 +94,10 @@ region.ratio <- function(
 #' @seealso \code{\link{region.ratio}}, \code{\link{illumina.library.ratio}}
 #'
 #' @export
-dv200 <- function(electrophoresis, prop.variable = "concentration", lower.marker.spread = 1) region.ratio(electrophoresis$data[which(between.markers(electrophoresis, lower.marker.spread)),], c(-Inf, Inf), c(200, Inf), sum.variable = prop.variable)
+dv200 <- function(electrophoresis, prop.variable = "concentration", lower.marker.spread = 1) {
+	electrophoresis$data <- subset(electrophoresis$data, between.markers(electrophoresis, lower.marker.spread))
+	as.vector(region.ratio(electrophoresis, c(-Inf, Inf), c(200, Inf), sum.variable = prop.variable))
+}
 
 
 #' Ratio of good inserts to adapter dimers
@@ -114,7 +117,7 @@ illumina.library.ratio <- function(
 	min.sequenceable =  100,
 	min.good.insert =   200,
 	max.sequenceable =  700
-) region.ratio(electrophoresis, c(min.sequenceable, min.good.insert), c(min.good.insert, max.sequenceable), sum.variable = "molarity")
+) as.vector(region.ratio(electrophoresis, c(min.sequenceable, min.good.insert), c(min.good.insert, max.sequenceable), sum.variable = "molarity"))
 
 
 #' Normalize data to proportions
