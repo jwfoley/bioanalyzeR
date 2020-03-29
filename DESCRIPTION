@@ -12,5 +12,9 @@ License: LGPL-3
 Encoding: UTF-8
 LazyData: true
 Imports: XML, base64enc, png, ggplot2
-Suggests: argparse
+Suggests: 
+    argparse,
+    knitr,
+    rmarkdown
 RoxygenNote: 7.1.0
+VignetteBuilder: knitr

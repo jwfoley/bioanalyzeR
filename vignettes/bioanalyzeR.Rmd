@@ -1,0 +1,496 @@
+---
+title: "bioanalyzeR"
+author: "Joe Foley"
+date: "`r Sys.Date()`"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{bioanalyzeR}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+```{r, include = FALSE}
+library(bioanalyzeR)
+library(ggplot2)
+```
+
+# Introduction
+
+This package imports electrophoresis data from the Agilent Bioanalyzer and TapeStation systems and includes functions to graph and analyze the data.
+
+## Features
+
+* Reads the output of various DNA and RNA assays into a single unified data structure, even data from multiple batches.
+* Automatically estimates the molecule length, concentration, and molarity for every data point.
+* Provides a simple but powerful function (based on `ggplot2::qplot`) to draw professional-quality electropherograms with any combination of variables, faceting, and aesthetics, including elegant sparklines.
+* Provides functions to automatically compute and compare any variable of interest within all samples, peaks, or regions, as well as shortcuts to calculate the DV200 of fragmented RNA and the insert:dimer ratio of Illumina libraries.
+* Provides a powerful command-line script to automate these analyses.
+
+## Why is this useful?
+
+* **More flexible and professional-looking graphs.** The graphing options in the Agilent software are limited, especially when you combine data from multiple batches. Importing the data into R, especially with the help of `ggplot2`, allows you to customize the presentation in any way you can imagine.
+* **Less misleading graphs.** The electropherograms from the Agilent software show only fluorescence on the y-axis. Fluorescence is proportional to mass, but often the real variable of interest is molarity: how many molecules? A 200 bp peak a 100 bp peak with twice as much molarity look the same on a fluorescence graph but very different on a molarity graph. Or if your only interest is the size distribution within each sample and not the total amount, you can normalize them all to the same scale for easy comparison.
+* **Automated analysis.** If you just want to perform a simple QC analysis like DV200 or library insert:dimer ratio, you can script that for an unlimited number of batches, or use the provided command-line script, and collect the results directly into a table—which you can also graph.
+
+## How to use this document
+
+You can read straight through this vignette, and apply all the demonstrations to your own data as you go. Or, since all the examples come from data included in the package and they are not really cumulative from one section to the next, you can just scan for output that looks useful and try the accompanying code by itself.
+
+
+# Exporting data from the Agilent software
+
+## Bioanalyzer
+
+In the 2100 Expert software, open your data file (`.xad`) in the "Data" context. Select "File->Export..." from the top menu. Check the "Export to XML" box and no others. Click "Export" and then save the file wherever you like.
+
+## TapeStation
+
+In the TapeStation Analysis Software, open your data file (`.D1000`, `.HSD1000`, `.RNA`., `.gDNA`, etc.). You need to export both the metadata (in XML format) and gel image (PNG).
+
+### Metadata XML
+Select "File->Export Data->Export to XML". You do not need to export the gel image or individual EPG images at this point. Select your destination and then click "Export" to save the file.
+
+### Gel image PNG
+It is important to follow these unusual directions carefully!
+
+1. In the "Home" tab (top), verify that there is a ladder lane ("Electronic Ladder" is okay) and that the markers are correctly identified in every sample (except failed lanes, which are okay).
+1. Select the "Gel" context (top left button).
+1. Select "Show All Lanes" if the button is not grayed out.
+1. Unselect "Aligned", "Scale to Sample", and "Scale to MW Range" if it is not grayed out.
+1. Leave the contrast slider in the middle.
+1. Maximize the window and drag the lower end of the gel image area to make it as tall as possible. At this point you should see all lanes from the run, with the marker bands present but unaligned.
+1. Right-click on a lane near the left end of the gel (it doesn't matter which) and you will see a context menu.
+1. Move your cursor over "Snapshot" but **also over a lane to the right of the one you right-clicked on**.
+1. Left-click "Snapshot". This will copy the gel image to your system clipboard, but you should see also see the newly selected lane become highlighted in light blue.
+1. Open any image editor (e.g. Paint) and paste the image from your clipboard. You should see one lane highlighted in light blue. If not, try taking the snapshot again.
+1. Save the gel image as a file in PNG format, preferably with the same name as the XML file and the `.png` extension. E.g. if your XML file is `batch1.xml` then the PNG file should be `batch1.png`.
+
+### Why does `read.tapestation` need a gel image?
+The TapeStation software cannot export the raw fluorescence data in any other format; the XML only contains metadata (sample ID, peak list, etc.). The data would be easily accessible inside the `.D1000`, `.HSD1000`, etc. file formats except they are encrypted. I have asked Agilent about this and they stated that they do not want the data to be accessible to users.
+
+## Data storage and transfer
+`read.electrophoresis` and the similar functions can also read XML files compressed with `gzip`. Although this is not done automatically by the Agilent software, it may be helpful to compress XML files for long-term storage, particularly the large Bioanalyzer XML files that contain all the raw data. Uncompressed XML files are assumed to have the extension `.xml` and compressed ones `.xml.gz`. TapeStation gel image files are assumed to have the extension `.png`.
+
+The filename you import can be a local path or a URL, so you can directly open data stored on a remote server. However, opening from URLs works with some servers and fails with others because of problems with file handling in the `XML` package, which are outside the scope of this package to fix.
+
+
+# Importing data
+
+This package includes the `read.bioanalyzer` and `read.tapestation` functions to import data from the different platforms, but it is easier to use the wrapper function `read.electrophoresis`, which automatically determines the type of data and can read multiple files into a single object. 
+
+## Demo data included in this package
+
+For a demonstration, we can use some pre-exported example data from the Agilent software. This package's `extdata` subdirectory contains the pre-exported data from every demo file included with the Bioanalyzer 2100 Expert and TapeStation Analysis software (with some typos in the sample names corrected so they are easy to parse):
+
+```{r}
+find.package("bioanalyzeR")
+list.files(paste0(find.package("bioanalyzeR"), "/extdata"), recursive = TRUE)
+```
+
+So let's import a file and see what we have:
+
+```{r}
+dna1000 <- read.electrophoresis(system.file("extdata", "bioanalyzer", "Demo DNA 1000 Series II.xml.gz", package = "bioanalyzeR"))
+dna1000$assay.info
+dna1000$samples
+```
+
+Or we can read several files into one object:
+
+```{r}
+several.files <- read.electrophoresis(
+	system.file("extdata", "bioanalyzer", "Demo DNA 1000 Series II.xml.gz", package = "bioanalyzeR"),
+	system.file("extdata", "bioanalyzer", "Demo DNA 7500 Series II.xml.gz", package = "bioanalyzeR"),
+	system.file("extdata", "bioanalyzer", "Demo DNA 12000 Series II.xml.gz", package = "bioanalyzeR")
+)
+several.files$samples
+```
+
+# The `electrophoresis` class
+
+Let's have a closer look at what we get when we open a data file:
+
+```{r}
+dna1000 <- read.electrophoresis(system.file("extdata", "bioanalyzer", "Demo DNA 1000 Series II.xml.gz", package = "bioanalyzeR"))
+class(dna1000)
+names(dna1000)
+head(dna1000$data)
+head(dna1000$samples)
+head(dna1000$peaks)
+head(dna1000$regions)
+```
+
+Each `electrophoresis` object contains the main data in its `$data` member and has several other members with metadata like the sample names and software-reported peaks and regions of interest (though this file had no regions in it).
+
+* `data` - a tall data frame of the run data, specifically:
+	* `time` (Bioanalyzer) - time when this data point was measured
+	* `aligned.time` (Bioanalyzer) - measurement time aligned between the expected times of the marker peaks
+	* `distance` (TapeStation) - migration distance of the measurement from the top of the gel area
+	* `relative.distance` (TapeStation) - migration distance normalized relative to the marker peaks
+	* `fluorescence` - fluorescence reading at this point
+	* `length` - estimated molecule length at this point
+	* `concentration` - estimated concentration of the area under the curve between this point and the previous one
+	* `molarity` - estimated molarity of the area under the curve between this point and the previous one
+* `assay.info` - a list of metadata about each batch and the assay kit used
+* `samples` - a data frame of metadata for each sample (also annotated to `data`, `peaks`, and `regions` with the same factor levels), specifically:
+	* `batch` - the batch (instrument run) of the sample, from the file name
+	* `well.number` - the well number in which the sample was loaded
+	* `sample.name` - the name of the sample
+	* `sample.observations` - notes about this sample supplied by the user or the Agilent software
+	* `sample.comment` - notes about this sample supplied by the user
+	* `reagent.id` (TapeStation) - the name of the ScreenTape used for this sample
+	* `RIN` or `RINe` (RNA) - the RNA Integrity Number (or equivalent) reported by the Agilent software
+	* `DIN` (genomic DNA) - the DNA Integrity Number reported by the Agilent Software
+	* `ladder.well` - which well contains the ladder that calibrates this sample
+* `peaks` - a data frame of peaks reported by the Agilent software, annotated with their lower and upper boundaries in various scales
+* `regions` - a data frame of regions of interest reported by the Agilent software, annotated with their lower and upper boundaries in varous scales
+* `mobility functions` - a list of model functions, one per ladder used for calibration, to convert migration speed measurements (aligned time or relative distance) into estimated molecule lengths
+* `mass.coefficients` - a list of coefficients, one per sample, to convert area under the curve to estimated mass
+
+You'll notice that many of the values at the beginning of `dna1000$data` are `NA`. This is because the mobility model (the standard curve relating migration speed to molecule length) does not extrapolate to observations below the lower marker or above the upper marker, and the estimates of concentration and molarity depend on the length. We can see some better examples if we look farther down:
+
+```{r}
+head(subset(dna1000$data, ! is.na(length)))
+```
+
+## Subsetting an `electrophoresis` object
+
+Because the `electrophoresis` class is complex, it has its own special `subset` method (`subset.electrophoresis`) to simplify subsetting. The principle is that you request a subset of the *samples*, and all members are automatically updated.
+
+```{r}
+dna1000 <- read.electrophoresis(system.file("extdata", "bioanalyzer", "Demo DNA 1000 Series II.xml.gz", package = "bioanalyzeR"))
+dna1000$samples
+dna1000.ladder1 <- subset(dna1000, sample.name == "Ladder 1")
+dna1000.ladder1$samples
+dna1000.ladder1$peaks
+```
+
+You can see that in addition to `dna1000.ladder1$samples`, `$peaks` and other members have also been reduced to data from the remaining samples even though they don't contain the `sample.observations` variable themselves. Instead, the `sample.index` column has been updated to point to the new row numbers of those samples in the `$samples` table.
+
+## Combining `electrophoresis` objects
+
+The `electrophoresis` class also has a special method for combining multiple instances into one, which is `rbind` (`rbind.electrophoresis`) since most members are data frames and multiple instances should have the same columns. However, this special `rbind` method automatically updates the `sample.index` columns and concatenates the other members that are not data frames.
+
+```{r}
+dna1000 <- read.electrophoresis(system.file("extdata", "bioanalyzer", "Demo DNA 1000 Series II.xml.gz", package = "bioanalyzeR"))
+dna7500 <- read.electrophoresis(system.file("extdata", "bioanalyzer", "Demo DNA 7500 Series II.xml.gz", package = "bioanalyzeR"))
+unique(dna1000$data$sample.index)
+unique(dna7500$data$sample.index)
+combined.batches <- rbind(dna1000, dna7500)
+unique(combined.batches$data$sample.index)
+combined.batches$assay.info
+```
+
+The `rbind` method is automatically used to combine multiple batches in `read.electrophoresis`, so if you use that function to import the batches at the same time, you probably will not need to `rbind` them later.
+
+
+# Drawing electropherograms
+
+## `qplot.electrophoresis`
+
+The members of an `electrophoresis` object that contain graphable data are data frames compatible with `ggplot2`. However, the metadata by sample are in the `$samples` member while the actual electrophoresis data are kept separately in the `$data` member. To simplify graphing, this package includes the `qplot.electrophoresis` function, which is analogous to `ggplot2::qplot` but has slightly different syntax: in particular, the first argument is the `electrophoresis` object, and the x- and y-variables have defaults.
+
+```{r}
+d1000 <- read.electrophoresis(system.file("extdata", "tapestation", "D1000-Tubes-16.xml.gz", package = "bioanalyzeR"))
+qplot.electrophoresis(d1000)
+```
+
+This produces plots analogous to the electropherograms in the Agilent software. However, with the default settings there are several differences; these settings are described in the next sections.
+
+## Data, peaks, and regions
+
+`qplot.electrophoresis` displays the software-reported peaks as filled area under the curve. You can change the fill color, or stop displaying peaks by setting the color to `NA`:
+
+```{r}
+qplot.electrophoresis(d1000, peak.fill = "yellow")
+qplot.electrophoresis(d1000, peak.fill = NA)
+```
+
+Reported regions of interest are shown as semitransparent gray rectangles; you can likewise modify the transparency of these or set it to NA to stop displaying regions:
+
+```{r}
+qplot.electrophoresis(d1000, region.alpha = 0.5)
+qplot.electrophoresis(d1000, region.alpha = NA)
+```
+
+Finally, the readings from the samples themselves are plotted by default as a continuous curve (`ggplot2::geom_line`). The other supported geom is `geom_area`, which (as in `qplot`) you get by setting `geom = "area"`:
+
+```{r}
+eukrna <- read.electrophoresis(system.file("extdata", "tapestation", "Eukaryotic RNA-Tubes-16.xml.gz", package = "bioanalyzeR"))
+qplot.electrophoresis(eukrna)
+qplot.electrophoresis(eukrna, geom = "area")
+```
+
+## Data ranges
+
+We can easily zoom in on an interesting feature by setting the `xlim` or `ylim` arguments (note that you can leave a limit as `NA` to let the software choose):
+
+```{r}
+qplot.electrophoresis(eukrna, xlim = c(100, 2000), ylim = c(NA, 0.08))
+```
+
+Or we can use the `scales` argument, which is passed to `ggplot2::facet_wrap` or `ggplot2::facet_grid`, to allow different facets to automatically get different axis scales:
+
+```{r}
+qplot.electrophoresis(eukrna, xlim = c(100, 2000), scales = "free_y")
+```
+
+Another difference from the electropherograms in the software is that, by default, the x-axis (molecule length) is in a linear scale. In the software, data points are simply graphed as they appeared to the instrument and the x-axis labels are roughly (but not exactly; see `stdcrv.mobility` below) logarithmic. We can log-scale the axes with the `log` argument that behaves the same as in `ggplot2::qplot`:
+
+```{r}
+qplot.electrophoresis(eukrna, log = "x")
+qplot.electrophoresis(eukrna, log = "xy")
+```
+
+Of course, log-scaling the y-axis gives weird results when the values are fractional.
+
+## Changing the axis variables
+
+By now you have probably noticed that the y-axis displays concentration rather than fluorescence. In fact it displays concentration per length (the concentration estimate for each point is scaled with the `differential.scale` function) so that the area under a curve, between any two x-values, is directly proportional to the concentration of molecules in that range.
+
+If you change to `y = "fluorescence"` you can see something closer to the electropherograms from the Agilent software:
+
+```{r}
+qplot.electrophoresis(eukrna, y = "fluorescence")
+```
+
+This is still not quite the same as the electropherograms from the Agilent software because the x-axis is linear. We could log-scale it as above, but to get a truly analogous graph we can simply change the x-variable to `relative.distance`, which for TapeStation data is the migration distance normalized to the markers (the Bioanalyzer has `aligned.time` instead):
+
+```{r}
+qplot.electrophoresis(eukrna, x = "relative.distance", y = "fluorescence")
+```
+
+Note that the x-axis is automatically reversed when the x-variable is distance, to keep the plots in the same orientation.
+
+Even though differential-scaled concentration is more directly informative than raw fluorescence, for many experiments the real variable of interest is molarity. Rather than the total mass of molecules, we want to know the number of molecules. The problem is that the mass concentration, and therefore the fluorescence, depends on the length of the molecule: a 2 kb fragment has approximately twice the mass and twice the fluorescence of a 1 kb fragment, even if the copy number is the same. So, compare concentration and molarity for one sample:
+
+```{r}
+ladder1 <- subset(d1000, sample.name == "Ladder 1")
+qplot.electrophoresis(ladder1)
+qplot.electrophoresis(ladder1, y = "molarity")
+```
+
+If our variable of interest was molarity, the concentration graph would have been very misleading! And the original fluorescence vs. distance graph even moreso.
+
+Or sometimes the absolute variable is irrelevant and what we really want to know is the size distribution within each sample. For that we can set `normalize = TRUE`, which uses the `normalize.proportion` function to scale the variable of interest to a proportion of the sample's total, i.e. the total area under every curve (between the markers) is 1. Notice how the different dilutions of the same sample become roughly equal after normalization:
+
+```{r}
+d5000 <- read.electrophoresis(system.file("extdata", "tapestation", "D5000-Tubes-16.xml.gz", package = "bioanalyzeR"))
+qplot.electrophoresis(d5000)
+qplot.electrophoresis(d5000, normalize = T)
+```
+
+## Faceting vs. overlaying
+
+Sometimes it is more interesting to overlay samples in the same plot rather than side-by-side in small multiples. The `facets` argument, as in `ggplot2::qplot`, automatically infers the appropriate faceting function and `facets = NULL` skips faceting and plots all data in one area. In that case, the samples are automatically color-coded by name:
+
+```{r}
+qplot.electrophoresis(d5000, facets = NULL)
+```
+
+Or if you are using `geom = "area"`, they are color-coded and also semitransparent (controlled with the `area.alpha` argument):
+
+```{r}
+qplot.electrophoresis(d5000, facets = NULL, geom = "area")
+```
+
+## Adding new variables and aesthetics
+
+There may be some pattern among your samples that you want to explore. You can add new graphable variables to an `electrophoresis` object by adding columns to the `$samples` data frame. Let's consider a larger batch:
+
+```{r}
+d1000.96 <- read.electrophoresis(system.file("extdata", "tapestation", "D1000-Plate-96.xml.gz", package = "bioanalyzeR"))
+levels(d1000.96$samples$sample.name)
+```
+
+This batch has a few different samples that are diluted to different degrees. We can turn those into variables. First we'll take the subset with `:` in the sample name to find the dilutions, then we'll parse the sample name and the dilution into variables.
+
+```{r}
+dilutions <- subset(d1000.96, grepl(":", sample.name))
+dilutions$samples$sample.type <- factor(sub(' 1:.*', "", dilutions$samples$sample.name))
+dilutions$samples$dilution <- factor(as.integer(sub('.*:', "", dilutions$samples$sample.name)))
+dilutions$samples[,c("sample.name", "sample.type", "dilution")]
+```
+
+Now that we've added new variables, we can facet on them:
+
+```{r}
+qplot.electrophoresis(dilutions, facets = sample.type ~ dilution, peak.fill = NA, region.alpha = NA, scales = "free_y")
+```
+
+Or we could facet on one variable and add the other as a custom aesthetic such as the curve color: the `...` collects additional arguments and passes them to the `aes` argument of `ggplot`.
+
+```{r}
+qplot.electrophoresis(dilutions, facets = ~ sample.type, color = dilution, peak.fill = NA, region.alpha = NA, scales = "free_y")
+```
+
+Notice that replicates of the same combination of conditions are still plotted separately (the function automatically adds the aesthetic `group = sample.index`).
+
+
+## Sparklines
+
+Because the output of `qplot.electrophoresis` is a `ggplot` object, you can add additonal layers or themes to customize it. One additional configuration is already provided: sparklines, a minimalist line graph. The `sparkline.electrophoresis` function simply hardcodes some appropriate settings and additions to the defaults of `qplot.electrophoresis` and passes the rest of the arguments to it, so usage is the same.
+
+The default faceting formula draws all sparklines in one vertical column as is customary (`facets = sample.index ~ .`). Regions are still drawn and can still be disabled with `region.alpha = NA`.
+
+```{r}
+sparkline.electrophoresis(d1000)
+```
+
+However, we still have the freedom to use other faceting formulas and aesthetics:
+
+```{r}
+sparkline.electrophoresis(dilutions, facets = sample.type ~ ., color = dilution, region.alpha = NA)
+```
+
+
+# Analyzing data
+
+## Sums within peaks and regions
+
+Since we have estimates of concentration and molarity for every observed data point (within the interpolation range of the mobility standard curve), we can compute the total concentration or molarity of any range of molecule lengths, even if those ranges were not reported as peaks or defined as regions of interest in the Agilent software. The function that does this is `integrate.custom`:
+
+```{r}
+eukrna <- read.electrophoresis(system.file("extdata", "tapestation", "Eukaryotic RNA-Tubes-16.xml.gz", package = "bioanalyzeR"))
+eukrna.concentration.200.5000 <- integrate.custom(eukrna, lower.bound = 200, upper.bound = 5000, sum.variable = "concentration")
+eukrna.molarity.200.5000 <- integrate.custom(eukrna, lower.bound = 200, upper.bound = 5000, sum.variable = "molarity")
+data.frame(name = as.character(eukrna$samples$sample.name), eukrna.concentration.200.5000, eukrna.molarity.200.5000)
+```
+
+## Region ratios
+A more useful thing to calculate, which is not provided by the Agilent software, is the ratio of two regions' sums. For that we have the `region.ratio` function:
+
+```{r}
+region.ratio(eukrna, c(100, 200), c(200, 5000))
+region.ratio(eukrna, c(100, 200), c(200, 5000), sum.variable = "molarity")
+```
+
+The result is a matrix rather than an ordinary vector. That is because the function can compute the ratio of multiple regions; the result is the ratio of each additional region to the first region:
+
+```{r}
+region.ratio(eukrna, c(100, 200), c(200, 5000), c(200, 1000))
+```
+
+### DV200
+
+One useful application of region ratios is calculating the DV200, the proportion of an RNA sample (by concentration) that is over 200 nt long. This is not completely trivial with `region.ratio` because we don't want to include the marker as part of the sample, so there is a special function to calculate DV200:
+
+```{r}
+dv200(eukrna)
+```
+
+### Illumina library ratio
+
+Another useful application of region ratios, for Illumina sequencing libraries, is calculating the molar ratio of library molecules with sufficiently long inserts to molecules containing only the sequencing adapters (adapter dimers). The `illumina.library.ratio` function streamlines this by setting only three parameters: the lowest and highest lengths that are sequenceable, and the length threshold that distinguishes good library molecules.
+
+```{r}
+illumina.library.ratio
+haloplex <- read.electrophoresis(system.file("extdata", "tapestation", "HSD1000-HaloplexHS-4.xml.gz", package = "bioanalyzeR"))
+data.frame(name = haloplex$samples$sample.name, ratio = illumina.library.ratio(haloplex))
+qplot.electrophoresis(haloplex, y = "molarity", region.alpha = NA, xlim = c(50, 750)) + geom_vline(xintercept = c(100, 200, 700), linetype = 2)
+```
+
+
+# Checking the accuracy of the results
+
+This package faithfully reports the fluorescence signal and peak/region concentrations and molarity reported by the Agilent software, but it must recalculate the model of migration speed vs. molecule length and the estimates of concentration and molarity by position. Some streamlined functions are provided to compare this package's results with those of the Agilent software.
+
+## `stdcrv.mobility`
+
+This function displays the standard curve of molecule length vs. the observed measurement that corresponds to migration speed (marker-aligned read time for Bioanalyzer, marker-relative migration distance for TapeStation), using the data from the ladder(s). In addition to the reported main position of each ladder peak, the fluorescence signal within the peak boundaries is also shown.
+
+```{r}
+dna1000 <- read.electrophoresis(system.file("extdata", "bioanalyzer", "Demo DNA 1000 Series II.xml.gz", package = "bioanalyzeR"))
+stdcrv.mobility(dna1000)
+```
+
+You can see how the spline function bends to accommodate the ladder peaks, which don't fit perfectly with logarithmic regression:
+
+```{r}
+dna1000.regression <- read.electrophoresis(system.file("extdata", "bioanalyzer", "Demo DNA 1000 Series II.xml.gz", package = "bioanalyzeR"), fit = "regression")
+stdcrv.mobility(dna1000.regression)
+```
+
+## `qc.electrophoresis`
+
+This function compares the calculations from this package with the reported values from the Agilent software, using the reported peaks because they have all the relevant estimates. The calculations you can compare are `"length"`, `"concentration"`, and `"molarity"`.
+
+```{r}
+qc.electrophoresis(dna1000, "length")
+qc.electrophoresis(dna1000, "concentration")
+qc.electrophoresis(dna1000, "molarity")
+```
+
+
+# Command-line automation
+
+Sometimes you may just want to do a quick analysis or graph your data, so it's not worth the trouble of opening up an interactive R session or scripting repetitive tasks. To automate simple tasks, the command-line script `bioanalyze.R` is provided. You can find it under the `bin/` subdirectory after installation of the package:
+
+```{r}
+system.file("bin", "bioanalyze.R", package = "bioanalyzeR")
+```
+
+You may wish to copy it to somewhere in your system path for easy access.
+
+When you run this script on an XML file, it will print a tab-delimited sample table to stdout (or you can put it in a file with the `-o` argument). If you provide a filename with the `-p` argument, it will save the results of `qplot.electrophoresis` as a PDF image.
+
+```
+$ bioanalyze.R -p D1000.pdf D1000-Tubes-16.xml.gz
+batch	well.number	sample.name	sample.observations	reagent.id	ladder.well
+D1000-Tubes-16	A1	D1000 Ladder	Ladder	01-S029-160125-05-000010	A1
+D1000-Tubes-16	B1	Smear sample (1:2)		01-S029-160125-05-000010	A1
+D1000-Tubes-16	C1	Smear sample (1:4)		01-S029-160125-05-000010	A1
+D1000-Tubes-16	D1	Smear sample (1:8)		01-S029-160125-05-000010	A1
+D1000-Tubes-16	E1	Smear sample (1:32)		01-S029-160125-05-000010	A1
+D1000-Tubes-16	F1	Ladder 1		01-S029-160125-05-000010	A1
+D1000-Tubes-16	G1	Fragment mix		01-S029-160125-05-000010	A1
+D1000-Tubes-16	H1	Ladder 2		01-S029-160125-05-000010	A1
+D1000-Tubes-16	A2	300 bp fragment		01-S029-160125-05-000010	A1
+D1000-Tubes-16	B2	300 bp fragment (1:2)		01-S029-160125-05-000010	A1
+D1000-Tubes-16	C2	300 bp fragment (1:10)		01-S029-160125-05-000010	A1
+D1000-Tubes-16	D2	300 bp fragment (1:70)		01-S029-160125-05-000010	A1
+D1000-Tubes-16	E2	Ladder 3		01-S029-160125-05-000010	A1
+D1000-Tubes-16	F2	150 bp fragment (1:10)		01-S029-160125-05-000010	A1
+D1000-Tubes-16	G2	150 bp fragment (1:30)		01-S029-160125-05-000010	A1
+D1000-Tubes-16	H2	150 bp fragment (1:60)		01-S029-160125-05-000010	A1
+writing D1000.pdf
+done
+Warning messages:
+1: Removed 4 rows containing missing values (position_stack). 
+2: Removed 15 row(s) containing missing values (geom_path). 
+```
+
+Of course you may want to customize the figure, so command-line arguments are provided for all the arguments to `qplot.electrophoresis`. Additionally, you can perform integration analysis from the command line; the results are included as additional columns in the tab-delimited sample table:
+
+```
+$ bioanalyze.R --integrate_region 200-500 --illumina HSD1000-HaloplexHS-4.xml.gz
+batch	well.number	sample.name	sample.observations	reagent.id	ladder.well	concentration in 200-500	Illumina library ratio
+HSD1000-HaloplexHS-4	A1	Ladder	Ladder	01-S030-170109-01-000059	A1	871.977686627144	1.68496642056565
+HSD1000-HaloplexHS-4	B1	Haloplex HS amplified library 1 1/50 dilution		01-S030-170109-01-000059	A1	445.529718181388	9.08025650617749
+HSD1000-HaloplexHS-4	C1	Haloplex HS amplified library 2 1/30 dilution		01-S030-170109-01-000059	A1	1520.71234972229	8.77495297042303
+HSD1000-HaloplexHS-4	D1	Haloplex HS amplified library 3 1/10 dilution		01-S030-170109-01-000059	A1	1980.27320572808	13.2304668073971
+HSD1000-HaloplexHS-4	E1	Haloplex HS amplified library 4 1/40 dilution		01-S030-170109-01-000059	A1	1406.40116297398	10.304852237037
+```
+
+You can see instructions for all the other command-line arguments with `bioanalyze.R --help`.
+
+
+# Known limitations
+
+Some of these features would not be difficult to implement but haven't been because I don't need them. Please contact me if they would be useful to you.
+
+* Protein assays, the Bioanalyzer Small RNA assay, and the entire Fragment Analyzer platform are not currently supported.
+* It might be possible to read Bioanalyzer `.xad` files directly rather than require exporting them to XML. The original files are also XML but store their main data in a compressed base64 block and I have not attempted to decode it.
+* It would definitely be possible to read TapeStation data files directly, because they are simply ZIP archives containing XML files, but they are encrypted (except the demo data provided with the TapeStation Analysis software). I have asked Agilent about this and they stated that they do not want the raw data to be accessible to users.
+* Because importing TapeStation data requires reading the gel image with green and purple marker bands, the fluorescence signal in the markers themselves is unreadable (it's obscured by the green and purple bands). Among other things this means it is impossible to calibrate the fluorescence-to-concentration coefficient separately for every sample according to the marker signal, so there will be random well-to-well error in the estimates of absolute concentration and molarity. However, relative comparisons within a sample (e.g. region ratio, DV200, Illumina library quality) should be unaffected as the error cancels out.
+* Data from very different assays, such as RNA vs. DNA or Bioanalyzer vs. TapeStation, cannot necessarily be combined with `rbind.electrophoresis` because of mismatched metadata.
+* The importing functions have not been thoroughly tested with anomalous data (missing markers, cross-contamination) and may fail to import an entire batch rather than salvage the samples that worked.
+* `qplot.electrophoresis` function should preferably be an S3 method treating `ggplot2::qplot` as the generic, so `qplot` will simply dispatch to it. But the inheritance is complicated because `qplot` is in another namespace and its first argument is a variable name for an aesthetic. It might be possible to fix this with a closer look at how method dispatching works, or maybe `qplot.electrophoresis` should simply be renamed because it isn't completely analogous to `qplot`.
+
