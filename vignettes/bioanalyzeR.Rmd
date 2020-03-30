@@ -67,6 +67,8 @@ Select "File->Export Data->Export to XML". You do not need to export the gel ima
 ### Gel image PNG
 It is important to follow these unusual directions carefully!
 
+![](settings_screenshot.png)
+
 1. In the "Home" tab (top), verify that there is a ladder lane ("Electronic Ladder" is okay) and that the markers are correctly identified in every sample (except failed lanes, which are okay).
 1. Select the "Gel" context (top left button).
 1. Select "Show All Lanes" if the button is not grayed out.
@@ -78,6 +80,14 @@ It is important to follow these unusual directions carefully!
 1. Left-click "Snapshot". This will copy the gel image to your system clipboard, but you should see also see the newly selected lane become highlighted in light blue.
 1. Open any image editor (e.g. Paint) and paste the image from your clipboard. You should see one lane highlighted in light blue. If not, try taking the snapshot again.
 1. Save the gel image as a file in PNG format, preferably with the same name as the XML file and the `.png` extension. E.g. if your XML file is `batch1.xml` then the PNG file should be `batch1.png`.
+
+Suggested workflow to process many files quickly:
+
+1. Copy the gel image into Paint but don't save it yet.
+1. Export the XML file and click "Close" for that file instead of returning to "Home" first.
+1. Return to Paint and click "Save", then *begin* typing a filename to match the XML file and it should automatically complete the rest so you only have to change `.xml` to `.png`.
+1. Press Ctrl-N to start a new file in Paint.
+1. Repeat.
 
 ### Why does `read.tapestation` need a gel image?
 The TapeStation software cannot export the raw fluorescence data in any other format; the XML only contains metadata (sample ID, peak list, etc.). The data would be easily accessible inside the `.D1000`, `.HSD1000`, etc. file formats except they are encrypted. I have asked Agilent about this and they stated that they do not want the data to be accessible to users.
