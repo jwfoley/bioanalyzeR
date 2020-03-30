@@ -476,6 +476,8 @@ compare.estimates("bioanalyzer", "Demo DNA 7500 Series II.xml.gz", "Bioanalyzer 
 compare.estimates("tapestation", "D5000-Plate-96.xml.gz", "TapeStation D5000", "D5000 Ladder")
 ```
 
+So we see that the length estimates are fairly accurate, as expected because the Agilent software's linear interpolation and this software's spline functions are by definition most accurate near the ladder peaks, but there is a wide range of error in the concentration and molarity estimates from both approaches.
+
 
 # Command-line automation
 
