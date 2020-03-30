@@ -540,7 +540,7 @@ You can see instructions for all the other command-line arguments with `bioanaly
 
 # Known limitations
 
-Some of these features would not be difficult to implement but haven't been because I don't need them. Please contact me if they would be useful to you.
+Some of these features would not be difficult to implement but haven't been because I don't need them. Please contact me if they would be useful to you and you are willing to help test them.
 
 * Protein assays, the Bioanalyzer Small RNA assay, and the entire Fragment Analyzer platform are not currently supported.
 * It might be possible to read Bioanalyzer `.xad` files directly rather than require exporting them to XML. The original files are also XML but store their main data in a compressed base64 block and I have not attempted to decode it.
