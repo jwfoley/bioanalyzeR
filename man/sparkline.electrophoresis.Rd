@@ -29,7 +29,7 @@ axis.ticks.y =      element_blank(),
 panel.grid =        element_blank(),
 panel.background =  element_blank(),
 strip.background =  element_blank(),
-strip.text.y =      element_text(angle = 0)
+strip.text.y =      element_text(angle = 0, hjust = 0)
 }
 }
 \references{
