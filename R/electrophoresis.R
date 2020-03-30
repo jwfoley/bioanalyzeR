@@ -163,6 +163,8 @@ in.custom.region <- function(
 #' 
 #' These functions take an electrophoresis object and check whether each data point is within a specified peak or region.
 #'
+#' Data points are considered to be within the boundaries of a peak if their original x-value (`aligned.time` for Bioanalyzer, `relative.distance` for TapeStation) is within the boundaries reported by the Agilent software, but for regions the length boundaries are used.
+#'
 #' @param electrophoresis An \code{electrophoresis} object.
 #' @param which.peak The integer index of a peak in \code{electrophoresis$peaks}.
 #' @param which.region The integer index of a region in \code{electrophoresis$regions}.
@@ -178,10 +180,10 @@ NULL
 #' @rdname in.peak.region
 #' @export
 in.peak <- function(electrophoresis, which.peak) {
+	x.name <- get.x.name(electrophoresis)
 	electrophoresis$data$sample.index == electrophoresis$peaks$sample.index[which.peak] &
-	! is.na(electrophoresis$data$length) &
-	electrophoresis$data$length >= electrophoresis$peaks$lower.length[which.peak] &
-	electrophoresis$data$length <= electrophoresis$peaks$upper.length[which.peak]
+	electrophoresis$data[[x.name]] >= electrophoresis$peaks[[paste0("lower.", x.name)]][which.peak] &
+	electrophoresis$data[[x.name]] <= electrophoresis$peaks[[paste0("upper.", x.name)]][which.peak]
 }
 
 
@@ -198,6 +200,8 @@ in.region <- function(electrophoresis, which.region) {
 #' Match data points to the peaks or regions they are in
 #'
 #' These functions take an electrophoresis object and report which of the peaks or regions each data point belongs to, if any.
+#'
+#' Data points are considered to be within the boundaries of a peak if their original x-value (`aligned.time` for Bioanalyzer, `relative.distance` for TapeStation) is within the boundaries reported by the Agilent software, but for regions the length boundaries are used.
 #'
 #' Warning: If peaks or regions in the reported table overlap, any data point in more than one peak or region will only be matched to the last peak or region it belongs to.
 #'
