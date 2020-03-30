@@ -213,7 +213,7 @@ qplot.electrophoresis <- function(
 #' panel.grid =        element_blank(),
 #' panel.background =  element_blank(),
 #' strip.background =  element_blank(),
-#' strip.text.y =      element_text(angle = 0)
+#' strip.text.y =      element_text(angle = 0, hjust = 0)
 #'}
 #'
 #' @param ... Arguments passed to \code{\link{qplot.electrophoresis}}.
@@ -239,7 +239,7 @@ sparkline.electrophoresis <- function(
 	panel.grid = element_blank(),
 	panel.background = element_blank(),
 	strip.background = element_blank(),
-	strip.text.y = element_text(angle = 0)
+	strip.text.y = element_text(angle = 0, hjust = 0)
 )
 
 
