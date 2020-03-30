@@ -206,7 +206,7 @@ The members of an `electrophoresis` object that contain graphable data are data 
 
 ```{r}
 d1000 <- read.electrophoresis(system.file("extdata", "tapestation", "D1000-Tubes-16.xml.gz", package = "bioanalyzeR"))
-qplot.electrophoresis(d1000)
+qplot.electrophoresis(d1000, title = "TapeStation D1000")
 ```
 
 This produces plots analogous to the electropherograms in the Agilent software. However, with the default settings there are several differences; these settings are described in the next sections.
@@ -216,23 +216,23 @@ This produces plots analogous to the electropherograms in the Agilent software. 
 `qplot.electrophoresis` displays the software-reported peaks as filled area under the curve. You can change the fill color, or stop displaying peaks by setting the color to `NA`:
 
 ```{r}
-qplot.electrophoresis(d1000, peak.fill = "yellow")
-qplot.electrophoresis(d1000, peak.fill = NA)
+qplot.electrophoresis(d1000, peak.fill = "yellow", title = "TapeStation D1000 with yellow peaks")
+qplot.electrophoresis(d1000, peak.fill = NA, title = "TapeStation D1000 with no peaks")
 ```
 
 Reported regions of interest are shown as semitransparent gray rectangles; you can likewise modify the transparency of these or set it to NA to stop displaying regions:
 
 ```{r}
-qplot.electrophoresis(d1000, region.alpha = 0.5)
-qplot.electrophoresis(d1000, region.alpha = NA)
+qplot.electrophoresis(d1000, region.alpha = 0.5, title = "TapeStation D1000 with darker regions")
+qplot.electrophoresis(d1000, region.alpha = NA, title = "TapeStation D1000 with no regions")
 ```
 
 Finally, the readings from the samples themselves are plotted by default as a continuous curve (`ggplot2::geom_line`). The other supported geom is `geom_area`, which (as in `qplot`) you get by setting `geom = "area"`:
 
 ```{r}
 eukrna <- read.electrophoresis(system.file("extdata", "tapestation", "Eukaryotic RNA-Tubes-16.xml.gz", package = "bioanalyzeR"))
-qplot.electrophoresis(eukrna)
-qplot.electrophoresis(eukrna, geom = "area")
+qplot.electrophoresis(eukrna, title = "TapeStation Eukaryotic RNA")
+qplot.electrophoresis(eukrna, title = "TapeStation Eukaryotic RNA with geom_area")
 ```
 
 ## Data ranges
@@ -240,20 +240,20 @@ qplot.electrophoresis(eukrna, geom = "area")
 We can easily zoom in on an interesting feature by setting the `xlim` or `ylim` arguments (note that you can leave a limit as `NA` to let the software choose):
 
 ```{r}
-qplot.electrophoresis(eukrna, xlim = c(100, 2000), ylim = c(NA, 0.08))
+qplot.electrophoresis(eukrna, xlim = c(100, 2000), ylim = c(NA, 0.08), title = "TapeStation Eukaryotic RNA zoomed in")
 ```
 
 Or we can use the `scales` argument, which is passed to `ggplot2::facet_wrap` or `ggplot2::facet_grid`, to allow different facets to automatically get different axis scales:
 
 ```{r}
-qplot.electrophoresis(eukrna, xlim = c(100, 2000), scales = "free_y")
+qplot.electrophoresis(eukrna, xlim = c(100, 2000), scales = "free_y", title = "TapeStation Eukaryotic RNA with free y-scales")
 ```
 
 Another difference from the electropherograms in the software is that, by default, the x-axis (molecule length) is in a linear scale. In the software, data points are simply graphed as they appeared to the instrument and the x-axis labels are roughly (but not exactly; see `stdcrv.mobility` below) logarithmic. We can log-scale the axes with the `log` argument that behaves the same as in `ggplot2::qplot`:
 
 ```{r}
-qplot.electrophoresis(eukrna, log = "x")
-qplot.electrophoresis(eukrna, log = "xy")
+qplot.electrophoresis(eukrna, log = "x", title = "TapeStation Eukaryotic RNA with log x-scale")
+qplot.electrophoresis(eukrna, log = "xy", title = "TapeStation Eukaryotic RNA with log x- and y-scales")
 ```
 
 Of course, log-scaling the y-axis gives weird results when the values are fractional.
@@ -265,13 +265,13 @@ By now you have probably noticed that the y-axis displays concentration rather t
 If you change to `y = "fluorescence"` you can see something closer to the electropherograms from the Agilent software:
 
 ```{r}
-qplot.electrophoresis(eukrna, y = "fluorescence")
+qplot.electrophoresis(eukrna, y = "fluorescence", title = "TapeStation Eukaryotic RNA fluorescence")
 ```
 
 This is still not quite the same as the electropherograms from the Agilent software because the x-axis is linear. We could log-scale it as above, but to get a truly analogous graph we can simply change the x-variable to `relative.distance`, which for TapeStation data is the migration distance normalized to the markers (the Bioanalyzer has `aligned.time` instead):
 
 ```{r}
-qplot.electrophoresis(eukrna, x = "relative.distance", y = "fluorescence")
+qplot.electrophoresis(eukrna, x = "relative.distance", y = "fluorescence", title = "TapeStation Eukaryotic RNA fluorescence vs. distance")
 ```
 
 Note that the x-axis is automatically reversed when the x-variable is distance, to keep the plots in the same orientation.
@@ -280,8 +280,8 @@ Even though differential-scaled concentration is more directly informative than 
 
 ```{r}
 ladder1 <- subset(d1000, sample.name == "Ladder 1")
-qplot.electrophoresis(ladder1)
-qplot.electrophoresis(ladder1, y = "molarity")
+qplot.electrophoresis(ladder1, title = "TapeStation D1000 ladder concentration")
+qplot.electrophoresis(ladder1, y = "molarity", title = "TapeStation D1000 ladder molarity")
 ```
 
 If our variable of interest was molarity, the concentration graph would have been very misleading! And the original fluorescence vs. distance graph even moreso.
@@ -290,8 +290,8 @@ Or sometimes the absolute variable is irrelevant and what we really want to know
 
 ```{r}
 d5000 <- read.electrophoresis(system.file("extdata", "tapestation", "D5000-Tubes-16.xml.gz", package = "bioanalyzeR"))
-qplot.electrophoresis(d5000)
-qplot.electrophoresis(d5000, normalize = T)
+qplot.electrophoresis(d5000, title = "TapeStation D5000")
+qplot.electrophoresis(d5000, normalize = T, title = "TapeStation D5000 normalized")
 ```
 
 ## Faceting vs. overlaying
@@ -299,13 +299,13 @@ qplot.electrophoresis(d5000, normalize = T)
 Sometimes it is more interesting to overlay samples in the same plot rather than side-by-side in small multiples. The `facets` argument, as in `ggplot2::qplot`, automatically infers the appropriate faceting function and `facets = NULL` skips faceting and plots all data in one area. In that case, the samples are automatically color-coded by name:
 
 ```{r}
-qplot.electrophoresis(d5000, facets = NULL)
+qplot.electrophoresis(d5000, facets = NULL, title = "TapeStation D5000 with no faceting")
 ```
 
 Or if you are using `geom = "area"`, they are color-coded and also semitransparent (controlled with the `area.alpha` argument):
 
 ```{r}
-qplot.electrophoresis(d5000, facets = NULL, geom = "area")
+qplot.electrophoresis(d5000, facets = NULL, geom = "area", title = "TapeStation D5000 with geom_area and no faceting")
 ```
 
 ## Adding new variables and aesthetics
@@ -329,13 +329,13 @@ dilutions$samples[,c("sample.name", "sample.type", "dilution")]
 Now that we've added new variables, we can facet on them:
 
 ```{r}
-qplot.electrophoresis(dilutions, facets = sample.type ~ dilution, peak.fill = NA, region.alpha = NA, scales = "free_y")
+qplot.electrophoresis(dilutions, facets = sample.type ~ dilution, peak.fill = NA, region.alpha = NA, scales = "free_y", title = "Faceting on sample vs. dilution")
 ```
 
 Or we could facet on one variable and add the other as a custom aesthetic such as the curve color: the `...` collects additional arguments and passes them to the `aes` argument of `ggplot`.
 
 ```{r}
-qplot.electrophoresis(dilutions, facets = ~ sample.type, color = dilution, peak.fill = NA, region.alpha = NA, scales = "free_y")
+qplot.electrophoresis(dilutions, facets = ~ sample.type, color = dilution, peak.fill = NA, region.alpha = NA, scales = "free_y", title = "Faceting on sample with dilutions color-coded")
 ```
 
 Notice that replicates of the same combination of conditions are still plotted separately (the function automatically adds the aesthetic `group = sample.index`).
@@ -348,13 +348,13 @@ Because the output of `qplot.electrophoresis` is a `ggplot` object, you can add 
 The default faceting formula draws all sparklines in one vertical column as is customary (`facets = sample.index ~ .`). Regions are still drawn and can still be disabled with `region.alpha = NA`.
 
 ```{r}
-sparkline.electrophoresis(d1000)
+sparkline.electrophoresis(d1000, title = "TapeStation D1000 sparklines")
 ```
 
 However, we still have the freedom to use other faceting formulas and aesthetics:
 
 ```{r}
-sparkline.electrophoresis(dilutions, facets = sample.type ~ ., color = dilution, region.alpha = NA)
+sparkline.electrophoresis(dilutions, facets = sample.type ~ ., color = dilution, region.alpha = NA, title = "TapeStation D1000 sparklines faceted by sample with dilutions color-coded")
 ```
 
 
@@ -401,7 +401,7 @@ Another useful application of region ratios, for Illumina sequencing libraries, 
 illumina.library.ratio
 haloplex <- read.electrophoresis(system.file("extdata", "tapestation", "HSD1000-HaloplexHS-4.xml.gz", package = "bioanalyzeR"))
 data.frame(name = haloplex$samples$sample.name, ratio = illumina.library.ratio(haloplex))
-qplot.electrophoresis(haloplex, y = "molarity", region.alpha = NA, xlim = c(50, 750)) + geom_vline(xintercept = c(100, 200, 700), linetype = 2)
+qplot.electrophoresis(haloplex, y = "molarity", region.alpha = NA, xlim = c(50, 750), title = "Molarity of Haloplex libraries") + geom_vline(xintercept = c(100, 200, 700), linetype = 2)
 ```
 
 
@@ -415,14 +415,14 @@ This function displays the standard curve of molecule length vs. the observed me
 
 ```{r}
 dna1000 <- read.electrophoresis(system.file("extdata", "bioanalyzer", "Demo DNA 1000 Series II.xml.gz", package = "bioanalyzeR"))
-stdcrv.mobility(dna1000)
+stdcrv.mobility(dna1000) + ggtitle("Bioanalyzer DNA 1000 standard curve")
 ```
 
 You can see how the spline function bends to accommodate the ladder peaks, which don't fit perfectly with logarithmic regression:
 
 ```{r}
 dna1000.regression <- read.electrophoresis(system.file("extdata", "bioanalyzer", "Demo DNA 1000 Series II.xml.gz", package = "bioanalyzeR"), fit = "regression")
-stdcrv.mobility(dna1000.regression)
+stdcrv.mobility(dna1000.regression) + ggtitle("Bioanalyzer DNA 1000 standard curve from logarithmic regression")
 ```
 
 ## `qc.electrophoresis`
@@ -430,9 +430,9 @@ stdcrv.mobility(dna1000.regression)
 This function compares the calculations from this package with the reported values from the Agilent software, using the reported peaks because they have all the relevant estimates. The calculations you can compare are `"length"`, `"concentration"`, and `"molarity"`.
 
 ```{r}
-qc.electrophoresis(dna1000, "length")
-qc.electrophoresis(dna1000, "concentration")
-qc.electrophoresis(dna1000, "molarity")
+qc.electrophoresis(dna1000, "length") + ggtitle("Bioanalyzer DNA 1000 length estimation")
+qc.electrophoresis(dna1000, "concentration") + ggtitle("Bioanalyzer DNA 1000 concentration estimation")
+qc.electrophoresis(dna1000, "molarity") + ggtitle("Bioanalyzer DNA 1000 molarity estimation")
 ```
 
 ## Comparison with the Agilent software's accuracy
@@ -475,7 +475,7 @@ compare.estimates <- function(dirname, filename, title, sample.names) {
 		facet_grid(what ~ source) +
 		scale_y_continuous(label = percent) +
 		xlab("length (bp)") +
-		ggtitle(title)
+		ggtitle(paste(title, "accuracy comparison"))
 }
 compare.estimates("bioanalyzer", "Demo DNA 1000 Series II.xml.gz", "Bioanalyzer DNA 1000", "DNA 1000 ladder")
 compare.estimates("bioanalyzer", "Demo DNA 7500 Series II.xml.gz", "Bioanalyzer DNA 7500", "ladder DNA 7500")
