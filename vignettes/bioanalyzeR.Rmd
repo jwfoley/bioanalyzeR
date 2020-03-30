@@ -2,7 +2,13 @@
 title: "bioanalyzeR"
 author: "Joe Foley"
 date: "`r Sys.Date()`"
-output: rmarkdown::html_vignette
+output:
+  rmarkdown::html_vignette:
+    fig_width: 7
+    fig_height: 5
+    toc: true
+    toc_depth: 2
+    df_print: kable
 vignette: >
   %\VignetteIndexEntry{bioanalyzeR}
   %\VignetteEngine{knitr::rmarkdown}
@@ -11,8 +17,8 @@ vignette: >
 
 ```{r, include = FALSE}
 knitr::opts_chunk$set(
-  collapse = TRUE,
-  comment = "#>"
+	collapse = TRUE,
+	comment = "#>"
 )
 ```
 
