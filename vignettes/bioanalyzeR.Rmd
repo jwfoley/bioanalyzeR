@@ -19,6 +19,7 @@ knitr::opts_chunk$set(
 ```{r, include = FALSE}
 library(bioanalyzeR)
 library(ggplot2)
+library(scales)
 ```
 
 # Introduction
@@ -426,6 +427,53 @@ This function compares the calculations from this package with the reported valu
 qc.electrophoresis(dna1000, "length")
 qc.electrophoresis(dna1000, "concentration")
 qc.electrophoresis(dna1000, "molarity")
+```
+
+## Comparison with the Agilent software's accuracy
+
+Because some of the demo batches include *de novo* runs of the ladder, we have example data with peaks of known true length, concentration, and molarity (the correct values are hardcoded in the peak data from the proper ladder sample). We can use these to check the accuracy of the estimates from the Agilent software and from this package. To avoid repetition we'll wrap a lot of operations into a function, then apply it to several datasets.
+
+```{r}
+compare.estimates <- function(dirname, filename, title, sample.names) {
+	data <- read.electrophoresis(system.file("extdata", dirname, filename, package = "bioanalyzeR"))
+	which.ladder.peaks <- which(data$peaks$sample.index == which(data$samples$well.number == data$samples$ladder.well)[1] & ! data$peaks$peak.observations %in% c("Lower Marker", "Upper Marker"))
+	which.reruns <- which(data$samples$sample.name %in% sample.names)
+	ladder.comparison <- data.frame(
+		replicate =  factor(rep(paste("replicate", 1:length(which.reruns)), each = length(which.ladder.peaks))),
+		source =     factor(rep(c("Agilent software", "bioanalyzeR"), each = length(which.reruns) * length(which.ladder.peaks))),
+		length =     data$peaks$length[which.ladder.peaks],
+		what =       factor(rep(c("length", "concentration", "molarity"), each = 2 * length(which.reruns) * length(which.ladder.peaks)), levels = c("length", "concentration", "molarity"))
+	)
+	ladder.comparison$true.value <- c(
+		rep(data$peaks$length[which.ladder.peaks], 2 * length(which.reruns)),
+		rep(data$peaks$concentration[which.ladder.peaks], 2 * length(which.reruns)),
+		rep(data$peaks$molarity[which.ladder.peaks], 2 * length(which.reruns))
+	)
+	which.rerun.peaks <- which(
+		data$peaks$sample.index %in% which.reruns &
+		! data$peaks$peak.observations %in% c("Lower Marker", "Upper Marker") # excluded markers as their results are hardcoded
+	)
+	x.name <- get.x.name(data)
+	ladder.comparison$estimate <- c(
+		data$peaks$length[which.rerun.peaks],
+		data$mobility.functions[[1]][[1]](data$peaks[[x.name]][which.rerun.peaks]),
+		data$peaks$concentration[which.rerun.peaks],
+		integrate.peaks(data, "concentration")[which.rerun.peaks],
+		data$peaks$molarity[which.rerun.peaks],
+		integrate.peaks(data, "molarity")[which.rerun.peaks]
+	)
+	ladder.comparison$error <- (ladder.comparison$estimate - ladder.comparison$true.value) / ladder.comparison$estimate
+	ggplot(ladder.comparison, aes(x = length, y = error, color = replicate)) +
+		geom_hline(yintercept = 0, color = "darkgray") +
+		geom_point() +
+		facet_grid(what ~ source) +
+		scale_y_continuous(label = percent) +
+		xlab("length (bp)") +
+		ggtitle(title)
+}
+compare.estimates("bioanalyzer", "Demo DNA 1000 Series II.xml.gz", "Bioanalyzer DNA 1000", "DNA 1000 ladder")
+compare.estimates("bioanalyzer", "Demo DNA 7500 Series II.xml.gz", "Bioanalyzer DNA 7500", "ladder DNA 7500")
+compare.estimates("tapestation", "D5000-Plate-96.xml.gz", "TapeStation D5000", "D5000 Ladder")
 ```
 
 
