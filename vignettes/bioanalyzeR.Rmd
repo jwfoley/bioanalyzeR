@@ -84,7 +84,7 @@ It is important to follow these unusual directions carefully!
 Suggested workflow to process many files quickly:
 
 1. Copy the gel image into Paint but don't save it yet.
-1. Export the XML file and click "Close" for that file instead of returning to "Home" first.
+1. Export the XML file and click "Close" for that file instead of returning to "Home".
 1. Return to Paint and click "Save", then *begin* typing a filename to match the XML file and it should automatically complete the rest so you only have to change `.xml` to `.png`.
 1. Press Ctrl-N to start a new file in Paint.
 1. Repeat.
