@@ -20,6 +20,8 @@ A vector of integers with length \code{nrow(data)}. Each element is either the i
 These functions take an electrophoresis object and report which of the peaks or regions each data point belongs to, if any.
 }
 \details{
+Data points are considered to be within the boundaries of a peak if their original x-value (`aligned.time` for Bioanalyzer, `relative.distance` for TapeStation) is within the boundaries reported by the Agilent software, but for regions the length boundaries are used.
+
 Warning: If peaks or regions in the reported table overlap, any data point in more than one peak or region will only be matched to the last peak or region it belongs to.
 }
 \seealso{

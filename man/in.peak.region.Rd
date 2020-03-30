@@ -23,6 +23,9 @@ A vector of logicals with length \code{nrow(electrophoresis$data)}.
 \description{
 These functions take an electrophoresis object and check whether each data point is within a specified peak or region.
 }
+\details{
+Data points are considered to be within the boundaries of a peak if their original x-value (`aligned.time` for Bioanalyzer, `relative.distance` for TapeStation) is within the boundaries reported by the Agilent software, but for regions the length boundaries are used.
+}
 \seealso{
 \code{\link{in.custom.region}}, \code{\link{in.peaks}}, \code{\link{in.regions}}
 }
