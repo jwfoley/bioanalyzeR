@@ -46,10 +46,6 @@ This package imports electrophoresis data from the Agilent Bioanalyzer and TapeS
 * **Less misleading graphs.** The electropherograms from the Agilent software show only fluorescence on the y-axis. Fluorescence is proportional to mass, but often the real variable of interest is molarity: how many molecules? On a fluorescence graph, a 200 bp peak looks the same as a 100 bp peak with twice as much molarity. Or if your only interest is the size distribution within each sample and not the total amount, you can normalize them all to the same scale for easy comparison.
 * **Automated analysis.** If you just want to perform a simple QC analysis like DV200 or library insert:dimer ratio, you can script that for an unlimited number of batches, or use the provided command-line script, and collect the results directly into a table.
 
-## How to use this document
-
-You could read straight through this vignette and apply all the demonstrations to your own data as you go. Or, since all the examples come from data included in the package and they are not really cumulative from one section to the next, you can just scan for output that looks useful and try the accompanying code by itself.
-
 
 # Exporting data from the Agilent software
 
