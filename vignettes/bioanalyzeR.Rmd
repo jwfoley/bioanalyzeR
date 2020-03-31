@@ -727,9 +727,6 @@ D1000-Tubes-16	G2	150 bp fragment (1:30)		01-S029-160125-05-000010	A1
 D1000-Tubes-16	H2	150 bp fragment (1:60)		01-S029-160125-05-000010	A1
 writing D1000.pdf
 done
-Warning messages:
-1: Removed 4 rows containing missing values (position_stack). 
-2: Removed 15 row(s) containing missing values (geom_path). 
 ```
 
 Of course you may want to customize the figure, so command-line arguments are provided for all the arguments to `qplot.electrophoresis`. Additionally, you can perform integration analysis from the command line; the results are included as additional columns in the tab-delimited sample table:
