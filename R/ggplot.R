@@ -128,11 +128,6 @@ qplot.electrophoresis <- function(
 	# remove data outside the space between markers
 	if (! include.markers) electrophoresis$data <- electrophoresis$data[which(between.markers(electrophoresis, lower.marker.spread)),]
 	
-	# remove data in unusable ranges
-	electrophoresis$data <- electrophoresis$data[! is.na(electrophoresis$data[[x]]) & ! is.na(electrophoresis$data[[y]]),]
-	if (log %in% c("x", "xy")) electrophoresis$data <- electrophoresis$data[electrophoresis$data[[x]] > 0,]
-	if (log %in% c("y", "xy")) electrophoresis$data <- electrophoresis$data[electrophoresis$data[[y]] > 0,]
-	
 	# annotate data with metadata
 	electrophoresis$data <- cbind(electrophoresis$data, electrophoresis$samples[electrophoresis$data$sample.index,])
 	if (! is.null(electrophoresis$peaks)) electrophoresis$peaks <- cbind(electrophoresis$peaks, electrophoresis$samples[electrophoresis$peaks$sample.index,])
@@ -142,14 +137,19 @@ qplot.electrophoresis <- function(
 	electrophoresis$data$y.normalized <- if (normalize) normalize.proportion(electrophoresis, y, lower.marker.spread) else electrophoresis$data[[y]]
 	electrophoresis$data$y.scaled <- if (y == "fluorescence") electrophoresis$data$y.normalized else differential.scale(electrophoresis, x, "y.normalized") # don't scale fluorescence by differentials
 	
-	# remove data outside x-limits (after normalization so that's not distorted)
-	electrophoresis$data <- electrophoresis$data[which(
-		(is.na(xlim[1]) | electrophoresis$data[[x]] >= xlim[1]) &
-		(is.na(xlim[2]) | electrophoresis$data[[x]] <= xlim[2])
-	),]
-	
-	# also rename x-variable so aesthetics are easy
+	# rename x-variable so aesthetics are easy
 	electrophoresis$data$x.value <- electrophoresis$data[[x]]
+	
+	# remove data outside limits (after normalization so that's not distorted)
+	# keep data outside y-limits so the area is still filled in if appropriate
+	electrophoresis$data <- electrophoresis$data[which(
+		(! is.na(electrophoresis$data$x.value)) &
+		(is.na(xlim[1]) | electrophoresis$data$x.value >= xlim[1]) &
+		(is.na(xlim[2]) | electrophoresis$data$x.value <= xlim[2]) &
+		(! is.na(electrophoresis$data$y.scaled)) &
+		((! log %in% c("x", "xy")) | electrophoresis$data$x.value > 0) &
+		((! log %in% c("y", "xy")) | electrophoresis$data$y.scaled > 0)
+	),]
 	
 	# create plot but don't add the geom yet
 	this.plot <- ggplot(electrophoresis$data)
