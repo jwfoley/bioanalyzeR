@@ -7,3 +7,6 @@
 *.tex
 *.pdf
 
+inst/doc
+doc
+Meta
