@@ -9,6 +9,7 @@ RGB.BAD <-           c(255, 106,  71)  # label for low RIN is red
 # hardcoded margin widths, in pixels
 LEFT.MARGIN <- 8
 RIGHT.MARGIN <- 15
+WARNING.PAD <- 10 # extra pixels to discard on both sides of a warning label in a gel lane
 
 
 # find all pixels in an RGB array from readPNG, with values in [0,1], that match a given RGB trio, with values in [0, 255]
@@ -63,16 +64,21 @@ read.tapestation.gel.image <- function(gel.image.file, n.lanes) {
 	
 	# extract fluorescence values by lane
 	average.lane.width <- (ncol(gel.image.rgb) - LEFT.MARGIN - RIGHT.MARGIN) / n.lanes
-	fluorescence.matrix <- 1 - gel.image.rgb[ # subtract from 1 because it's negative
-		(start.of.bottom.highlight - 1):(end.of.top.highlight + 1), # reverse so it will be in order from fastest to slowest migration like Bioanalyzer
+	lane.pixels <- gel.image.rgb[
+		(end.of.top.highlight + 1):(start.of.bottom.highlight - 1),
 		LEFT.MARGIN + 1 + round(average.lane.width * (1:n.lanes - 1 + lane.center)),
-		1 # use only the red channel
 	]
+	n.readings <- nrow(lane.pixels)
+	bad.pixels <- ! (lane.pixels[,,1] == lane.pixels[,,2] & lane.pixels[,,1] == lane.pixels[,,3]) # find non-grayscale pixels, indicating annotations that block the data
+	for (col in which(colSums(bad.pixels) > 0)) {
+		bad.rows <- which(bad.pixels[,col])
+		lane.pixels[(min(bad.rows) - WARNING.PAD):(max(bad.rows) + WARNING.PAD), col,] <- NA # set bad pixels and pad around them to NA
+	}
 	
 	data.frame(
-		sample.index =  rep(1:ncol(fluorescence.matrix), each = nrow(fluorescence.matrix)),
-		distance =      nrow(fluorescence.matrix):1 / nrow(fluorescence.matrix),
-		fluorescence =  as.vector(fluorescence.matrix)
+		sample.index =  rep(1:n.lanes, each = n.readings),
+		distance =      n.readings:1 / n.readings,
+		fluorescence =  1 - as.vector(lane.pixels[n.readings:1,,1]) # subtract from 1 because it's a negative; reverse rows to put fastest migration first like Bioanalyzer; use only red channel
 	)
 }
 
