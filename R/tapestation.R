@@ -6,6 +6,10 @@ RGB.GOOD <-          c(138, 208, 160)  # label for high RIN is green
 RGB.MEDIUM <-        c(255, 237, 101)  # label for medium RIN is yellow
 RGB.BAD <-           c(255, 106,  71)  # label for low RIN is red
 
+# hardcoded margin widths, in pixels
+LEFT.MARGIN <- 8
+RIGHT.MARGIN <- 15
+
 
 # find all pixels in an RGB array from readPNG, with values in [0,1], that match a given RGB trio, with values in [0, 255]
 find.matching.pixels <- function(rgb.image, rgb.values) {
@@ -20,9 +24,10 @@ find.matching.pixels <- function(rgb.image, rgb.values) {
 #'
 #' Because the gel image alone contains little metadata, this function returns only a simple data frame containing the fluorescence intensity vs. migration distance at every point in every lane of the gel (numbered from left to right). It is less useful by itself than when it is called inside \code{\link{read.tapestation}}.
 #'
-#' Note: This function attempts to find the marker bands by their special color. But because this color is overlaid on the gel image, it is impossible to read the fluorescence intensity inside the markers, so it is reported as NA.
+#' Note: Fluorescence is reported only for one column of pixels down the center of each lane. If there are annotations on the gel image, such as the yellow warning symbol, those pixels are reported as NA, but usually they are at the top of the image outside the reportable range anyway.
 #'
 #' @param gel.image.file The filename of a TapeStation gel image with blue highlight, in PNG format. The filename can be a URL.
+#' @param n.lanes The number of lanes in the gel image.
 #'
 #' @return A data frame with one row for each vertical pixel of each gel lane.
 #' 
@@ -30,44 +35,42 @@ find.matching.pixels <- function(rgb.image, rgb.values) {
 #'
 #' @export
 #' @importFrom png readPNG
-read.tapestation.gel.image <- function(gel.image.file) {
-	gel.image.con <- file(gel.image.file, "rb", raw = T)
-	gel.image.rgb <- readPNG(readBin(gel.image.con, what = "raw", n = 1E10)) # workaround to allow URLs (1E10 should be a safe overestimate of the maximum size)
+read.tapestation.gel.image <- function(gel.image.file, n.lanes) {
+	gel.image.con <- file(gel.image.file, "rb", raw = T) # workaround to allow URLs 
+	gel.image.rgb <- readPNG(readBin(gel.image.con, what = "raw", n = 25E6)) # safe overestimate of the maximum size (slightly above 4K resolution @ 24 bits uncompressed)
 	close(gel.image.con) # if not explicitly closed, R gives a warning
 	# note: this is in the form (y, x, channel); [1,1,] is the upper left corner
 	
-	# find lower marker
-	pixel.is.lower.marker <- find.matching.pixels(gel.image.rgb, RGB.LOWER.MARKER)
-	x.is.lower.marker <- apply(pixel.is.lower.marker, 2, any)
+	# stop if markers are overlaid
+	if (any(find.matching.pixels(gel.image.rgb, RGB.LOWER.MARKER) | find.matching.pixels(gel.image.rgb, RGB.UPPER.MARKER))) stop('Marker bands detected in gel image. Please re-export it after unchecking "Show Marker Annotations".')
 	
-	# use lower marker bands to identify a single representative x-value for each gel lane
-	x.gel <- which(diff(c(FALSE, x.is.lower.marker)) == 1) # guess the start x-positions of the lanes based on where there are gaps between lower markers; add this FALSE so that column 1 will test positive if necessary, and this also offsets all the indices correctly
-	lane.spacings <- diff(x.gel)
-	if (diff(range(lane.spacings)) > 1) { # the guessed lanes are not evenly spaced, even tolerating 1 pixel of antialiasing error
-		lane.spacing.freq <- table(lane.spacings)
-		estimated.lane.width <- as.integer(names(lane.spacing.freq)[which.max(lane.spacing.freq)]) # guess that the most common width is the correct one (assuming there aren't lots of problems in this batch!)
-		n.lanes <- floor((dim(gel.image.rgb)[2] - x.gel[1]) / estimated.lane.width) # assume the first edge is definitely called correctly (should only be whitespace to its left) and any whitespace to the right is narrower than a lane
-		x.gel <- x.gel[1] + estimated.lane.width * 1:n.lanes - round(estimated.lane.width / 2) # aim for the centers of the lanes because we might have slight error
-	}
-	gel.image.rgb.reduced <- gel.image.rgb[,x.gel,]
-			
 	# find gel boundaries
-	position.is.highlight <- find.matching.pixels(gel.image.rgb.reduced, RGB.HIGHLIGHT)
-	lane.with.borders <- which(position.is.highlight[1,]) # assuming there will be a highlight in the top pixel row
-	stopifnot(length(lane.with.borders) == 1) # need one highlighted lane to find gel borders
-	position.is.label <- find.matching.pixels(gel.image.rgb.reduced, RGB.GOOD) |
-		find.matching.pixels(gel.image.rgb.reduced, RGB.MEDIUM) |
-		find.matching.pixels(gel.image.rgb.reduced, RGB.BAD)
-	border.transition <- diff((position.is.highlight | position.is.label)[,lane.with.borders])
-	y.gel.start <- which(border.transition == -1)[1] - 1
-	y.gel.end <- which(border.transition == 1)[1] - 1
-
-	# now finally extract the intensities!
-	result.rgb <- gel.image.rgb.reduced[y.gel.end:y.gel.start,,] # only the actual data values; reverse order so it goes bottom to top like peak calls and distance
-	fluorescence.matrix <- 1 - result.rgb[,,1] # only get red fluorescence because all channels are equal in the places we care about; subtract from 1 because it's a negative (red decreases in the protein gels too even though they're blue instead of black)
-	fluorescence.matrix[result.rgb[,,1] != result.rgb[,,2]] <- NA # set non-data pixels (obscured by marker band color) to NA; assume red channel always equals green channel, but not necessary blue because protein gels use blue
+	position.is.highlight <- find.matching.pixels(gel.image.rgb, RGB.HIGHLIGHT)
+	highlight.cols <- which(position.is.highlight[1,]) # use only the first pixel row to find the highlight
+	stopifnot(all(diff(highlight.cols) == 1)) # assume the highlight is continuous in the first pixel row
+	highlighted.lane.width <- length(highlight.cols)
+	highlight.subset <- position.is.highlight[,highlight.cols]
+	highlight.rows <- which(rowSums(highlight.subset) == highlighted.lane.width) # find all pixel rows with full highlight (will miss ones with annotation text over them)
+	top.highlight.rows <- highlight.rows[highlight.rows < nrow(gel.image.rgb) / 2]
+	end.of.top.highlight <- top.highlight.rows[length(top.highlight.rows)] # assume it's the last row in the top half
+	start.of.bottom.highlight <- if (length(top.highlight.rows) == length(highlight.rows)) { # no bottom highlight
+		stop("haven't written this part yet")
+	} else highlight.rows[length(top.highlight.rows) + 1]
+	highlight.border.offsets <- which(highlight.subset[end.of.top.highlight + 1,]) # sometimes will be empty if there's only one pixel of border and the color is off because of antialiasing, but we can live with that much error
+	stopifnot(length(highlight.border.offsets < 2) || all(diff(highlight.border.offsets) == 1)) # assume the border is contiguous
+	stopifnot(length(highlight.border.offsets) == 0 || (highlight.border.offsets[1] == 1 || highlight.border.offsets[length(highlight.border.offsets)] == highlighted.lane.width)) # assume the border is on one edge or the other
+	lane.center <- ((if (1 %in% highlight.border.offsets) highlight.border.offsets[length(highlight.border.offsets)] else 0) +(highlighted.lane.width - length(highlight.border.offsets)) / 2) / highlighted.lane.width # approximate x-position of the center of the lane, from the left, as a proportion of the total width
+	
+	# extract fluorescence values by lane
+	average.lane.width <- (ncol(gel.image.rgb) - LEFT.MARGIN - RIGHT.MARGIN) / n.lanes
+	fluorescence.matrix <- 1 - gel.image.rgb[ # subtract from 1 because it's negative
+		(start.of.bottom.highlight - 1):(end.of.top.highlight + 1), # reverse so it will be in order from fastest to slowest migration like Bioanalyzer
+		LEFT.MARGIN + 1 + round(average.lane.width * (1:n.lanes - 1 + lane.center)),
+		1 # use only the red channel
+	]
+	
 	data.frame(
-		sample.index =  rep(1:length(x.gel), each = nrow(fluorescence.matrix)),
+		sample.index =  rep(1:ncol(fluorescence.matrix), each = nrow(fluorescence.matrix)),
 		distance =      nrow(fluorescence.matrix):1 / nrow(fluorescence.matrix),
 		fluorescence =  as.vector(fluorescence.matrix)
 	)
@@ -213,10 +216,8 @@ read.tapestation <- function(xml.file, gel.image.file = NULL, fit = "spline") {
 	parsed.data <- read.tapestation.xml(xml.file)
 	stopifnot(length(unique(parsed.data$samples$batch)) == 1)
 	batch <- parsed.data$samples$batch[1]
-	gel.data <- read.tapestation.gel.image(gel.image.file)
-	stopifnot(length(unique(gel.data$sample.index)) == nrow(parsed.data$samples))
 	result <- structure(list(
-		data = gel.data,
+		data = read.tapestation.gel.image(gel.image.file, nrow(parsed.data$samples)),
 		assay.info = list(parsed.data$assay.info),
 		samples = parsed.data$samples,
 		peaks = parsed.data$peaks,

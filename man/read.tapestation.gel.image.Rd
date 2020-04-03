@@ -4,10 +4,12 @@
 \alias{read.tapestation.gel.image}
 \title{Read a TapeStation gel image}
 \usage{
-read.tapestation.gel.image(gel.image.file)
+read.tapestation.gel.image(gel.image.file, n.lanes)
 }
 \arguments{
 \item{gel.image.file}{The filename of a TapeStation gel image with blue highlight, in PNG format. The filename can be a URL.}
+
+\item{n.lanes}{The number of lanes in the gel image.}
 }
 \value{
 A data frame with one row for each vertical pixel of each gel lane.
@@ -18,7 +20,7 @@ This function reads a gel image exported from the TapeStation software and saved
 \details{
 Because the gel image alone contains little metadata, this function returns only a simple data frame containing the fluorescence intensity vs. migration distance at every point in every lane of the gel (numbered from left to right). It is less useful by itself than when it is called inside \code{\link{read.tapestation}}.
 
-Note: This function attempts to find the marker bands by their special color. But because this color is overlaid on the gel image, it is impossible to read the fluorescence intensity inside the markers, so it is reported as NA.
+Note: Fluorescence is reported only for one column of pixels down the center of each lane. If there are annotations on the gel image, such as the yellow warning symbol, those pixels are reported as NA, but usually they are at the top of the image outside the reportable range anyway.
 }
 \seealso{
 \code{\link{read.tapestation}}, \code{\link{read.tapestation.xml}}
