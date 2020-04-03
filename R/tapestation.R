@@ -53,9 +53,9 @@ read.tapestation.gel.image <- function(gel.image.file, n.lanes) {
 	highlight.rows <- which(rowSums(highlight.subset) == highlighted.lane.width) # find all pixel rows with full highlight (will miss ones with annotation text over them)
 	top.highlight.rows <- highlight.rows[highlight.rows < nrow(gel.image.rgb) / 2]
 	end.of.top.highlight <- top.highlight.rows[length(top.highlight.rows)] # assume it's the last row in the top half
-	start.of.bottom.highlight <- if (length(top.highlight.rows) == length(highlight.rows)) { # no bottom highlight
-		stop("haven't written this part yet")
-	} else highlight.rows[length(top.highlight.rows) + 1]
+	highlighted.positions <- gel.image.rgb[,highlight.cols,]
+	subposition.is.quality.label <- find.matching.pixels(highlighted.positions, RGB.GOOD) | find.matching.pixels(highlighted.positions, RGB.MEDIUM) | find.matching.pixels(highlighted.positions, RGB.BAD)
+	start.of.bottom.highlight <- if (any(subposition.is.quality.label)) which(rowSums(subposition.is.quality.label) > 0)[1] else highlight.rows[length(top.highlight.rows) + 1] # quality label supersedes any blue highlight
 	highlight.border.offsets <- which(highlight.subset[end.of.top.highlight + 1,]) # sometimes will be empty if there's only one pixel of border and the color is off because of antialiasing, but we can live with that much error
 	stopifnot(length(highlight.border.offsets < 2) || all(diff(highlight.border.offsets) == 1)) # assume the border is contiguous
 	stopifnot(length(highlight.border.offsets) == 0 || (highlight.border.offsets[1] == 1 || highlight.border.offsets[length(highlight.border.offsets)] == highlighted.lane.width)) # assume the border is on one edge or the other
