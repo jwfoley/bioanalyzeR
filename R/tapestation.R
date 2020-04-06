@@ -341,10 +341,11 @@ read.tapestation <- function(xml.file, gel.image.file = NULL, fit = "spline") {
 		delta.fluorescence = c(NA, diff(data.subset$fluorescence)),
 		delta.distance = c(NA, -diff(data.subset$distance))
 	), simplify = F)))
+	# estimate area under each measurement with the trapezoidal rule; to simplify math, each point's sum is for the trapezoid to the left of it
 	data.calibration$area <- (2 * data.calibration$fluorescence - data.calibration$delta.fluorescence) * data.calibration$delta.distance
+	# in kits with upper marker, only upper marker's true concentration is given, so calibrate only to that; otherwise, lower marker's true concentration is given so calibrate only to that
 	peaks.calibration <- cbind(result$peaks, area = tapply(data.calibration$area, data.calibration$peak, sum))
 	has.upper.marker <- any(result$peaks$peak.observations %in% UPPER.MARKER.NAMES)
-	# in kits with upper marker, only upper marker's true concentration is given, so calibrate only to that; otherwise, lower marker's true concentration is given so calibrate only to that
 	marker.areas <- do.call(rbind, by(peaks.calibration, peaks.calibration$sample.index, function(peaks.subset) peaks.subset[which(
 		(has.upper.marker & peaks.subset$peak.observations %in% UPPER.MARKER.NAMES) |
 		(! has.upper.marker & peaks.subset$peak.observations %in% LOWER.MARKER.NAMES)
