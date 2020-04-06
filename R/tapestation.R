@@ -64,7 +64,7 @@ read.tapestation.gel.image <- function(gel.image.file, n.lanes) {
 	# extract fluorescence values by lane
 	average.lane.width <- (ncol(gel.image.rgb) - LEFT.MARGIN - RIGHT.MARGIN) / n.lanes
 	lane.pixels <- gel.image.rgb[
-		(end.of.top.highlight + 1):(start.of.bottom.highlight - 1),
+		(start.of.bottom.highlight - 1):(end.of.top.highlight + 1), # reverse rows to put fastest migration first like Bioanalyzer
 		LEFT.MARGIN + 1 + round(average.lane.width * (1:n.lanes - 1 + lane.center)),
 	]
 	n.readings <- nrow(lane.pixels)
@@ -77,7 +77,7 @@ read.tapestation.gel.image <- function(gel.image.file, n.lanes) {
 	data.frame(
 		sample.index =  rep(1:n.lanes, each = n.readings),
 		distance =      n.readings:1 / n.readings,
-		fluorescence =  as.vector(1 - lane.pixels[n.readings:1,,1]) # subtract from 1 because it's a negative; reverse rows to put fastest migration first like Bioanalyzer; use only red channel
+		fluorescence =  as.vector(1 - lane.pixels[,,1]) # subtract from 1 because it's a negative; use only red channel
 	)
 }
 
