@@ -1,6 +1,4 @@
 # hardcoded colors
-RGB.UPPER.MARKER <-  c(128,   0, 128)  # upper marker is purple
-RGB.LOWER.MARKER <-  c(  0, 128,   0)  # lower marker is green
 RGB.HIGHLIGHT <-     c(209, 228, 250)  # highlight around selected lane is light blue
 RGB.GOOD <-          c(138, 208, 160)  # label for high RIN is green
 RGB.MEDIUM <-        c(255, 237, 101)  # label for medium RIN is yellow
@@ -41,9 +39,6 @@ read.tapestation.gel.image <- function(gel.image.file, n.lanes) {
 	gel.image.rgb <- readPNG(readBin(gel.image.con, what = "raw", n = 25E6)) # safe overestimate of the maximum size (slightly above 4K resolution @ 24 bits uncompressed)
 	close(gel.image.con) # if not explicitly closed, R gives a warning
 	# note: this is in the form (y, x, channel); [1,1,] is the upper left corner
-	
-	# stop if markers are overlaid
-	if (any(find.matching.pixels(gel.image.rgb, RGB.LOWER.MARKER) | find.matching.pixels(gel.image.rgb, RGB.UPPER.MARKER))) stop('Marker bands detected in gel image. Please re-export it after unchecking "Show Marker Annotations".')
 	
 	# find gel boundaries
 	position.is.highlight <- find.matching.pixels(gel.image.rgb, RGB.HIGHLIGHT)
