@@ -11,9 +11,15 @@ WARNING.PAD <- 10 # extra pixels to discard on both sides of a warning label in 
 
 
 # find all pixels in an RGB array from readPNG, with values in [0,1], that match a given RGB trio, with values in [0, 255]
-find.matching.pixels <- function(rgb.image, rgb.values) {
+find.matching.pixels.mat <- function(rgb.mat, rgb.values) {
 	rgb.fractions <- rgb.values / 255
-	return(rgb.image[,,1] == rgb.fractions[1] & rgb.image[,,2] == rgb.fractions[2] & rgb.image[,,3] == rgb.fractions[3])
+	return(rgb.mat[,,1] == rgb.fractions[1] & rgb.mat[,,2] == rgb.fractions[2] & rgb.mat[,,3] == rgb.fractions[3])
+}
+
+# version for a "vector" (actually a matrix with one spatial dimension and one RGB channel dimension)
+find.matching.pixels.vec <- function(rgb.vec, rgb.values) {
+	rgb.fractions <- rgb.values / 255
+	return(rgb.vec[,1] == rgb.fractions[1] & rgb.vec[,2] == rgb.fractions[2] & rgb.vec[,3] == rgb.fractions[3])
 }
 
 
@@ -41,18 +47,16 @@ read.tapestation.gel.image <- function(gel.image.file, n.lanes) {
 	# note: this is in the form (y, x, channel); [1,1,] is the upper left corner
 	
 	# find gel boundaries
-	position.is.highlight <- find.matching.pixels(gel.image.rgb, RGB.HIGHLIGHT)
-	highlight.cols <- which(position.is.highlight[1,]) # use only the first pixel row to find the highlight
+	highlight.cols <- which(find.matching.pixels.vec(gel.image.rgb[1,,], RGB.HIGHLIGHT)) # use only the first pixel row to find the highlight
 	stopifnot(all(diff(highlight.cols) == 1)) # assume the highlight is continuous in the first pixel row
 	highlighted.lane.width <- length(highlight.cols)
-	highlight.subset <- position.is.highlight[,highlight.cols]
-	highlight.rows <- which(rowSums(highlight.subset) == highlighted.lane.width) # find all pixel rows with full highlight (will miss ones with annotation text over them)
+	highlighted.subset <- gel.image.rgb[,highlight.cols,]
+	highlight.rows <- which(rowSums(find.matching.pixels.mat(highlighted.subset, RGB.HIGHLIGHT)) == highlighted.lane.width) # find all pixel rows with full highlight (will miss ones with annotation text over them)
 	top.highlight.rows <- highlight.rows[highlight.rows < nrow(gel.image.rgb) / 2]
 	end.of.top.highlight <- top.highlight.rows[length(top.highlight.rows)] # assume it's the last row in the top half
-	highlighted.positions <- gel.image.rgb[,highlight.cols,]
-	subposition.is.quality.label <- find.matching.pixels(highlighted.positions, RGB.GOOD) | find.matching.pixels(highlighted.positions, RGB.MEDIUM) | find.matching.pixels(highlighted.positions, RGB.BAD)
+	subposition.is.quality.label <- find.matching.pixels.mat(highlighted.subset, RGB.GOOD) | find.matching.pixels.mat(highlighted.subset, RGB.MEDIUM) | find.matching.pixels.mat(highlighted.subset, RGB.BAD)
 	start.of.bottom.highlight <- if (any(subposition.is.quality.label)) which(rowSums(subposition.is.quality.label) > 0)[1] else highlight.rows[length(top.highlight.rows) + 1] # quality label supersedes any blue highlight
-	highlight.border.offsets <- which(highlight.subset[end.of.top.highlight + 1,]) # sometimes will be empty if there's only one pixel of border and the color is off because of antialiasing, but we can live with that much error
+	highlight.border.offsets <- which(find.matching.pixels.vec(highlighted.subset[end.of.top.highlight + 1,,], RGB.HIGHLIGHT)) # sometimes will be empty if there's only one pixel of border and the color is off because of antialiasing, but we can live with that much error
 	stopifnot(length(highlight.border.offsets < 2) || all(diff(highlight.border.offsets) == 1)) # assume the border is contiguous
 	stopifnot(length(highlight.border.offsets) == 0 || (highlight.border.offsets[1] == 1 || highlight.border.offsets[length(highlight.border.offsets)] == highlighted.lane.width)) # assume the border is on one edge or the other
 	lane.center <- ((if (1 %in% highlight.border.offsets) highlight.border.offsets[length(highlight.border.offsets)] else 0) +(highlighted.lane.width - length(highlight.border.offsets)) / 2) / highlighted.lane.width # approximate x-position of the center of the lane, from the left, as a proportion of the total width
@@ -73,7 +77,7 @@ read.tapestation.gel.image <- function(gel.image.file, n.lanes) {
 	data.frame(
 		sample.index =  rep(1:n.lanes, each = n.readings),
 		distance =      n.readings:1 / n.readings,
-		fluorescence =  1 - as.vector(lane.pixels[n.readings:1,,1]) # subtract from 1 because it's a negative; reverse rows to put fastest migration first like Bioanalyzer; use only red channel
+		fluorescence =  as.vector(1 - lane.pixels[n.readings:1,,1]) # subtract from 1 because it's a negative; reverse rows to put fastest migration first like Bioanalyzer; use only red channel
 	)
 }
 
