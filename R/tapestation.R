@@ -105,9 +105,14 @@ read.tapestation.xml <- function(xml.file) {
  	xml.root <- xmlRoot(xmlParse(xml.file))
  	
  	assay.info <- list(
- 		file.name =      xmlValue(xml.root[["FileInformation"]][["FileName"]]),
- 		creation.date =  xmlValue(xml.root[["FileInformation"]][["RunEndDate"]]),
- 		assay.name =     xmlValue(xml.root[["FileInformation"]][["Assay"]])
+ 		file.name =           xmlValue(xml.root[["FileInformation"]][["FileName"]]),
+ 		creation.date =       xmlValue(xml.root[["FileInformation"]][["RunEndDate"]]),
+ 		assay.name =          xmlValue(xml.root[["FileInformation"]][["Assay"]]),
+ 		assay.type =          NULL,
+ 		length.unit =         NULL,
+ 		concentration.unit =  NULL,
+ 		molarity.unit =       NULL,
+ 		fit =                 NULL
  	)
  	# try to guess the assay type from the name
  	if (grepl("RNA", assay.info$assay.name)) {
@@ -224,6 +229,7 @@ read.tapestation <- function(xml.file, gel.image.file = NULL, fit = "spline") {
 	
 	parsed.data <- read.tapestation.xml(xml.file)
 	stopifnot(length(unique(parsed.data$samples$batch)) == 1)
+	parsed.data$assay.info$fit <- fit
 	batch <- parsed.data$samples$batch[1]
 	result <- structure(list(
 		data = read.tapestation.gel.image(gel.image.file, nrow(parsed.data$samples)),

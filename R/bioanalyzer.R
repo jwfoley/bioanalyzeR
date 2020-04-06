@@ -15,7 +15,9 @@ read.bioanalyzer <- function(xml.file, fit = "spline") {
 		assay.name =          xmlValue(chip.root[["AssayHeader"]][["Title"]]),
 		assay.type =          xmlValue(chip.root[["AssayHeader"]][["Class"]]),
 		length.unit =         xmlValue(chip.root[["AssayBody"]][["DAAssaySetpoints"]][["DAMAssayInfoMolecular"]][["SizeUnit"]]),
-		concentration.unit =  xmlValue(chip.root[["AssayBody"]][["DAAssaySetpoints"]][["DAMAssayInfoMolecular"]][["ConcentrationUnit"]])
+		concentration.unit =  xmlValue(chip.root[["AssayBody"]][["DAAssaySetpoints"]][["DAMAssayInfoMolecular"]][["ConcentrationUnit"]]),
+		molarity.unit =       NULL,
+		fit =                 fit
 	)
 	# hardcode the molarity unit depending on concentration unit, otherwise the MW scales will be wrong
 	assay.info$molarity.unit <- switch(assay.info$concentration.unit,
