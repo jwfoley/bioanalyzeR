@@ -93,10 +93,9 @@ plotting$add_argument("--ylim",
 	nargs = 2,
 	metavar = c("MIN", "MAX")
 )
-plotting$add_argument("--peak_fill",
-	help = "color of peaks",
-	default = "darkred",
-	metavar = "COLOR"
+plotting$add_argument("--hide_peaks",
+	help = "don't fill the area under peaks",
+	action = "store_true"
 )
 plotting$add_argument("--region_alpha",
 	help = "alpha of region highlights",
@@ -209,7 +208,7 @@ if (! is.null(args$plot_file)) {
 			lower.marker.spread = args$lower_marker_spread,
 			xlim = if (! is.null(args$xlim)) args$xlim else c(NA, NA),
 			ylim = if (! is.null(args$ylim)) args$ylim else c(NA, NA),
-			peak.fill = args$peak_fill,
+			show.peaks = ! args$hide_peaks,
 			region.alpha = args$region_alpha,
 			area.alpha = args$area_alpha,
 			title = args$title,
