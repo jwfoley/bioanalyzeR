@@ -16,7 +16,7 @@ NULL
 integrate.peaks <- function(
 	electrophoresis,
 	sum.variable = "concentration"
-) sapply(1:nrow(electrophoresis$peaks), function(peak) sum(electrophoresis$data[[sum.variable]][which(in.peak(electrophoresis, peak))]))
+) tapply(electrophoresis$data[[sum.variable]], in.peaks(electrophoresis), sum)
 
 
 #' @rdname integrate.peaks.regions
@@ -24,7 +24,7 @@ integrate.peaks <- function(
 integrate.regions <- function(
 	electrophoresis,
 	sum.variable = "concentration"
-) sapply(1:nrow(electrophoresis$regions), function(region) sum(electrophoresis$data[[sum.variable]][which(in.region(electrophoresis, region))]))
+) tapply(electrophoresis$data[[sum.variable]], in.regions(electrophoresis), sum)
 
 
 #' Integrate a variable in a custom region
