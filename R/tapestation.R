@@ -1,3 +1,7 @@
+# names given to marker peaks
+LOWER.MARKER.NAMES <- c("Lower Marker", "edited Lower Marker")
+UPPER.MARKER.NAMES <- c("Upper Marker", "edited Upper Marker")
+
 # hardcoded colors
 RGB.HIGHLIGHT <-     c(209, 228, 250)  # highlight around selected lane is light blue
 RGB.GOOD <-          c(138, 208, 160)  # label for high RIN is green
@@ -238,7 +242,7 @@ read.tapestation <- function(xml.file, gel.image.file = NULL, fit = "spline") {
 	}
 	
 	# calculate relative distances
-	is.lower.marker <- result$peaks$peak.observations %in% c("Lower Marker", "edited Lower Marker")
+	is.lower.marker <- result$peaks$peak.observations %in% LOWER.MARKER.NAMES
 	marker.distances <- data.frame(lower = sapply(1:nrow(result$samples), function(i) {
 		distance <- result$peaks$distance[is.lower.marker & result$peaks$sample.index == i]
 		if (length(distance) == 0) {
@@ -249,7 +253,7 @@ read.tapestation <- function(xml.file, gel.image.file = NULL, fit = "spline") {
 			stop(paste("multiple lower marker peaks for sample", i))
 		}
 	}))
-	is.upper.marker <- result$peaks$peak.observations %in% c("Upper Marker", "edited Upper Marker")
+	is.upper.marker <- result$peaks$peak.observations %in% UPPER.MARKER.NAMES
 	if (sum(is.upper.marker) == 0) { # kit lacks upper marker
 		marker.distances$upper <- 0 # effectively normalizes only to lower marker
 	} else {
@@ -278,8 +282,6 @@ read.tapestation <- function(xml.file, gel.image.file = NULL, fit = "spline") {
 	
 	# prepare more fields to be filled in piecemeal from each ladder
 	result$data$length <- NA
-	result$data$concentration <- NA
-	result$data$molarity <- NA
 	result$peaks$lower.length <- NA
 	result$peaks$upper.length <- NA
 	if (! is.null(result$regions)) {
@@ -288,16 +290,8 @@ read.tapestation <- function(xml.file, gel.image.file = NULL, fit = "spline") {
 	}
 	result$mobility.functions <- list(list())
 	names(result$mobility.functions) <- batch
-	result$mass.coefficients <- rep(NA, nrow(result$samples))
-	data.calibration <- cbind(result$data, do.call(rbind, lapply(1:nrow(result$samples), function(i) {
-		which.this.sample <- result$data$sample.index == i
-		data.frame(
-			delta.fluorescence = c(NA, diff(result$data$fluorescence[which.this.sample])),
-			delta.distance = c(NA, -diff(result$data$distance[which.this.sample]))
-		)
-	})))
-	# estimate area under each measurement with the trapezoidal rule; to simplify math, each point's sum is for the trapezoid to the left of it
-	data.calibration$area <- (2 * data.calibration$fluorescence - data.calibration$delta.fluorescence) * data.calibration$delta.distance
+	
+	# fit a mobility model for each ladder and apply it to the appropriate samples
 	for (ladder.well in unique(result$samples$ladder.well)) {
 		which.ladder.index <- which(result$samples$well.number == ladder.well)
 		peaks.ladder <- subset(result$peaks, sample.index == which.ladder.index)
@@ -335,24 +329,31 @@ read.tapestation <- function(xml.file, gel.image.file = NULL, fit = "spline") {
 			result$regions$lower.relative.distance[which.regions] <- standard.curve.inverse(result$regions$upper.length[which.regions])
 			result$regions$upper.relative.distance[which.regions] <- standard.curve.inverse(result$regions$lower.length[which.regions])
 		}
-		
-		# convert to molarity
-		# first solve for a coefficient that relates known masses (known molarities scaled by length) to area under the electropherogram peaks, then apply that coefficient to each individual measurement
-		# this is done by fitting a one-parameter model on the non-marker peaks of the ladder, because the marker peaks in all samples are unreadable (blocked by green and purple bands)
-		# preferably it would be scaled to each sample's own markers, but that's impossible because the markers are unreadable! and we can't even use their Agilent-reported molarity estimates or areas to scale relative to the ladder because those are always normalized to the upper marker! (which is often the one that's contaminated by sample anyway)
-		# so all we can do is normalize to the ladder's non-marker peaks, therefore each sample will be randomly off by some constant scaling factor, but at least molarity comparisons within a sample ought to be accurate
-		peaks.ladder$area <- sapply(1:nrow(peaks.ladder), function(i) sum(subset(data.calibration, sample.index == which.ladder.index & distance >= peaks.ladder$lower.distance[i] & distance <= peaks.ladder$upper.distance[i])$area))
-		mass.coefficient <- lm(concentration ~ area - 1, data = peaks.ladder)$coefficients[1]
-		result$mass.coefficients[which.samples] <- mass.coefficient
-		result$data$concentration[which.rows] <- mass.coefficient * data.calibration$area[which.rows]
-		result$data$molarity[which.rows] <- result$data$concentration[which.rows] / molecular.weight(result$data$length[which.rows], parsed.data$assay.info$assay.type) * 1E6 # we're converting ng/uL to nmol/L or pg/uL to pmol/L so we need to scale by 1E6
 	}
-	
 	# convert inferred relative distances of regions back to raw distances
 	if (! is.null(result$regions)) {
 		result$regions$lower.distance <- result$regions$lower.relative.distance * marker.distances$range[result$regions$sample.index] + marker.distances$upper[result$regions$sample.index]
 		result$regions$upper.distance <- result$regions$upper.relative.distance * marker.distances$range[result$regions$sample.index] + marker.distances$upper[result$regions$sample.index]
 	}
+	
+	# convert to concentration and molarity 
+	data.calibration <- cbind(result$data, peak = in.peaks(result), do.call(rbind, by(result$data, result$data$sample.index, function(data.subset) data.frame(
+		delta.fluorescence = c(NA, diff(data.subset$fluorescence)),
+		delta.distance = c(NA, -diff(data.subset$distance))
+	), simplify = F)))
+	data.calibration$area <- (2 * data.calibration$fluorescence - data.calibration$delta.fluorescence) * data.calibration$delta.distance
+	peaks.calibration <- cbind(result$peaks, area = tapply(data.calibration$area, data.calibration$peak, sum))
+	has.upper.marker <- any(result$peaks$peak.observations %in% UPPER.MARKER.NAMES)
+	# in kits with upper marker, only upper marker's true concentration is given, so calibrate only to that; otherwise, lower marker's true concentration is given so calibrate only to that
+	marker.areas <- do.call(rbind, by(peaks.calibration, peaks.calibration$sample.index, function(peaks.subset) peaks.subset[which(
+		(has.upper.marker & peaks.subset$peak.observations %in% UPPER.MARKER.NAMES) |
+		(! has.upper.marker & peaks.subset$peak.observations %in% LOWER.MARKER.NAMES)
+	), c("concentration", "area")], simplify = F))
+	stopifnot(all(marker.areas$concentration == marker.areas$concentration[1]))
+	# calculate the coefficient that relates known concentrations to area under the electropherograms
+	result$mass.coefficients[1:nrow(result$samples)] <- marker.areas$concentration / marker.areas$area
+	result$data$concentration <- result$mass.coefficients[result$data$sample.index] * data.calibration$area	
+	result$data$molarity <- result$data$concentration / molecular.weight(result$data$length, parsed.data$assay.info$assay.type) * 1E6 # we're converting ng/uL to nmol/L or pg/uL to pmol/L so we need to scale by 1E6
 	
 	result
 }
