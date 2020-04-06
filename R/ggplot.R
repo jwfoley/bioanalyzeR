@@ -174,11 +174,10 @@ qplot.electrophoresis <- function(
 	if (! is.null(facets) & show.peaks & ! is.null(electrophoresis$peaks)) {
 		peak.data <- subset(cbind(electrophoresis$data, peak = in.peaks(electrophoresis)), ! is.na(peak))
 		peak.data$peak.observations <- electrophoresis$peaks$peak.observations[peak.data$peak]
-		this.plot <- this.plot + geom_area((if (length(unique(peak.data$peak.observations)) > 1)
-			aes(x = x.value, y = y.scaled, group = peak, fill = peak.observations)
+		this.plot <- this.plot + if (length(unique(peak.data$peak.observations)) > 1)
+			geom_area(aes(x = x.value, y = y.scaled, group = peak, fill = peak.observations), data = peak.data)
 		else
-			aes(x = x.value, y = y.scaled, group = peak)
-		), data = peak.data)
+			geom_area(aes(x = x.value, y = y.scaled, group = peak), data = peak.data, fill = "darkgray")
 	}
 	
 	# add faceting
