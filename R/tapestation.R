@@ -352,8 +352,8 @@ read.tapestation <- function(xml.file, gel.image.file = NULL, fit = "spline") {
 	), c("concentration", "area")], simplify = F))
 	stopifnot(all(marker.areas$concentration == marker.areas$concentration[1]))
 	# calculate the coefficient that relates known concentrations to area under the electropherograms
-	result$mass.coefficients[1:nrow(result$samples)] <- marker.areas$concentration / marker.areas$area
-	result$data$concentration <- result$mass.coefficients[result$data$sample.index] * data.calibration$area	
+	mass.coefficients <- marker.areas$concentration / marker.areas$area
+	result$data$concentration <- mass.coefficients[result$data$sample.index] * data.calibration$area	
 	result$data$molarity <- result$data$concentration / molecular.weight(result$data$length, parsed.data$assay.info$assay.type) * 1E6 # we're converting ng/uL to nmol/L or pg/uL to pmol/L so we need to scale by 1E6
 	
 	result

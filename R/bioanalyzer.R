@@ -90,8 +90,7 @@ read.bioanalyzer <- function(xml.file, fit = "spline") {
 		samples = do.call(rbind, c(lapply(result.list, function(x) x$samples), make.row.names = F)),
 		peaks = do.call(rbind, c(lapply(1:length(result.list), function(i) if (is.null(result.list[[i]]$peaks)) NULL else cbind(sample.index = i, result.list[[i]]$peaks)), make.row.names = F)),
 		regions = NULL,
-		mobility.functions = NULL,
-		mass.coefficients = NULL
+		mobility.functions = NULL
 	), class = "electrophoresis")
 	if (all(is.na(result$samples$RIN))) result$samples$RIN <- NULL
 	alignment.values <- lapply(result.list, function(x) x$alignment.values)
@@ -178,9 +177,9 @@ read.bioanalyzer <- function(xml.file, fit = "spline") {
 		(peaks.subset$peak.observations == "Lower Marker" & peaks.subset$concentration == defined.ladder.peaks$Concentration[1]) |
 		(peaks.subset$peak.observations == "Upper Marker" & peaks.subset$concentration == defined.ladder.peaks$Concentration[nrow(defined.ladder.peaks)])
 	)], simplify = F)
-	result$mass.coefficients <- ladder.mass.coefficient * sapply(marker.areas, function(these.areas) mean(marker.areas[[which.ladder]] / these.areas)) # if there are two markers per sample, this gives the mean area ratio relative to their counterparts in the ladder well; if only one marker, the mean ratio is just the ratio 
+	mass.coefficients <- ladder.mass.coefficient * sapply(marker.areas, function(these.areas) mean(marker.areas[[which.ladder]] / these.areas)) # if there are two markers per sample, this gives the mean area ratio relative to their counterparts in the ladder well; if only one marker, the mean ratio is just the ratio 
 	# apply this coefficient to get the concentration of each trapezoid
-	result$data$concentration <- data.calibration$corrected.area * result$mass.coefficients[result$data$sample.index]
+	result$data$concentration <- data.calibration$corrected.area * mass.coefficients[result$data$sample.index]
 	# finally scale by molecular weight to get the molarity
 	result$data$molarity <- result$data$concentration / molecular.weight(result$data$length, assay.info$assay.type) * 1E6 # we're converting ng/uL to nmol/L or pg/uL to pmol/L so we need to scale by 1E6
 	

@@ -31,8 +31,7 @@ rbind.electrophoresis <- function(...) {
 		samples = do.call(rbind, lapply(arg.list, function(x) x$samples)),
 		peaks = do.call(rbind, lapply(arg.list, function(x) x$peaks)),
 		regions = do.call(rbind, lapply(arg.list, function(x) x$regions)),
-		mobility.functions = do.call(c, lapply(arg.list, function(x) x$mobility.functions)),
-		mass.coefficients = do.call(c, lapply(arg.list, function(x) x$mass.coefficients))
+		mobility.functions = do.call(c, lapply(arg.list, function(x) x$mobility.functions))
 	), class = "electrophoresis")
 }
 
@@ -98,7 +97,6 @@ subset.electrophoresis <- function(electrophoresis, ...) {
 		if (nrow(electrophoresis$regions) == 0) electrophoresis$regions <- NULL
 	}
 #	electrophoresis$mobility.functions <- 
-	if (! is.null(electrophoresis$mass.coefficients)) electrophoresis$mass.coefficients <- electrophoresis$mass.coefficients[remaining.samples]
 	
 	# renumber sample indices
 	new.indices <- 1:nrow(electrophoresis$samples)
