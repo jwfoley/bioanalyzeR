@@ -9,7 +9,7 @@
 \usage{
 read.bioanalyzer(xml.file, fit = "spline")
 
-read.electrophoresis(..., fit = "spline")
+read.electrophoresis(..., fit = "spline", mc.cores = detectCores())
 
 read.tapestation(xml.file, gel.image.file = NULL, fit = "spline")
 }
@@ -19,6 +19,8 @@ read.tapestation(xml.file, gel.image.file = NULL, fit = "spline")
 \item{fit}{The method used to fit the mobility model of molecule length vs. migration distance, one of \code{"interpolation"} (linear interpolation via \code{\link{approxfun}}), \code{"spline"} (splines via \code{\link{splinefun}}), or \code{"regression"} (log-linear regression via \code{\link{lm}} with the model \code{relative.distance ~ log(length)}).}
 
 \item{...}{One or more XML files exported from the Bioanalyzer or TapeStation software. TapeStation XML files must have corresponding PNG files with matching names.}
+
+\item{mc.cores}{Maximum number of CPU cores to use (passed to \code{\link[parallel]{mclapply}}). Only one core is used per input file.}
 
 \item{gel.image.file}{The filename of a TapeStation gel image with blue highlight, in PNG format. If \code{NULL}, the gel image file is expected to have the same name as the XML file with a different extension, e.g. \code{experiment1.xml} and \code{experiment1.png}, so if you name your files in that pattern you don't need to fill out this argument.}
 }

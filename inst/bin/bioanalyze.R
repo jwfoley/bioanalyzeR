@@ -1,7 +1,8 @@
 #! /usr/bin/Rscript
 
-library(bioanalyzeR)
+library(parallel)
 library(argparse)
+library(bioanalyzeR)
 
 parser <- ArgumentParser(description = "Simple automation of bioanalyzeR functions.")
 
@@ -28,6 +29,12 @@ files$add_argument("--fit",
 	help = "mobility standard curve method",
 	default = "spline",
 	choices = c("spline", "interpolation", "regression")
+)
+files$add_argument("--mc_cores",
+	help = "maximum CPU cores",
+	default = detectCores(),
+	type = "integer",
+	metavar = "N"
 )
 
 plotting <- parser$add_argument_group("plotting", "Settings for the electropherogram plot. See help(qplot.electrophoresis) for more information.")
@@ -166,7 +173,7 @@ qc$add_argument("--qc",
 
 args <- parser$parse_args()
 
-data <- do.call(read.electrophoresis, c(as.list(args$xml_files), fit = args$fit))
+data <- do.call(read.electrophoresis, c(as.list(args$xml_files), fit = args$fit, mc.cores = args$mc_cores))
 
 # integration and table generation
 result <- data$samples
