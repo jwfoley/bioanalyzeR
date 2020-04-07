@@ -4,11 +4,11 @@ Simple R functions for importing and analyzing electrophoresis data from an Agil
 
 Easy way to get the newest release (includes 30 MB of demo data):
 
-    > install.packages("https://github.com/jwfoley/bioanalyzeR/releases/download/v0.1.0/bioanalyzeR_0.1.0.tar.gz")
+    > install.packages("https://github.com/jwfoley/bioanalyzeR/releases/download/v0.2.0/bioanalyzeR_0.2.0.tar.gz")
 
 Easy way without the demo data:
 
-    > install.packages("https://github.com/jwfoley/bioanalyzeR/releases/download/v0.1.0/bioanalyzeR_0.1.0-no_data.tar.gz")
+    > install.packages("https://github.com/jwfoley/bioanalyzeR/releases/download/v0.2.0/bioanalyzeR_0.2.0-no_data.tar.gz")
 
 For hackers (it may take a minute to build the vignette):
 
