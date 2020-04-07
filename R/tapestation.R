@@ -1,16 +1,29 @@
+# names given to marker peaks
+LOWER.MARKER.NAMES <- c("Lower Marker", "edited Lower Marker")
+UPPER.MARKER.NAMES <- c("Upper Marker", "edited Upper Marker")
+
 # hardcoded colors
-RGB.UPPER.MARKER <-  c(128,   0, 128)  # upper marker is purple
-RGB.LOWER.MARKER <-  c(  0, 128,   0)  # lower marker is green
 RGB.HIGHLIGHT <-     c(209, 228, 250)  # highlight around selected lane is light blue
 RGB.GOOD <-          c(138, 208, 160)  # label for high RIN is green
 RGB.MEDIUM <-        c(255, 237, 101)  # label for medium RIN is yellow
 RGB.BAD <-           c(255, 106,  71)  # label for low RIN is red
 
+# hardcoded margin widths, in pixels
+LEFT.MARGIN <- 8
+RIGHT.MARGIN <- 15
+WARNING.PAD <- 10 # extra pixels to discard on both sides of a warning label in a gel lane
+
 
 # find all pixels in an RGB array from readPNG, with values in [0,1], that match a given RGB trio, with values in [0, 255]
-find.matching.pixels <- function(rgb.image, rgb.values) {
+find.matching.pixels.mat <- function(rgb.mat, rgb.values) {
 	rgb.fractions <- rgb.values / 255
-	return(rgb.image[,,1] == rgb.fractions[1] & rgb.image[,,2] == rgb.fractions[2] & rgb.image[,,3] == rgb.fractions[3])
+	return(rgb.mat[,,1] == rgb.fractions[1] & rgb.mat[,,2] == rgb.fractions[2] & rgb.mat[,,3] == rgb.fractions[3])
+}
+
+# version for a "vector" (actually a matrix with one spatial dimension and one RGB channel dimension)
+find.matching.pixels.vec <- function(rgb.vec, rgb.values) {
+	rgb.fractions <- rgb.values / 255
+	return(rgb.vec[,1] == rgb.fractions[1] & rgb.vec[,2] == rgb.fractions[2] & rgb.vec[,3] == rgb.fractions[3])
 }
 
 
@@ -20,9 +33,10 @@ find.matching.pixels <- function(rgb.image, rgb.values) {
 #'
 #' Because the gel image alone contains little metadata, this function returns only a simple data frame containing the fluorescence intensity vs. migration distance at every point in every lane of the gel (numbered from left to right). It is less useful by itself than when it is called inside \code{\link{read.tapestation}}.
 #'
-#' Note: This function attempts to find the marker bands by their special color. But because this color is overlaid on the gel image, it is impossible to read the fluorescence intensity inside the markers, so it is reported as NA.
+#' Note: Fluorescence is reported only for one column of pixels down the center of each lane. If there are annotations on the gel image, such as the yellow warning symbol, those pixels are reported as NA, but usually they are at the top of the image outside the reportable range anyway.
 #'
 #' @param gel.image.file The filename of a TapeStation gel image with blue highlight, in PNG format. The filename can be a URL.
+#' @param n.lanes The number of lanes in the gel image.
 #'
 #' @return A data frame with one row for each vertical pixel of each gel lane.
 #' 
@@ -30,46 +44,44 @@ find.matching.pixels <- function(rgb.image, rgb.values) {
 #'
 #' @export
 #' @importFrom png readPNG
-read.tapestation.gel.image <- function(gel.image.file) {
-	gel.image.con <- file(gel.image.file, "rb", raw = T)
-	gel.image.rgb <- readPNG(readBin(gel.image.con, what = "raw", n = 1E10)) # workaround to allow URLs (1E10 should be a safe overestimate of the maximum size)
+read.tapestation.gel.image <- function(gel.image.file, n.lanes) {
+	gel.image.con <- file(gel.image.file, "rb", raw = T) # workaround to allow URLs 
+	gel.image.rgb <- readPNG(readBin(gel.image.con, what = "raw", n = 25E6)) # safe overestimate of the maximum size (slightly above 4K resolution @ 24 bits uncompressed)
 	close(gel.image.con) # if not explicitly closed, R gives a warning
 	# note: this is in the form (y, x, channel); [1,1,] is the upper left corner
 	
-	# find lower marker
-	pixel.is.lower.marker <- find.matching.pixels(gel.image.rgb, RGB.LOWER.MARKER)
-	x.is.lower.marker <- apply(pixel.is.lower.marker, 2, any)
-	
-	# use lower marker bands to identify a single representative x-value for each gel lane
-	x.gel <- which(diff(c(FALSE, x.is.lower.marker)) == 1) # guess the start x-positions of the lanes based on where there are gaps between lower markers; add this FALSE so that column 1 will test positive if necessary, and this also offsets all the indices correctly
-	lane.spacings <- diff(x.gel)
-	if (diff(range(lane.spacings)) > 1) { # the guessed lanes are not evenly spaced, even tolerating 1 pixel of antialiasing error
-		lane.spacing.freq <- table(lane.spacings)
-		estimated.lane.width <- as.integer(names(lane.spacing.freq)[which.max(lane.spacing.freq)]) # guess that the most common width is the correct one (assuming there aren't lots of problems in this batch!)
-		n.lanes <- floor((dim(gel.image.rgb)[2] - x.gel[1]) / estimated.lane.width) # assume the first edge is definitely called correctly (should only be whitespace to its left) and any whitespace to the right is narrower than a lane
-		x.gel <- x.gel[1] + estimated.lane.width * 1:n.lanes - round(estimated.lane.width / 2) # aim for the centers of the lanes because we might have slight error
-	}
-	gel.image.rgb.reduced <- gel.image.rgb[,x.gel,]
-			
 	# find gel boundaries
-	position.is.highlight <- find.matching.pixels(gel.image.rgb.reduced, RGB.HIGHLIGHT)
-	lane.with.borders <- which(position.is.highlight[1,]) # assuming there will be a highlight in the top pixel row
-	stopifnot(length(lane.with.borders) == 1) # need one highlighted lane to find gel borders
-	position.is.label <- find.matching.pixels(gel.image.rgb.reduced, RGB.GOOD) |
-		find.matching.pixels(gel.image.rgb.reduced, RGB.MEDIUM) |
-		find.matching.pixels(gel.image.rgb.reduced, RGB.BAD)
-	border.transition <- diff((position.is.highlight | position.is.label)[,lane.with.borders])
-	y.gel.start <- which(border.transition == -1)[1] - 1
-	y.gel.end <- which(border.transition == 1)[1] - 1
-
-	# now finally extract the intensities!
-	result.rgb <- gel.image.rgb.reduced[y.gel.end:y.gel.start,,] # only the actual data values; reverse order so it goes bottom to top like peak calls and distance
-	fluorescence.matrix <- 1 - result.rgb[,,1] # only get red fluorescence because all channels are equal in the places we care about; subtract from 1 because it's a negative (red decreases in the protein gels too even though they're blue instead of black)
-	fluorescence.matrix[result.rgb[,,1] != result.rgb[,,2]] <- NA # set non-data pixels (obscured by marker band color) to NA; assume red channel always equals green channel, but not necessary blue because protein gels use blue
+	highlight.cols <- which(find.matching.pixels.vec(gel.image.rgb[1,,], RGB.HIGHLIGHT)) # use only the first pixel row to find the highlight
+	stopifnot(all(diff(highlight.cols) == 1)) # assume the highlight is continuous in the first pixel row
+	highlighted.lane.width <- length(highlight.cols)
+	highlighted.subset <- gel.image.rgb[,highlight.cols,]
+	highlight.rows <- which(rowSums(find.matching.pixels.mat(highlighted.subset, RGB.HIGHLIGHT)) == highlighted.lane.width) # find all pixel rows with full highlight (will miss ones with annotation text over them)
+	top.highlight.rows <- highlight.rows[highlight.rows < nrow(gel.image.rgb) / 2]
+	end.of.top.highlight <- top.highlight.rows[length(top.highlight.rows)] # assume it's the last row in the top half
+	subposition.is.quality.label <- find.matching.pixels.mat(highlighted.subset, RGB.GOOD) | find.matching.pixels.mat(highlighted.subset, RGB.MEDIUM) | find.matching.pixels.mat(highlighted.subset, RGB.BAD)
+	start.of.bottom.highlight <- if (any(subposition.is.quality.label)) which(rowSums(subposition.is.quality.label) > 0)[1] else highlight.rows[length(top.highlight.rows) + 1] # quality label supersedes any blue highlight
+	highlight.border.offsets <- which(find.matching.pixels.vec(highlighted.subset[end.of.top.highlight + 1,,], RGB.HIGHLIGHT)) # sometimes will be empty if there's only one pixel of border and the color is off because of antialiasing, but we can live with that much error
+	stopifnot(length(highlight.border.offsets < 2) || all(diff(highlight.border.offsets) == 1)) # assume the border is contiguous
+	stopifnot(length(highlight.border.offsets) == 0 || (highlight.border.offsets[1] == 1 || highlight.border.offsets[length(highlight.border.offsets)] == highlighted.lane.width)) # assume the border is on one edge or the other
+	lane.center <- ((if (1 %in% highlight.border.offsets) highlight.border.offsets[length(highlight.border.offsets)] else 0) +(highlighted.lane.width - length(highlight.border.offsets)) / 2) / highlighted.lane.width # approximate x-position of the center of the lane, from the left, as a proportion of the total width
+	
+	# extract fluorescence values by lane
+	average.lane.width <- (ncol(gel.image.rgb) - LEFT.MARGIN - RIGHT.MARGIN) / n.lanes
+	lane.pixels <- gel.image.rgb[
+		(start.of.bottom.highlight - 1):(end.of.top.highlight + 1), # reverse rows to put fastest migration first like Bioanalyzer
+		LEFT.MARGIN + 1 + round(average.lane.width * (1:n.lanes - 1 + lane.center)),
+	]
+	n.readings <- nrow(lane.pixels)
+	bad.pixels <- ! (lane.pixels[,,1] == lane.pixels[,,2] & lane.pixels[,,1] == lane.pixels[,,3]) # find non-grayscale pixels, indicating annotations that block the data
+	for (col in which(colSums(bad.pixels) > 0)) {
+		bad.rows <- which(bad.pixels[,col])
+		lane.pixels[(min(bad.rows) - WARNING.PAD):(max(bad.rows) + WARNING.PAD), col,] <- NA # set bad pixels and pad around them to NA
+	}
+	
 	data.frame(
-		sample.index =  rep(1:length(x.gel), each = nrow(fluorescence.matrix)),
-		distance =      nrow(fluorescence.matrix):1 / nrow(fluorescence.matrix),
-		fluorescence =  as.vector(fluorescence.matrix)
+		sample.index =  rep(1:n.lanes, each = n.readings),
+		distance =      n.readings:1 / n.readings,
+		fluorescence =  as.vector(1 - lane.pixels[,,1]) # subtract from 1 because it's a negative; use only red channel
 	)
 }
 
@@ -93,9 +105,14 @@ read.tapestation.xml <- function(xml.file) {
  	xml.root <- xmlRoot(xmlParse(xml.file))
  	
  	assay.info <- list(
- 		file.name =      xmlValue(xml.root[["FileInformation"]][["FileName"]]),
- 		creation.date =  xmlValue(xml.root[["FileInformation"]][["RunEndDate"]]),
- 		assay.name =     xmlValue(xml.root[["FileInformation"]][["Assay"]])
+ 		file.name =           xmlValue(xml.root[["FileInformation"]][["FileName"]]),
+ 		creation.date =       xmlValue(xml.root[["FileInformation"]][["RunEndDate"]]),
+ 		assay.name =          xmlValue(xml.root[["FileInformation"]][["Assay"]]),
+ 		assay.type =          NULL,
+ 		length.unit =         NULL,
+ 		concentration.unit =  NULL,
+ 		molarity.unit =       NULL,
+ 		fit =                 NULL
  	)
  	# try to guess the assay type from the name
  	if (grepl("RNA", assay.info$assay.name)) {
@@ -212,11 +229,10 @@ read.tapestation <- function(xml.file, gel.image.file = NULL, fit = "spline") {
 	
 	parsed.data <- read.tapestation.xml(xml.file)
 	stopifnot(length(unique(parsed.data$samples$batch)) == 1)
+	parsed.data$assay.info$fit <- fit
 	batch <- parsed.data$samples$batch[1]
-	gel.data <- read.tapestation.gel.image(gel.image.file)
-	stopifnot(length(unique(gel.data$sample.index)) == nrow(parsed.data$samples))
 	result <- structure(list(
-		data = gel.data,
+		data = read.tapestation.gel.image(gel.image.file, nrow(parsed.data$samples)),
 		assay.info = list(parsed.data$assay.info),
 		samples = parsed.data$samples,
 		peaks = parsed.data$peaks,
@@ -232,7 +248,7 @@ read.tapestation <- function(xml.file, gel.image.file = NULL, fit = "spline") {
 	}
 	
 	# calculate relative distances
-	is.lower.marker <- result$peaks$peak.observations %in% c("Lower Marker", "edited Lower Marker")
+	is.lower.marker <- result$peaks$peak.observations %in% LOWER.MARKER.NAMES
 	marker.distances <- data.frame(lower = sapply(1:nrow(result$samples), function(i) {
 		distance <- result$peaks$distance[is.lower.marker & result$peaks$sample.index == i]
 		if (length(distance) == 0) {
@@ -243,7 +259,7 @@ read.tapestation <- function(xml.file, gel.image.file = NULL, fit = "spline") {
 			stop(paste("multiple lower marker peaks for sample", i))
 		}
 	}))
-	is.upper.marker <- result$peaks$peak.observations %in% c("Upper Marker", "edited Upper Marker")
+	is.upper.marker <- result$peaks$peak.observations %in% UPPER.MARKER.NAMES
 	if (sum(is.upper.marker) == 0) { # kit lacks upper marker
 		marker.distances$upper <- 0 # effectively normalizes only to lower marker
 	} else {
@@ -272,8 +288,6 @@ read.tapestation <- function(xml.file, gel.image.file = NULL, fit = "spline") {
 	
 	# prepare more fields to be filled in piecemeal from each ladder
 	result$data$length <- NA
-	result$data$concentration <- NA
-	result$data$molarity <- NA
 	result$peaks$lower.length <- NA
 	result$peaks$upper.length <- NA
 	if (! is.null(result$regions)) {
@@ -282,16 +296,8 @@ read.tapestation <- function(xml.file, gel.image.file = NULL, fit = "spline") {
 	}
 	result$mobility.functions <- list(list())
 	names(result$mobility.functions) <- batch
-	result$mass.coefficients <- rep(NA, nrow(result$samples))
-	data.calibration <- cbind(result$data, do.call(rbind, lapply(1:nrow(result$samples), function(i) {
-		which.this.sample <- result$data$sample.index == i
-		data.frame(
-			delta.fluorescence = c(NA, diff(result$data$fluorescence[which.this.sample])),
-			delta.distance = c(NA, -diff(result$data$distance[which.this.sample]))
-		)
-	})))
-	# estimate area under each measurement with the trapezoidal rule; to simplify math, each point's sum is for the trapezoid to the left of it
-	data.calibration$area <- (2 * data.calibration$fluorescence - data.calibration$delta.fluorescence) * data.calibration$delta.distance
+	
+	# fit a mobility model for each ladder and apply it to the appropriate samples
 	for (ladder.well in unique(result$samples$ladder.well)) {
 		which.ladder.index <- which(result$samples$well.number == ladder.well)
 		peaks.ladder <- subset(result$peaks, sample.index == which.ladder.index)
@@ -318,7 +324,10 @@ read.tapestation <- function(xml.file, gel.image.file = NULL, fit = "spline") {
 		
 		# apply model to raw data
 		result$data$length[which.rows] <- standard.curve.function(result$data$relative.distance[which.rows])
-		result$data$length[! in.custom.region(result$data, min(peaks.ladder$length), max(peaks.ladder$length))] <- NA # avoid extrapolation
+		result$data$length[! (
+			in.custom.region(result$data, min(peaks.ladder$length), max(peaks.ladder$length)) &
+			in.custom.region(result$data, min(peaks.ladder$relative.distance), max(peaks.ladder$relative.distance), bound.variable = "relative.distance")
+		)] <- NA # avoid extrapolation
 		
 		# apply model to peaks
 		result$peaks$lower.length[which.peaks] <- standard.curve.function(result$peaks$upper.relative.distance[which.peaks])
@@ -329,24 +338,32 @@ read.tapestation <- function(xml.file, gel.image.file = NULL, fit = "spline") {
 			result$regions$lower.relative.distance[which.regions] <- standard.curve.inverse(result$regions$upper.length[which.regions])
 			result$regions$upper.relative.distance[which.regions] <- standard.curve.inverse(result$regions$lower.length[which.regions])
 		}
-		
-		# convert to molarity
-		# first solve for a coefficient that relates known masses (known molarities scaled by length) to area under the electropherogram peaks, then apply that coefficient to each individual measurement
-		# this is done by fitting a one-parameter model on the non-marker peaks of the ladder, because the marker peaks in all samples are unreadable (blocked by green and purple bands)
-		# preferably it would be scaled to each sample's own markers, but that's impossible because the markers are unreadable! and we can't even use their Agilent-reported molarity estimates or areas to scale relative to the ladder because those are always normalized to the upper marker! (which is often the one that's contaminated by sample anyway)
-		# so all we can do is normalize to the ladder's non-marker peaks, therefore each sample will be randomly off by some constant scaling factor, but at least molarity comparisons within a sample ought to be accurate
-		peaks.ladder$area <- sapply(1:nrow(peaks.ladder), function(i) sum(subset(data.calibration, sample.index == which.ladder.index & distance >= peaks.ladder$lower.distance[i] & distance <= peaks.ladder$upper.distance[i])$area))
-		mass.coefficient <- lm(concentration ~ area - 1, data = peaks.ladder)$coefficients[1]
-		result$mass.coefficients[which.samples] <- mass.coefficient
-		result$data$concentration[which.rows] <- mass.coefficient * data.calibration$area[which.rows]
-		result$data$molarity[which.rows] <- result$data$concentration[which.rows] / molecular.weight(result$data$length[which.rows], parsed.data$assay.info$assay.type) * 1E6 # we're converting ng/uL to nmol/L or pg/uL to pmol/L so we need to scale by 1E6
 	}
-	
 	# convert inferred relative distances of regions back to raw distances
 	if (! is.null(result$regions)) {
 		result$regions$lower.distance <- result$regions$lower.relative.distance * marker.distances$range[result$regions$sample.index] + marker.distances$upper[result$regions$sample.index]
 		result$regions$upper.distance <- result$regions$upper.relative.distance * marker.distances$range[result$regions$sample.index] + marker.distances$upper[result$regions$sample.index]
 	}
+	
+	# convert to concentration and molarity 
+	data.calibration <- cbind(result$data, peak = in.peaks(result), do.call(rbind, by(result$data, result$data$sample.index, function(data.subset) data.frame(
+		delta.fluorescence = c(NA, diff(data.subset$fluorescence)),
+		delta.distance = c(NA, -diff(data.subset$distance))
+	), simplify = F)))
+	# estimate area under each measurement with the trapezoidal rule; to simplify math, each point's sum is for the trapezoid to the left of it
+	data.calibration$area <- (2 * data.calibration$fluorescence - data.calibration$delta.fluorescence) * data.calibration$delta.distance
+	# in kits with upper marker, only upper marker's true concentration is given, so calibrate only to that; otherwise, lower marker's true concentration is given so calibrate only to that
+	peaks.calibration <- cbind(result$peaks, area = sapply(1:nrow(result$peaks), function(i) sum(data.calibration$area[which(data.calibration$peak == i)]))) # can't use tapply or by because some peaks might not have any area (like gDNA sample wells)
+	has.upper.marker <- any(result$peaks$peak.observations %in% UPPER.MARKER.NAMES)
+	marker.areas <- do.call(rbind, by(peaks.calibration, peaks.calibration$sample.index, function(peaks.subset) peaks.subset[which(
+		(has.upper.marker & peaks.subset$peak.observations %in% UPPER.MARKER.NAMES) |
+		(! has.upper.marker & peaks.subset$peak.observations %in% LOWER.MARKER.NAMES)
+	), c("concentration", "area")], simplify = F))
+	stopifnot(all(marker.areas$concentration == marker.areas$concentration[1]))
+	# calculate the coefficient that relates known concentrations to area under the electropherograms
+	mass.coefficients <- marker.areas$concentration / marker.areas$area
+	result$data$concentration <- mass.coefficients[result$data$sample.index] * data.calibration$area	
+	result$data$molarity <- result$data$concentration / molecular.weight(result$data$length, parsed.data$assay.info$assay.type) * 1E6 # we're converting ng/uL to nmol/L or pg/uL to pmol/L so we need to scale by 1E6
 	
 	result
 }

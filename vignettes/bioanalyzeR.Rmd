@@ -71,10 +71,11 @@ It is important to follow these unusual directions carefully!
 1. Unselect "Aligned", "Scale to Sample", and "Scale to MW Range" if it is not grayed out.
 1. Leave the contrast slider in the middle.
 1. Maximize the window and drag the lower end of the gel image area to make it as tall as possible. At this point you should see all lanes from the run, with the marker bands present but unaligned.
-1. Right-click on a lane near the left end of the gel (it doesn't matter which) and you will see a context menu.
+1. Right-click on any lane of the gel and in the context menu, uncheck "Show Marker Annotations".
+1. Right-click on a lane near the left end of the gel (it doesn't matter which) to bring up the context menu again.
 1. Move your cursor over "Snapshot" but **also over a lane to the right of the one you right-clicked on**.
 1. Left-click "Snapshot". This will copy the gel image to your system clipboard, but you should see also see the newly selected lane become highlighted in light blue.
-1. Open any image editor (e.g. Paint) and paste the image from your clipboard. You should see one lane highlighted in light blue. If not, try taking the snapshot again.
+1. Open any image editor (e.g. Paint) and paste the image from your clipboard. You should see one lane highlighted in light blue and unaligned lanes with no green or purple marker bands. If not, try taking the snapshot again.
 1. Save the gel image as a file in PNG format, preferably with the same name as the XML file and the `.png` extension. E.g. if your XML file is `batch1.xml` then the PNG file should be `batch1.png`.
 
 ![](example_gel_image.png)
@@ -191,7 +192,6 @@ Each `electrophoresis` object contains the main data in its `$data` member and h
 * `peaks` - a data frame of peaks reported by the Agilent software, annotated with their lower and upper boundaries in various scales
 * `regions` - a data frame of regions of interest reported by the Agilent software, annotated with their lower and upper boundaries in varous scales
 * `mobility functions` - a list of model functions, one per ladder used for calibration, to convert migration speed measurements (aligned time or relative distance) into estimated molecule lengths
-* `mass.coefficients` - a list of coefficients, one per sample, to convert area under the curve to estimated mass
 
 You'll notice that many of the values at the beginning of `dna1000$data` are `NA`. This is because the mobility model (the standard curve relating migration speed to molecule length) does not extrapolate to observations below the lower marker or above the upper marker, and the estimates of concentration and molarity depend on the length. We can see some better examples if we look farther down:
 
@@ -265,22 +265,17 @@ This produces plots analogous to the electropherograms in the Agilent software. 
 
 ## Data, peaks, and regions
 
-`qplot.electrophoresis` displays the software-reported peaks as filled area under the curve. You can change the fill color, or stop displaying peaks by setting the color to `NA`:
+`qplot.electrophoresis` displays the software-reported peaks as filled area under the curve. You can stop displaying peaks by setting `show.peaks = FALSE`:
 
 ```{r}
 qplot.electrophoresis(
 	d1000,
-	peak.fill = "yellow",
-	title = "TapeStation D1000 with yellow peaks"
-)
-qplot.electrophoresis(
-	d1000,
-	peak.fill = NA,
+	show.peaks = FALSE,
 	title = "TapeStation D1000 with no peaks"
 )
 ```
 
-Reported regions of interest are shown as semitransparent gray rectangles; you can likewise modify the transparency of these or set it to NA to stop displaying regions:
+Reported regions of interest are shown as semitransparent gray rectangles; you can modify the transparency of these or set it to NA to stop displaying regions:
 
 ```{r}
 qplot.electrophoresis(
@@ -314,7 +309,7 @@ qplot.electrophoresis(
 
 ## Data ranges
 
-We can easily zoom in on an interesting feature by setting the `xlim` or `ylim` arguments (note that you can leave a limit as `NA` to let the software choose):
+You can easily zoom in on an interesting feature by setting the `xlim` or `ylim` arguments (note that you can leave a limit as `NA` to let the software choose):
 
 ```{r}
 qplot.electrophoresis(
@@ -325,7 +320,7 @@ qplot.electrophoresis(
 )
 ```
 
-Or we can use the `scales` argument, which is passed to `ggplot2::facet_wrap` or `ggplot2::facet_grid`, to allow different facets to automatically get different axis scales:
+Or you can use the `scales` argument, which is passed to `ggplot2::facet_wrap` or `ggplot2::facet_grid`, to allow different facets to automatically get different axis scales:
 
 ```{r}
 qplot.electrophoresis(
@@ -336,7 +331,7 @@ qplot.electrophoresis(
 )
 ```
 
-Another difference from the electropherograms in the software is that, by default, the x-axis (molecule length) is in a linear scale. In the Agilent software, data points are simply graphed as they appeared to the instrument and the x-axis labels are roughly (but not exactly; see `stdcrv.mobility` below) logarithmic. We can log-scale the axes with the `log` argument that behaves the same as in `ggplot2::qplot`:
+Another difference from the electropherograms in the software is that, by default, the x-axis (molecule length) is in a linear scale. In the Agilent software, data points are simply graphed as they appeared to the instrument and the x-axis labels are roughly (but not exactly; see `stdcrv.mobility` below) logarithmic. You can log-scale the axes with the `log` argument that behaves the same as in `ggplot2::qplot`:
 
 ```{r}
 qplot.electrophoresis(
@@ -357,7 +352,7 @@ Of course, log-scaling the y-axis gives weird results when the values are fracti
 
 By now you have probably noticed that the y-axis displays concentration rather than fluorescence. In fact it displays concentration per length (the concentration estimate for each point is scaled with the `differential.scale` function) so that the area under a curve, between any two x-values, is directly proportional to the concentration of molecules in that range.
 
-If you change to `y = "fluorescence"` you can see something closer to the electropherograms from the Agilent software:
+If you change the y-variable to `y = "fluorescence"` you can see something closer to the electropherograms from the Agilent software:
 
 ```{r}
 qplot.electrophoresis(
@@ -367,7 +362,7 @@ qplot.electrophoresis(
 )
 ```
 
-This is still not quite the same as the electropherograms from the Agilent software because the x-axis is linear. We could log-scale it as above, but to get a truly analogous graph we can simply change the x-variable to `relative.distance`, which for TapeStation data is the migration distance normalized to the markers (the Bioanalyzer has `aligned.time` instead):
+This is still not quite the same as the electropherograms from the Agilent software because the x-axis is linear. You could log-scale it as above, but to get a truly analogous graph you can simply change the x-variable to `relative.distance`, which for TapeStation data is the migration distance normalized to the markers (the Bioanalyzer has `aligned.time` instead):
 
 ```{r}
 qplot.electrophoresis(
@@ -394,7 +389,7 @@ qplot.electrophoresis(
 
 If our variable of interest was molarity, the concentration graph would have been very misleading! And the original fluorescence vs. distance graph even moreso.
 
-Or sometimes the absolute variable is irrelevant and what we really want to know is the size distribution within each sample. For that we can set `normalize = TRUE`, which uses the `normalize.proportion` function to scale the variable of interest to a proportion of the sample's total, i.e. the total area under every curve (between the markers) is 1. Notice how the different dilutions of the same sample become roughly equal after normalization:
+Or sometimes the absolute variable is irrelevant and what we really want to know is the size distribution within each sample. For that you can set `normalize = TRUE`, which uses the `normalize.proportion` function to scale the variable of interest to a proportion of the sample's total, i.e. the total area under every curve (between the markers) is 1. Notice how the different dilutions of the same sample become roughly equal after normalization:
 
 ```{r}
 d5000 <- read.electrophoresis(system.file(
@@ -463,7 +458,7 @@ Now that we've added new variables, we can facet on them:
 qplot.electrophoresis(
 	dilutions,
 	facets = sample.type ~ dilution,
-	peak.fill = NA,
+	show.peaks = FALSE,
 	region.alpha = NA,
 	scales = "free_y",
 	title = "Faceting on sample vs. dilution"
@@ -477,7 +472,7 @@ qplot.electrophoresis(
 	dilutions,
 	facets = ~ sample.type,
 	color = dilution,
-	peak.fill = NA,
+	show.peaks = FALSE,
 	region.alpha = NA,
 	scales = "free_y",
 	title = "Faceting on sample with dilutions color-coded"
@@ -606,7 +601,7 @@ qplot.electrophoresis(
 
 # Checking the accuracy of the results
 
-This package faithfully reports the fluorescence signal and peak/region concentrations and molarity reported by the Agilent software, but it must recalculate the model of migration speed vs. molecule length and the estimates of concentration and molarity by position. Some streamlined functions are provided to compare this package's results with those of the Agilent software.
+This package faithfully reports the fluorescence signal and peak/region concentrations and molarity given by the Agilent software, but it must recalculate the model of migration speed vs. molecule length and the estimates of concentration and molarity by position. Some streamlined functions are provided to compare this package's results with those of the Agilent software.
 
 ## `stdcrv.mobility`
 
@@ -751,7 +746,6 @@ Some of these features would not be difficult to implement but haven't been beca
 * Protein assays, the Bioanalyzer Small RNA assay, and the entire Fragment Analyzer platform are not currently supported.
 * It might be possible to read Bioanalyzer `.xad` files directly rather than require exporting them to XML. The original files are also XML but store their main data in a compressed base64 block and I have not attempted to decode it.
 * It would definitely be possible to read TapeStation data files directly, because they are simply ZIP archives containing XML files, but they are encrypted (except the demo data provided with the TapeStation Analysis software). I have asked Agilent about this and they stated that they do not want the raw data to be accessible to users.
-* Because importing TapeStation data requires reading the gel image with green and purple marker bands, the fluorescence signal in the markers themselves is unreadable (it's obscured by the green and purple bands). Among other things this means it is impossible to calibrate the fluorescence-to-concentration coefficient separately for every sample according to the marker signal, so there will be random well-to-well error in the estimates of absolute concentration and molarity. However, relative comparisons within a sample (e.g. region ratio, DV200, Illumina library quality) should be unaffected as the error cancels out.
 * Data from very different assays, such as RNA vs. DNA or Bioanalyzer vs. TapeStation, cannot necessarily be combined with `rbind.electrophoresis` because of mismatched metadata.
 * The importing functions have not been thoroughly tested with anomalous data (missing markers, cross-contamination) and may fail to import an entire batch rather than salvage the samples that worked.
 * `qplot.electrophoresis` function should preferably be an S3 method treating `ggplot2::qplot` as the generic, so `qplot` will simply dispatch to it. But the inheritance is complicated because `qplot` is in another namespace and its first argument is a variable name for an aesthetic. It might be possible to fix this with a closer look at how method dispatching works, or maybe `qplot.electrophoresis` should simply be renamed because it isn't completely analogous to `qplot`.

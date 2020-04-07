@@ -87,7 +87,7 @@ labeller.electrophoresis <- function(electrophoresis) function(factor.frame) {
 #' @param include.markers If \code{FALSE}, graph only data between the marker peaks.
 #' @param lower.marker.spread If normalizing the totals or excluding marker peaks, extend the lower marker peak by this amount (via \code{\link{between.markers}}).
 #' @param xlim,ylim Limits of x- and y-axes 
-#' @param peak.fill Color to fill the area under reported peaks. Set to \code{NA} to skip plotting the peaks.
+#' @param show.peaks Whether to fill the areas under reported peaks.
 #' @param region.alpha Alpha-transparency of the highlight in the reported regions of interested. Set to \code{NA} to skip plotting the regions.
 #' @param area.alpha Alpha-transparency of the filled areas under the curves, if they are overlaid in one graph (\code{facet = FALSE} and \code{geom = "area"}), to make them visible through one another.
 #' @param title,xlab,ylab Plot title, x-axis label, and y-axis label.
@@ -114,7 +114,7 @@ qplot.electrophoresis <- function(
 	lower.marker.spread = 5,
 	xlim = c(NA, NA),
 	ylim = c(NA, NA),
-	peak.fill = "darkred",
+	show.peaks = TRUE,
 	region.alpha = 0.2,
 	area.alpha = 0.2,
 	title = NULL,
@@ -171,9 +171,13 @@ qplot.electrophoresis <- function(
 	)
 	
 	# add peaks
-	if (! is.null(facets) & ! is.na(peak.fill) & ! is.null(electrophoresis$peaks)) {
+	if (! is.null(facets) & show.peaks & ! is.null(electrophoresis$peaks)) {
 		peak.data <- subset(cbind(electrophoresis$data, peak = in.peaks(electrophoresis)), ! is.na(peak))
-		this.plot <- this.plot + geom_area(aes(x = x.value, y = y.scaled, group = peak), data = peak.data, fill = peak.fill)
+		peak.data$peak.observations <- electrophoresis$peaks$peak.observations[peak.data$peak]
+		this.plot <- this.plot + if (length(unique(peak.data$peak.observations)) > 1)
+			geom_area(aes(x = x.value, y = y.scaled, group = peak, fill = peak.observations), data = peak.data)
+		else
+			geom_area(aes(x = x.value, y = y.scaled, group = peak), data = peak.data, fill = "darkgray")
 	}
 	
 	# add faceting
@@ -218,7 +222,7 @@ qplot.electrophoresis <- function(
 #'
 #' @param ... Arguments passed to \code{\link{qplot.electrophoresis}}.
 #' @param facets Passed to \code{\link{qplot.electrophoresis}} but the default is hardcoded for one column of sparklines.
-#' @param scales,geom,peak.fill Passed to \code{\link{qplot.electrophoresis}} but the defaults are hardcoded for sparklines and probably do not make sense to change.
+#' @param scales,geom,show.peaks Passed to \code{\link{qplot.electrophoresis}} but the defaults are hardcoded for sparklines and probably do not make sense to change.
 #'
 #' @references
 #' Tufte, Edward R. (1983) The Visual Display of Quantitative Information. Cheshire, Conn.: Graphics Press.
@@ -232,8 +236,8 @@ sparkline.electrophoresis <- function(
 	facets = sample.index ~ .,
 	scales = "free_y",
 	geom = "line",
-	peak.fill = NA
-) qplot.electrophoresis(..., facets = facets, scales = scales, geom = geom, peak.fill = peak.fill) + theme(
+	show.peaks = FALSE
+) qplot.electrophoresis(..., facets = facets, scales = scales, geom = geom, show.peaks = show.peaks) + theme(
 	axis.text.y = element_blank(),
 	axis.ticks.y = element_blank(),
 	panel.grid = element_blank(),

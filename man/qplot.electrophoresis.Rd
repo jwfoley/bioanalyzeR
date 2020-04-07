@@ -20,7 +20,7 @@ qplot.electrophoresis(
   lower.marker.spread = 5,
   xlim = c(NA, NA),
   ylim = c(NA, NA),
-  peak.fill = "darkred",
+  show.peaks = TRUE,
   region.alpha = 0.2,
   area.alpha = 0.2,
   title = NULL,
@@ -57,7 +57,7 @@ qplot.electrophoresis(
 
 \item{xlim, ylim}{Limits of x- and y-axes}
 
-\item{peak.fill}{Color to fill the area under reported peaks. Set to \code{NA} to skip plotting the peaks.}
+\item{show.peaks}{Whether to fill the areas under reported peaks.}
 
 \item{region.alpha}{Alpha-transparency of the highlight in the reported regions of interested. Set to \code{NA} to skip plotting the regions.}
 
