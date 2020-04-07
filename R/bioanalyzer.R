@@ -161,7 +161,7 @@ read.bioanalyzer <- function(xml.file, fit = "spline") {
 	# convert to concentration and molarity
 	# the idea is that we must correct fluorescence area by migration time to account for the fact that faster-moving molecules spend less time in front of the detector (Agilent's TimeCorrectedArea apparently does this with the raw time, not the aligned time)
 	# and then fluorescence is proportional to concentration, which is molarity * length
-	data.calibration <- cbind(result$data, do.call(rbind, by(result$data, result$data$sample.index, function(data.subset) data.frame(
+	data.calibration <- cbind(result$data, peak = in.peaks(result), do.call(rbind, by(result$data, result$data$sample.index, function(data.subset) data.frame(
 		delta.fluorescence = c(NA, diff(data.subset$fluorescence)),
 		delta.time = c(NA, diff(data.subset$time))
 	), simplify = F)))
@@ -172,7 +172,7 @@ read.bioanalyzer <- function(xml.file, fit = "spline") {
 	# fit the coefficient of mass vs. corrected area, using only the (non-marker) ladder peaks
 	# this is because in the RNA kits, there is only one marker and its concentration is reported as zero, so we can't directly use it to calibrate the other samples
 	# instead, we calculate one coefficient for the ladder and then scale each sample's coefficient by the area of its marker peak relative to the area of the ladder's marker peak
-	peaks.calibration <- cbind(result$peaks, corrected.area = tapply(data.calibration$corrected.area, in.peaks(result), sum))
+	peaks.calibration <- cbind(result$peaks, corrected.area = sapply(1:nrow(result$peaks), function(i) sum(data.calibration$corrected.area[which(data.calibration$peak == i)]))) # can't use tapply or by because some peaks might not have any area
 	ladder.peaks <- subset(peaks.calibration, peak.observations == "Ladder Peak")
 	ladder.mass.coefficient <- mean(ladder.peaks$concentration / ladder.peaks$corrected.area)
 	marker.areas <- by(peaks.calibration, peaks.calibration$sample.index, function(peaks.subset) peaks.subset$corrected.area[which(
