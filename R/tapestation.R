@@ -324,7 +324,10 @@ read.tapestation <- function(xml.file, gel.image.file = NULL, fit = "spline") {
 		
 		# apply model to raw data
 		result$data$length[which.rows] <- standard.curve.function(result$data$relative.distance[which.rows])
-		result$data$length[! in.custom.region(result$data, min(peaks.ladder$length), max(peaks.ladder$length))] <- NA # avoid extrapolation
+		result$data$length[! (
+			in.custom.region(result$data, min(peaks.ladder$length), max(peaks.ladder$length)) &
+			in.custom.region(result$data, min(peaks.ladder$relative.distance), max(peaks.ladder$relative.distance), bound.variable = "relative.distance")
+		)] <- NA # avoid extrapolation
 		
 		# apply model to peaks
 		result$peaks$lower.length[which.peaks] <- standard.curve.function(result$peaks$upper.relative.distance[which.peaks])

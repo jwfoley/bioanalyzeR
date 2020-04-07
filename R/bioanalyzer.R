@@ -141,6 +141,10 @@ read.bioanalyzer <- function(xml.file, fit = "spline") {
 	
 	# apply mobility function
 	result$data$length <- standard.curve.function(result$data$aligned.time)
+	result$data$length[! (
+		in.custom.region(result$data, min(peaks.ladder$length), max(peaks.ladder$length)) &
+		in.custom.region(result$data, min(peaks.ladder$aligned.time), max(peaks.ladder$aligned.time), bound.variable = "aligned.time")
+	)] <- NA # avoid extrapolation
 	result$data$length[! in.custom.region(result$data, min(defined.ladder.peaks$Size), max(defined.ladder.peaks$Size))] <- NA # avoid extrapolating
 	result$peaks$lower.length <- standard.curve.function(result$peaks$lower.aligned.time)
 	result$peaks$upper.length <- standard.curve.function(result$peaks$upper.aligned.time)
