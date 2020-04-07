@@ -114,7 +114,7 @@ qplot.electrophoresis <- function(
 	lower.marker.spread = 5,
 	xlim = c(NA, NA),
 	ylim = c(NA, NA),
-	show.peaks = T,
+	show.peaks = TRUE,
 	region.alpha = 0.2,
 	area.alpha = 0.2,
 	title = NULL,
@@ -236,7 +236,7 @@ sparkline.electrophoresis <- function(
 	facets = sample.index ~ .,
 	scales = "free_y",
 	geom = "line",
-	show.peaks = F
+	show.peaks = FALSE
 ) qplot.electrophoresis(..., facets = facets, scales = scales, geom = geom, show.peaks = show.peaks) + theme(
 	axis.text.y = element_blank(),
 	axis.ticks.y = element_blank(),

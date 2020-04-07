@@ -9,7 +9,7 @@ sparkline.electrophoresis(
   facets = sample.index ~ .,
   scales = "free_y",
   geom = "line",
-  peak.fill = NA
+  show.peaks = FALSE
 )
 }
 \arguments{
@@ -17,7 +17,7 @@ sparkline.electrophoresis(
 
 \item{facets}{Passed to \code{\link{qplot.electrophoresis}} but the default is hardcoded for one column of sparklines.}
 
-\item{scales, geom, peak.fill}{Passed to \code{\link{qplot.electrophoresis}} but the defaults are hardcoded for sparklines and probably do not make sense to change.}
+\item{scales, geom, show.peaks}{Passed to \code{\link{qplot.electrophoresis}} but the defaults are hardcoded for sparklines and probably do not make sense to change.}
 }
 \description{
 This function is a shortcut that calls \code{\link{qplot.electrophoresis}} with customized settings to generate sparklines.
