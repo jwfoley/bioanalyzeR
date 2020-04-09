@@ -163,29 +163,7 @@ read.bioanalyzer <- function(xml.file, fit = "spline") {
 	}
 	
 	# convert to concentration and molarity
-	# the idea is that we must correct fluorescence area by migration time to account for the fact that faster-moving molecules spend less time in front of the detector (Agilent's TimeCorrectedArea apparently does this with the raw time, not the aligned time)
-	# and then fluorescence is proportional to concentration, which is molarity * length
-	data.calibration <- cbind(result$data, peak = in.peaks(result), do.call(rbind, by(result$data, result$data$sample.index, function(data.subset) data.frame(
-		delta.fluorescence = c(NA, diff(data.subset$fluorescence)),
-		delta.time = c(NA, diff(data.subset$time))
-	), simplify = F)))
-	# estimate area under each measurement with the trapezoidal rule; to simplify math, each point's sum is for the trapezoid to the left of it
-	data.calibration$area <- (2 * data.calibration$fluorescence - data.calibration$delta.fluorescence) * data.calibration$delta.time
-	# correct area by migration time
-	data.calibration$corrected.area <- data.calibration$area / data.calibration$time
-	# fit the coefficient of mass vs. corrected area, using only the (non-marker) ladder peaks
-	# this is because in the RNA kits, there is only one marker and its concentration is reported as zero, so we can't directly use it to calibrate the other samples
-	# instead, we calculate one coefficient for the ladder and then scale each sample's coefficient by the area of its marker peak relative to the area of the ladder's marker peak
-	peaks.calibration <- cbind(result$peaks, corrected.area = sapply(1:nrow(result$peaks), function(i) sum(data.calibration$corrected.area[which(data.calibration$peak == i)]))) # can't use tapply or by because some peaks might not have any area
-	ladder.peaks <- subset(peaks.calibration, peak.observations == "Ladder Peak")
-	ladder.mass.coefficient <- mean(ladder.peaks$concentration / ladder.peaks$corrected.area)
-	marker.areas <- by(peaks.calibration, peaks.calibration$sample.index, function(peaks.subset) peaks.subset$corrected.area[which(
-		(peaks.subset$peak.observations == "Lower Marker" & peaks.subset$concentration == defined.ladder.peaks$Concentration[1]) |
-		(peaks.subset$peak.observations == "Upper Marker" & peaks.subset$concentration == defined.ladder.peaks$Concentration[nrow(defined.ladder.peaks)])
-	)], simplify = F)
-	mass.coefficients <- ladder.mass.coefficient * sapply(marker.areas, function(these.areas) mean(marker.areas[[which.ladder]] / these.areas)) # if there are two markers per sample, this gives the mean area ratio relative to their counterparts in the ladder well; if only one marker, the mean ratio is just the ratio 
-	# apply this coefficient to get the concentration of each trapezoid
-	result$data$concentration <- data.calibration$corrected.area * mass.coefficients[result$data$sample.index]
+	result$data$concentration <- calculate.concentration(result, defined.ladder.peaks$Concentration)
 	# finally scale by molecular weight to get the molarity
 	result$data$molarity <- result$data$concentration / molecular.weight(result$data$length, assay.info$assay.type) * 1E6 # we're converting ng/uL to nmol/L or pg/uL to pmol/L so we need to scale by 1E6
 	

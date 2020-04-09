@@ -120,17 +120,18 @@ subset.electrophoresis <- function(electrophoresis, ...) {
 
 #' Get the original x-variable
 #'
-#' This function takes an \code{electrophoresis} object and returns the name of the x-value that was used to fit the mobility model.
+#' This function takes an \code{electrophoresis} object and returns the name of the x-variable that was used to fit the mobility model.
 #'
-#' The result should only be either \code{"aligned time"} for Bioanalyzer data or \code{"relative.distance"} for TapeStation data.
+#' If `raw == FALSE` the result should only be either \code{"aligned time"} for Bioanalyzer data or \code{"relative.distance"} for TapeStation data. If `raw == TRUE` the result should be \code{"time"} or \code{"distance"}.
 #'
 #' @param electrophoresis An \code{electrophoresis} object.
+#' @param raw Whether to return the name of the raw variable instead of the aligned variable.
 #'
-#' @return A character giving the name of the x-value.
+#' @return A character giving the name of the x-variable.
 #'
 #' @export
-get.x.name <- function(electrophoresis) {
-	possible.x.names <- c("aligned.time", "relative.distance")
+get.x.name <- function(electrophoresis, raw = FALSE) {
+	possible.x.names <- if (raw) c("time", "distance") else c("aligned.time", "relative.distance")
 	result <- possible.x.names[possible.x.names %in% colnames(electrophoresis$data)]
 	stopifnot(length(result) == 1)
 	result

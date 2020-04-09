@@ -4,17 +4,19 @@
 \alias{get.x.name}
 \title{Get the original x-variable}
 \usage{
-get.x.name(electrophoresis)
+get.x.name(electrophoresis, raw = FALSE)
 }
 \arguments{
 \item{electrophoresis}{An \code{electrophoresis} object.}
+
+\item{raw}{Whether to return the name of the raw variable instead of the aligned variable.}
 }
 \value{
-A character giving the name of the x-value.
+A character giving the name of the x-variable.
 }
 \description{
-This function takes an \code{electrophoresis} object and returns the name of the x-value that was used to fit the mobility model.
+This function takes an \code{electrophoresis} object and returns the name of the x-variable that was used to fit the mobility model.
 }
 \details{
-The result should only be either \code{"aligned time"} for Bioanalyzer data or \code{"relative.distance"} for TapeStation data.
+If `raw == FALSE` the result should only be either \code{"aligned time"} for Bioanalyzer data or \code{"relative.distance"} for TapeStation data. If `raw == TRUE` the result should be \code{"time"} or \code{"distance"}.
 }

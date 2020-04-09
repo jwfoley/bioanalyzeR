@@ -346,23 +346,7 @@ read.tapestation <- function(xml.file, gel.image.file = NULL, fit = "spline") {
 	}
 	
 	# convert to concentration and molarity 
-	data.calibration <- cbind(result$data, peak = in.peaks(result), do.call(rbind, by(result$data, result$data$sample.index, function(data.subset) data.frame(
-		delta.fluorescence = c(NA, diff(data.subset$fluorescence)),
-		delta.distance = c(NA, -diff(data.subset$distance))
-	), simplify = F)))
-	# estimate area under each measurement with the trapezoidal rule; to simplify math, each point's sum is for the trapezoid to the left of it
-	data.calibration$area <- (2 * data.calibration$fluorescence - data.calibration$delta.fluorescence) * data.calibration$delta.distance
-	# in kits with upper marker, only upper marker's true concentration is given, so calibrate only to that; otherwise, lower marker's true concentration is given so calibrate only to that
-	peaks.calibration <- cbind(result$peaks, area = sapply(1:nrow(result$peaks), function(i) sum(data.calibration$area[which(data.calibration$peak == i)]))) # can't use tapply or by because some peaks might not have any area (like gDNA sample wells)
-	has.upper.marker <- any(result$peaks$peak.observations %in% UPPER.MARKER.NAMES)
-	marker.areas <- do.call(rbind, by(peaks.calibration, peaks.calibration$sample.index, function(peaks.subset) peaks.subset[which(
-		(has.upper.marker & peaks.subset$peak.observations %in% UPPER.MARKER.NAMES) |
-		(! has.upper.marker & peaks.subset$peak.observations %in% LOWER.MARKER.NAMES)
-	), c("concentration", "area")], simplify = F))
-	stopifnot(all(marker.areas$concentration == marker.areas$concentration[1]))
-	# calculate the coefficient that relates known concentrations to area under the electropherograms
-	mass.coefficients <- marker.areas$concentration / marker.areas$area
-	result$data$concentration <- mass.coefficients[result$data$sample.index] * data.calibration$area	
+	result$data$concentration <- calculate.concentration(result)
 	result$data$molarity <- result$data$concentration / molecular.weight(result$data$length, parsed.data$assay.info$assay.type) * 1E6 # we're converting ng/uL to nmol/L or pg/uL to pmol/L so we need to scale by 1E6
 	
 	result
