@@ -133,12 +133,9 @@ read.tapestation.xml <- function(xml.file) {
 	result.list <- xmlApply(xml.root[["Samples"]], function(sample.xml) {
 		well.number <- xmlValue(sample.xml[["WellNumber"]])
 		sample.name <- trimws(xmlValue(sample.xml[["Comment"]]))
-		if (sample.name == "") sample.name <- well.number
 		sample.observations <- trimws(xmlValue(sample.xml[["Observations"]]))
-		if (sample.observations == "Marker(s) not detected") {
-			warning(paste(sample.observations, "for well", well.number, sample.name))
-			return(NULL)
-		}
+		if (sample.observations == "Marker(s) not detected") warning(paste(sample.observations, "for well", well.number, sample.name))
+		if (sample.name == "") sample.name <- well.number
 		suppressWarnings(RINe <- as.numeric(xmlValue(sample.xml[["RNA"]][["RINe"]])))
 		suppressWarnings(DIN <- as.numeric(xmlValue(sample.xml[["DIN"]])))
 		
@@ -203,8 +200,11 @@ read.tapestation.xml <- function(xml.file) {
 	# determine ladder scheme
 	ladder.wells <- result$samples$well.number[result$samples$sample.observations == "Ladder"]
 	result$samples$ladder.well <- factor(NA, levels = levels(result$samples$well.number))
+	# missing ladder! leave NA
+	if (length(ladder.wells) == 0) {
+		return(result)
 	# scheme: only one ladder for the whole run
-	if (length(ladder.wells) == 1) {
+	} else if (length(ladder.wells) == 1) {
 		result$samples$ladder.well <- ladder.wells
 	# scheme: one electronic ladder for the whole run but it's displayed more than once
 	} else if (
@@ -282,7 +282,7 @@ read.tapestation <- function(xml.file, gel.image.file = NULL, fit = "spline") {
 	
 	# abort early if there aren't ladders to use
 	if (sum(! is.na(result$samples$ladder.well)) == 0) {
-		warning("unknown ladder scheme so lengths and molarities are not calculated")
+		warning("no ladder identified so lengths and molarities are not calculated")
 		return(result)
 	}
 	

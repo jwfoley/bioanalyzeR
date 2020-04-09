@@ -126,14 +126,17 @@ calculate.concentration <- function(electrophoresis, ladder.concentrations = NUL
 	} else {
 		# without known ladder concentrations, just calibrate by the upper marker if present, lower marker otherwise
 		# this is the TapeStation's approach and that's the only known concentration it reports so it's the only way
-		which.markers <- sapply(1:nrow(electrophoresis$samples), function(sample.index) which(
-			electrophoresis$peaks$sample.index == sample.index & (
-				(has.upper.marker & electrophoresis$peaks$peak.observations %in% UPPER.MARKER.NAMES) |
-				(! has.upper.marker & electrophoresis$peaks$peak.observations %in% LOWER.MARKER.NAMES)
+		which.markers <- sapply(1:nrow(electrophoresis$samples), function(sample.index) {
+			result <- which(
+				electrophoresis$peaks$sample.index == sample.index & (
+					(has.upper.marker & electrophoresis$peaks$peak.observations %in% UPPER.MARKER.NAMES) |
+					(! has.upper.marker & electrophoresis$peaks$peak.observations %in% LOWER.MARKER.NAMES)
+				)
 			)
-		))
+			if (length(result) == 1) result else NA
+		})
 		marker.concentrations <- electrophoresis$peaks$concentration[which.markers]
-		stopifnot(all(marker.concentrations == marker.concentrations[1]))
+		stopifnot(all(marker.concentrations == marker.concentrations[1], na.rm = T))
 		marker.concentrations / sapply(which.markers, function(i) sum(area[which(in.peak(electrophoresis, i))]))
 	}
 	

@@ -280,7 +280,7 @@ between.markers <- function(electrophoresis, lower.marker.spread = 5) {
 #'
 #' @export
 differential.scale <- function(electrophoresis, x, y) {
-	stopifnot(all(diff(electrophoresis$data$sample.index) %in% c(0, 1))) # assume data points from each sample are contiguous and ordered by sample
+	stopifnot(all(diff(electrophoresis$data$sample.index) >= 0)) # assume data points from each sample are contiguous and ordered by sample; no backsies
 	delta.x <- unlist(by(electrophoresis$data, electrophoresis$data$sample.index, function(data.subset) c(NA, diff(data.subset[[x]])), simplify = F)) # apply by sample to make sure we don't get a weird delta at the sample boundary
 	if (all(delta.x < 0, na.rm = T)) delta.x <- -delta.x else stopifnot(all(delta.x > 0, na.rm = T)) # assume data points are monotonic; if negative (like migration distance) make them positive so the math comes out clean
 	
