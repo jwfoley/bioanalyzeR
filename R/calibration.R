@@ -1,13 +1,13 @@
 calculate.concentration <- function(electrophoresis, ladder.concentrations = NULL) {
-	raw.x.name <- get.x.name(electrophoresis, T)
+	x.name <- get.x.name(electrophoresis)
 	delta <- do.call(rbind, by(electrophoresis$data, electrophoresis$data$sample.index, function(data.subset) data.frame(
 		fluorescence = c(NA, diff(data.subset$fluorescence)),
-		x = c(NA, diff(data.subset[[raw.x.name]])) # these will probably be constant but we'd better not assume
+		x = c(NA, diff(data.subset[[x.name]])) # these will probably be constant but we'd better not assume
 	), simplify = F))
-	if (raw.x.name == "distance") delta$x <- -delta$x # distances are stored in decreasing order so the deltas are negative
+	if (x.name == "relative.distance") delta$x <- -delta$x # distances are stored in decreasing order so the deltas are negative
 	# estimate area under each measurement with the trapezoidal rule; to simplify math, each point's sum is for the trapezoid to the left of it
 	area <- (2 * electrophoresis$data$fluorescence - delta$fluorescence) * delta$x
-	if (raw.x.name == "time") area <- area / electrophoresis$data$time # compensate for time spent in the detector (faster-moving molecules get less signal)
+	if (x.name == "aligned.time") area <- area / electrophoresis$data[[x.name]] # compensate for time spent in the detector (faster-moving molecules get less signal)
 	
 	# calculate coefficients relating concentration to area under the curve
 	has.upper.marker <- any(electrophoresis$peaks$peak.observations %in% UPPER.MARKER.NAMES)
