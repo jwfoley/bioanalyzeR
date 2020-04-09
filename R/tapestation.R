@@ -287,8 +287,7 @@ read.tapestation <- function(xml.file, gel.image.file = NULL, fit = "spline") {
 	}
 	
 	# perform calibrations
-	result <- calculate.concentration(calculate.length(result, fit))
-	result$data$molarity <- result$data$concentration / molecular.weight(result$data$length, parsed.data$assay.info$assay.type) * 1E6 # we're converting ng/uL to nmol/L or pg/uL to pmol/L so we need to scale by 1E6
+	result <- calculate.molarity(calculate.concentration(calculate.length(result, fit)))
 	
 	# convert inferred relative distance of regions back to raw distance
 	if (! is.null(result$regions)) {

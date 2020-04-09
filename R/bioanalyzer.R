@@ -121,8 +121,7 @@ read.bioanalyzer <- function(xml.file, fit = "spline") {
 	result$samples$ladder.well <- factor(which.ladder, levels = levels(result$samples$well.number))
 	
 	# perform calibrations
-	result <- calculate.concentration(calculate.length(result, fit), defined.ladder.peaks$Concentration)
-	result$data$molarity <- result$data$concentration / molecular.weight(result$data$length, assay.info$assay.type) * 1E6 # we're converting ng/uL to nmol/L or pg/uL to pmol/L so we need to scale by 1E6
+	result <- calculate.molarity(calculate.concentration(calculate.length(result, fit), defined.ladder.peaks$Concentration))
 	
 	# convert inferred aligned times of regions back to raw times
 	if (! is.null(result$regions)) {

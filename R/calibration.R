@@ -138,3 +138,13 @@ calculate.concentration <- function(electrophoresis, ladder.concentrations = NUL
 	electrophoresis
 }
 
+calculate.molarity <- function(electrophoresis) {
+	electrophoresis$data$molarity <- NA
+	for (batch in unique(electrophoresis$samples$batch)) {
+		which.rows <- which(electrophoresis$data$sample.index %in% which(electrophoresis$samples$batch == batch))
+		electrophoresis$data$molarity[which.rows] <- electrophoresis$data$concentration[which.rows] / molecular.weight(electrophoresis$data$length[which.rows], electrophoresis$assay.info[[batch]]$assay.type) * 1E6 # we're converting ng/uL to nmol/L or pg/uL to pmol/L so we need to scale by 1E6
+	}
+	
+	electrophoresis
+}
+
