@@ -17,10 +17,10 @@ calculate.concentration <- function(electrophoresis, ladder.concentrations = NUL
 		which.markers <- lapply(1:nrow(electrophoresis$samples), function(sample.index) which(
 			electrophoresis$peaks$sample.index == sample.index & (
 				(
-					electrophoresis$peaks$peak.observations == "Lower Marker" & 
+					electrophoresis$peaks$peak.observations %in% LOWER.MARKER.NAMES & 
 					electrophoresis$peaks$concentration == ladder.concentrations[1] # verify this is the right peak (sometimes Bioanalyzer annotates more than one as the marker but it only assigns the hardcoded concentration to one)
 				) | (
-					electrophoresis$peaks$peak.observations == "Upper Marker" &
+					electrophoresis$peaks$peak.observations %in% UPPER.MARKER.NAMES &
 					electrophoresis$peaks$concentration == ladder.concentrations[length(ladder.concentrations)]
 				)
 			)
