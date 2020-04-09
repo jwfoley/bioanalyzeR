@@ -48,7 +48,7 @@ calculate.length <- function(electrophoresis, fit = "spline") {
 					standard.curve.inverse <- function(length) 1/(mobility.model$coefficients[1] + log(length) * mobility.model$coefficients[2])
 				}
 			}
-			electrophoresis$mobility.functions[[1]][[ladder.well]] <- standard.curve.function
+			electrophoresis$mobility.functions[[batch]][[ladder.well]] <- standard.curve.function
 			
 			# apply model to raw data
 			electrophoresis$data$length[which.rows] <- standard.curve.function(electrophoresis$data[[x.name]][which.rows])
