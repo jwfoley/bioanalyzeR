@@ -1,3 +1,78 @@
+calculate.length <- function(electrophoresis, fit = "spline") {
+	x.name <- get.x.name(electrophoresis)
+	lower.name <- paste0("lower.", x.name)
+	upper.name <- paste0("upper.", x.name)
+		
+	# prepare new fields to be filled in piecemeal from each ladder
+	electrophoresis$data$length <- NA
+	electrophoresis$peaks$lower.length <- NA
+	electrophoresis$peaks$upper.length <- NA
+	if (! is.null(electrophoresis$regions)) {
+		electrophoresis$regions[[lower.name]] <- NA
+		electrophoresis$regions[[upper.name]] <- NA
+	}
+	electrophoresis$mobility.functions <- list()
+	
+	# fit a mobility model for each ladder and apply it to the appropriate samples
+	for (batch in unique(electrophoresis$samples$batch)) {
+		electrophoresis$mobility.functions[[batch]] <- list()
+		in.this.batch <- electrophoresis$samples$batch == batch
+		for (ladder.well in unique(electrophoresis$samples$ladder.well[which(in.this.batch)])) {
+			which.ladder.index <- which(in.this.batch & electrophoresis$samples$well.number == ladder.well)
+			peaks.ladder <- subset(electrophoresis$peaks, sample.index == which.ladder.index)
+			which.samples <- which(in.this.batch & electrophoresis$samples$ladder.well == ladder.well)
+			which.rows <- which(electrophoresis$data$sample.index %in% which.samples)
+			which.peaks <- which(electrophoresis$peaks$sample.index %in% which.samples)
+			which.regions <- which(electrophoresis$regions$sample.index %in% which.samples)
+			
+			peaks.ladder$x <- peaks.ladder[[x.name]]
+			
+			# fit standard curve for molecule length vs. x-value
+			# do this in relative x space so it's effectively recalibrated for each sample's markers
+			if (fit == "interpolation") {
+				warning("linear interpolation gives ugly results for molarity estimation")
+				standard.curve.function <- approxfun(peaks.ladder$x, peaks.ladder$length)
+				standard.curve.inverse <- approxfun(peaks.ladder$length, peaks.ladder$x)
+			} else if (fit == "spline") {
+				standard.curve.function <- splinefun(peaks.ladder$x, peaks.ladder$length, method = "natural")
+				standard.curve.inverse <- splinefun(peaks.ladder$length, peaks.ladder$x, method = "natural")
+			} else if (fit == "regression") {
+				if (x.name == "relative.distance") {
+					mobility.model <- lm(x ~ log(length), peaks.ladder)
+					standard.curve.function <- function(x) exp((x - mobility.model$coefficients[1]) / mobility.model$coefficients[2])
+					standard.curve.inverse <- function(length) mobility.model$coefficients[1] + mobility.model$coefficients[2] * log(length)
+				} else if (x.name == "aligned.time") {
+					# if x-variable is time, we must correct for the fact that faster-moving molecules spend less time in front of the detector
+					mobility.model <- lm(1/aligned.time ~ log(length), data = peaks.ladder)
+					standard.curve.function <- function(aligned.time) exp((1 / aligned.time - mobility.model$coefficients[1]) / mobility.model$coefficients[2])
+					standard.curve.inverse <- function(length) 1/(mobility.model$coefficients[1] + log(length) * mobility.model$coefficients[2])
+				}
+			}
+			electrophoresis$mobility.functions[[1]][[ladder.well]] <- standard.curve.function
+			
+			# apply model to raw data
+			electrophoresis$data$length[which.rows] <- standard.curve.function(electrophoresis$data[[x.name]][which.rows])
+			electrophoresis$data$length[! (
+				in.custom.region(electrophoresis$data, min(peaks.ladder$length), max(peaks.ladder$length)) &
+				in.custom.region(electrophoresis$data, min(peaks.ladder$x), max(peaks.ladder$x), bound.variable = x.name)
+			)] <- NA # avoid extrapolation
+			
+			# apply model to peaks
+			electrophoresis$peaks$lower.length[which.peaks] <- standard.curve.function(electrophoresis$peaks[[upper.name]][which.peaks])
+			electrophoresis$peaks$upper.length[which.peaks] <- standard.curve.function(electrophoresis$peaks[[lower.name]][which.peaks])
+			
+			# apply inverse model to regions
+			if (! is.null(electrophoresis$regions)) {
+				electrophoresis$regions[[lower.name]][which.regions] <- standard.curve.inverse(electrophoresis$regions$upper.length[which.regions])
+				electrophoresis$regions[[upper.name]][which.regions] <- standard.curve.inverse(electrophoresis$regions$lower.length[which.regions])
+			}
+		}
+	}
+	
+	electrophoresis
+}
+
+
 calculate.concentration <- function(electrophoresis, ladder.concentrations = NULL) {
 	x.name <- get.x.name(electrophoresis)
 	delta <- do.call(rbind, by(electrophoresis$data, electrophoresis$data$sample.index, function(data.subset) data.frame(

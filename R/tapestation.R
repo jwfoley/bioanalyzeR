@@ -286,68 +286,15 @@ read.tapestation <- function(xml.file, gel.image.file = NULL, fit = "spline") {
 		return(result)
 	}
 	
-	# prepare more fields to be filled in piecemeal from each ladder
-	result$data$length <- NA
-	result$peaks$lower.length <- NA
-	result$peaks$upper.length <- NA
-	if (! is.null(result$regions)) {
-		result$regions$lower.relative.distance <- NA
-		result$regions$upper.relative.distance <- NA
-	}
-	result$mobility.functions <- list(list())
-	names(result$mobility.functions) <- batch
+	# perform calibrations
+	result <- calculate.concentration(calculate.length(result, fit))
+	result$data$molarity <- result$data$concentration / molecular.weight(result$data$length, parsed.data$assay.info$assay.type) * 1E6 # we're converting ng/uL to nmol/L or pg/uL to pmol/L so we need to scale by 1E6
 	
-	# fit a mobility model for each ladder and apply it to the appropriate samples
-	for (ladder.well in unique(result$samples$ladder.well)) {
-		which.ladder.index <- which(result$samples$well.number == ladder.well)
-		peaks.ladder <- subset(result$peaks, sample.index == which.ladder.index)
-		which.samples <- which(result$samples$ladder.well == ladder.well)
-		which.rows <- which(result$data$sample.index %in% which.samples)
-		which.peaks <- which(result$peaks$sample.index %in% which.samples)
-		which.regions <- which(result$regions$sample.index %in% which.samples)
-		
-		# fit standard curve for molecule length vs. migration distance
-		# do this in relative-distance space so it's effectively recalibrated for each sample's markers
-		if (fit == "interpolation") {
-			warning("linear interpolation gives ugly results for molarity estimation")
-			standard.curve.function <- approxfun(peaks.ladder$relative.distance, peaks.ladder$length)
-			standard.curve.inverse <- approxfun(peaks.ladder$length, peaks.ladder$relative.distance)
-		} else if (fit == "spline") {
-			standard.curve.function <- splinefun(peaks.ladder$relative.distance, peaks.ladder$length, method = "natural")
-			standard.curve.inverse <- splinefun(peaks.ladder$length, peaks.ladder$relative.distance, method = "natural")
-		} else if (fit == "regression") {
-			mobility.model <- lm(relative.distance ~ log(length), peaks.ladder)
-			standard.curve.function <- function(relative.distance) exp((relative.distance - mobility.model$coefficients[1]) / mobility.model$coefficients[2])
-			standard.curve.inverse <- function(length) mobility.model$coefficients[1] + mobility.model$coefficients[2] * log(length)
-		}
-		result$mobility.functions[[1]][[ladder.well]] <- standard.curve.function
-		
-		# apply model to raw data
-		result$data$length[which.rows] <- standard.curve.function(result$data$relative.distance[which.rows])
-		result$data$length[! (
-			in.custom.region(result$data, min(peaks.ladder$length), max(peaks.ladder$length)) &
-			in.custom.region(result$data, min(peaks.ladder$relative.distance), max(peaks.ladder$relative.distance), bound.variable = "relative.distance")
-		)] <- NA # avoid extrapolation
-		
-		# apply model to peaks
-		result$peaks$lower.length[which.peaks] <- standard.curve.function(result$peaks$upper.relative.distance[which.peaks])
-		result$peaks$upper.length[which.peaks] <- standard.curve.function(result$peaks$lower.relative.distance[which.peaks])
-		
-		# apply inverse model to regions
-		if (! is.null(result$regions)) {
-			result$regions$lower.relative.distance[which.regions] <- standard.curve.inverse(result$regions$upper.length[which.regions])
-			result$regions$upper.relative.distance[which.regions] <- standard.curve.inverse(result$regions$lower.length[which.regions])
-		}
-	}
-	# convert inferred relative distances of regions back to raw distances
+	# convert inferred relative distance of regions back to raw distance
 	if (! is.null(result$regions)) {
 		result$regions$lower.distance <- result$regions$lower.relative.distance * marker.distances$range[result$regions$sample.index] + marker.distances$upper[result$regions$sample.index]
 		result$regions$upper.distance <- result$regions$upper.relative.distance * marker.distances$range[result$regions$sample.index] + marker.distances$upper[result$regions$sample.index]
 	}
-	
-	# convert to concentration and molarity 
-	result <- calculate.concentration(result)
-	result$data$molarity <- result$data$concentration / molecular.weight(result$data$length, parsed.data$assay.info$assay.type) * 1E6 # we're converting ng/uL to nmol/L or pg/uL to pmol/L so we need to scale by 1E6
 	
 	result
 }

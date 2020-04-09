@@ -118,54 +118,22 @@ read.bioanalyzer <- function(xml.file, fit = "spline") {
 	which.ladder <- which(result$samples$is.ladder)
 	stopifnot(length(which.ladder) == 1)
 	result$samples$is.ladder <- NULL
-	peaks.ladder <- subset(result$peaks, sample.index == which.ladder & peak.observations %in% c("Lower Marker", "Ladder Peak", "Upper Marker"))
 	result$samples$ladder.well <- factor(which.ladder, levels = levels(result$samples$well.number))
 	
-	# fit standard curve for molecule length
-	# do this with aligned times so it's effectively recalibrated for each sample's markers
-	if (fit == "interpolation") {
-		warning("linear interpolation gives ugly results for molarity estimation")
-		standard.curve.function <- approxfun(peaks.ladder$aligned.time, peaks.ladder$length)
-		standard.curve.inverse <- approxfun(peaks.ladder$length, peaks.ladder$aligned.time)
-	} else if (fit == "spline") {
-		standard.curve.function <- splinefun(peaks.ladder$aligned.time, peaks.ladder$length, method = "natural")
-		standard.curve.inverse <- splinefun(peaks.ladder$length, peaks.ladder$aligned.time, method = "natural")
-	} else if (fit == "regression") {
-		mobility.model <- lm(1/aligned.time ~ log(length), data = peaks.ladder)
-		standard.curve.function <- function(aligned.time) exp((1 / aligned.time - mobility.model$coefficients[1]) / mobility.model$coefficients[2])
-		standard.curve.inverse <- function(length) 1/(mobility.model$coefficients[1] + log(length) * mobility.model$coefficients[2])
-	}
-	result$mobility.functions <- list(list(standard.curve.function))
-	names(result$mobility.functions[[1]]) <- which.ladder
-	names(result$mobility.functions) <- batch
+	# perform calibrations
+	result <- calculate.concentration(calculate.length(result, fit), defined.ladder.peaks$Concentration)
+	result$data$molarity <- result$data$concentration / molecular.weight(result$data$length, assay.info$assay.type) * 1E6 # we're converting ng/uL to nmol/L or pg/uL to pmol/L so we need to scale by 1E6
 	
-	# apply mobility function
-	result$data$length <- standard.curve.function(result$data$aligned.time)
-	result$data$length[! (
-		in.custom.region(result$data, min(peaks.ladder$length), max(peaks.ladder$length)) &
-		in.custom.region(result$data, min(peaks.ladder$aligned.time), max(peaks.ladder$aligned.time), bound.variable = "aligned.time")
-	)] <- NA # avoid extrapolation
-	result$data$length[! in.custom.region(result$data, min(defined.ladder.peaks$Size), max(defined.ladder.peaks$Size))] <- NA # avoid extrapolating
-	result$peaks$lower.length <- standard.curve.function(result$peaks$lower.aligned.time)
-	result$peaks$upper.length <- standard.curve.function(result$peaks$upper.aligned.time)
+	# convert inferred aligned times of regions back to raw times
 	if (! is.null(result$regions)) {
-		result$regions$lower.aligned.time <- standard.curve.inverse(result$regions$lower.length)
-		result$regions$upper.aligned.time <- standard.curve.inverse(result$regions$upper.length)
-		
-		# convert inferred aligned times of regions back to raw times
 		result$regions$lower.time <- NA
 		result$regions$upper.time <- NA
 		for (i in 1:nrow(result$samples)) {
 			which.regions <- which(result$regions$sample.index == i)
 			result$regions$lower.time[which.regions] <- (result$regions$lower.aligned.time[which.regions] - alignment.values[[i]][2])/alignment.values[[i]][1]
 			result$regions$upper.time[which.regions] <- (result$regions$upper.aligned.time[which.regions] - alignment.values[[i]][2])/alignment.values[[i]][1]
-		}
+		}	
 	}
-	
-	# convert to concentration and molarity
-	result <- calculate.concentration(result, defined.ladder.peaks$Concentration)
-	# finally scale by molecular weight to get the molarity
-	result$data$molarity <- result$data$concentration / molecular.weight(result$data$length, assay.info$assay.type) * 1E6 # we're converting ng/uL to nmol/L or pg/uL to pmol/L so we need to scale by 1E6
 	
 	result
 }
