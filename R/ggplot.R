@@ -310,21 +310,23 @@ stdcrv.mobility <- function(electrophoresis, n.simulate = 100, line.color = "red
 #' @export
 #' @import ggplot2
 qc.electrophoresis <- function(electrophoresis, variable, log = TRUE) {
-	peaks <- switch(variable,
+	if (all(electrophoresis$peaks[[variable]] == 0)) stop(paste("Agilent software did not report any", variable, "values to compare")) # Bioanalyzer reports all zero molarities in RNA kits
+
+	peaks <- cbind(electrophoresis$peaks, estimated.variable = switch(variable,
 		length = {
 			x.name <- get.x.name(electrophoresis)			
-			result <- cbind(electrophoresis$peaks, estimated.variable = NA)
+			result <- rep(NA, nrow(electrophoresis$peaks))
 			for (i in 1:nrow(electrophoresis$samples)) {
-				which.peaks <- result$sample.index == i
-				result$estimated.variable[which.peaks] <- electrophoresis$mobility.functions[[as.character(electrophoresis$samples$batch[i])]][[as.character(electrophoresis$samples$ladder.well[i])]](result[[x.name]][which.peaks])
+				which.peaks <- electrophoresis$peaks$sample.index == i
+				result[which.peaks] <- electrophoresis$mobility.functions[[as.character(electrophoresis$samples$batch[i])]][[as.character(electrophoresis$samples$ladder.well[i])]](electrophoresis$peaks[[x.name]][which.peaks])
 			}
 			result
 		},
 		
-		concentration = cbind(electrophoresis$peaks, estimated.variable = integrate.peaks(electrophoresis, "concentration")),
+		concentration = integrate.peaks(electrophoresis, "concentration"),
 		
-		molarity = cbind(electrophoresis$peaks, estimated.variable = integrate.peaks(electrophoresis, "molarity"))
-	)
+		molarity = integrate.peaks(electrophoresis, "molarity")
+	))
 	
 	peaks <- subset(peaks, ! is.na(estimated.variable)) # remove NA's so they don't affect the x-limits and throw a warning
 	
