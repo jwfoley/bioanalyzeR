@@ -163,7 +163,7 @@ read.bioanalyzer <- function(xml.file, fit = "spline") {
 	}
 	
 	# convert to concentration and molarity
-	result$data$concentration <- calculate.concentration(result, defined.ladder.peaks$Concentration)
+	result <- calculate.concentration(result, defined.ladder.peaks$Concentration)
 	# finally scale by molecular weight to get the molarity
 	result$data$molarity <- result$data$concentration / molecular.weight(result$data$length, assay.info$assay.type) * 1E6 # we're converting ng/uL to nmol/L or pg/uL to pmol/L so we need to scale by 1E6
 	

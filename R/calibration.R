@@ -58,7 +58,8 @@ calculate.concentration <- function(electrophoresis, ladder.concentrations = NUL
 		stopifnot(all(marker.concentrations == marker.concentrations[1]))
 		marker.concentrations / sapply(which.markers, function(i) sum(area[which(in.peak(electrophoresis, i))]))
 	}
-
-	mass.coefficients[electrophoresis$data$sample.index] * area	
+	
+	electrophoresis$data$concentration <- mass.coefficients[electrophoresis$data$sample.index] * area	
+	electrophoresis
 }
 
