@@ -102,20 +102,23 @@ calculate.concentration <- function(electrophoresis, ladder.concentrations = NUL
 		))
 		marker.areas <- lapply(which.markers, function(peak.indexes) sapply(peak.indexes, function(peak.index) sum(area[which(in.peak(electrophoresis, peak.index))])))
 		result <- rep(NA, nrow(electrophoresis$samples))
-		for (ladder.well in unique(electrophoresis$samples$ladder.well)) {
-			ladder.index <- which(electrophoresis$samples$well.number == ladder.well)
-			stopifnot(length(ladder.index) == 1)
-			which.samples <- which(electrophoresis$samples$ladder.well == ladder.well)
-			non.marker.concentrations <- ladder.concentrations[-c(1, if (has.upper.marker) length(ladder.concentrations) else NULL)]
-			which.ladder.peaks <- which(
-				electrophoresis$peaks$sample.index == ladder.index &
-				(! electrophoresis$peaks$peak.observations %in% c(LOWER.MARKER.NAMES, UPPER.MARKER.NAMES)) &
-				electrophoresis$peaks$concentration %in% non.marker.concentrations
-			)
-			ladder.mass.coefficient <- mean(electrophoresis$peaks$concentration[which.ladder.peaks] / sapply(which.ladder.peaks, function(i) sum(area[which(in.peak(electrophoresis, i))])))
-			
-			# then modify the mass coefficient for each sample according to the ratio of its marker area(s) to the ladder's
-			result[which.samples] <- ladder.mass.coefficient * sapply(marker.areas[which.samples], function(these.areas) mean(marker.areas[[ladder.index]] / these.areas)) # if there are two markers per sample, this gives the mean area ratio relative to their counterparts in the ladder well; if only one marker, the mean ratio is just the ratio 
+		for (batch in unique(electrophoresis$samples$batch)) {
+			in.this.batch <- electrophoresis$samples$batch == batch
+			for (ladder.well in unique(electrophoresis$samples$ladder.well[which(in.this.batch)])) {
+				ladder.index <- which(in.this.batch & electrophoresis$samples$well.number == ladder.well)
+				stopifnot(length(ladder.index) == 1)
+				which.samples <- which(in.this.batch & electrophoresis$samples$ladder.well == ladder.well)
+				non.marker.concentrations <- ladder.concentrations[-c(1, if (has.upper.marker) length(ladder.concentrations) else NULL)]
+				which.ladder.peaks <- which(
+					electrophoresis$peaks$sample.index == ladder.index &
+					(! electrophoresis$peaks$peak.observations %in% c(LOWER.MARKER.NAMES, UPPER.MARKER.NAMES)) &
+					electrophoresis$peaks$concentration %in% non.marker.concentrations
+				)
+				ladder.mass.coefficient <- mean(electrophoresis$peaks$concentration[which.ladder.peaks] / sapply(which.ladder.peaks, function(i) sum(area[which(in.peak(electrophoresis, i))])))
+				
+				# then modify the mass coefficient for each sample according to the ratio of its marker area(s) to the ladder's
+				result[which.samples] <- ladder.mass.coefficient * sapply(marker.areas[which.samples], function(these.areas) mean(marker.areas[[ladder.index]] / these.areas)) # if there are two markers per sample, this gives the mean area ratio relative to their counterparts in the ladder well; if only one marker, the mean ratio is just the ratio 
+			}
 		}
 		
 		result
