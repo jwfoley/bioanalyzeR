@@ -9,7 +9,11 @@
 \usage{
 read.bioanalyzer(xml.file, fit = "spline")
 
-read.electrophoresis(..., fit = "spline", mc.cores = detectCores())
+read.electrophoresis(
+  ...,
+  fit = "spline",
+  mc.cores = if (.Platform$OS.type == "windows") 1 else detectCores()
+)
 
 read.tapestation(xml.file, gel.image.file = NULL, fit = "spline")
 }

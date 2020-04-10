@@ -53,7 +53,11 @@ rbind.electrophoresis <- function(...) {
 #' 
 #' @export
 #' @importFrom parallel mclapply detectCores
-read.electrophoresis <- function(..., fit = "spline", mc.cores = detectCores()) do.call(rbind, mclapply(list(...), function(xml.file) {
+read.electrophoresis <- function(
+	...,
+	fit = "spline",
+	mc.cores = if (.Platform$OS.type == "windows") 1 else detectCores()
+) do.call(rbind, mclapply(list(...), function(xml.file) {
 	xml.con <- file(xml.file)
 	first.char <- readChar(xml.con, 1)
 	if (first.char == GZIP.FIRST.CHAR) first.char <- readChar(gzcon(xml.con), 1) # if gzipped, uncompress and try again
