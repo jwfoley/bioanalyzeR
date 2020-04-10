@@ -32,7 +32,7 @@ files$add_argument("--fit",
 )
 files$add_argument("--mc_cores",
 	help = "maximum CPU cores",
-	default = detectCores(),
+	default = if (.Platform$OS.type == "windows") 1 else detectCores(),
 	type = "integer",
 	metavar = "N"
 )
