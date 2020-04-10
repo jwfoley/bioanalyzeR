@@ -328,12 +328,11 @@ qc.electrophoresis <- function(electrophoresis, variable, log = TRUE) {
 		molarity = integrate.peak(electrophoresis, 1:nrow(electrophoresis$peaks), sum.variable = "molarity")
 	))
 	
-	peaks <- subset(peaks, ! is.na(estimated.variable)) # remove NA's so they don't affect the x-limits and throw a warning
+	peaks <- peaks[! is.na(peaks[[variable]]) & ! is.na(peaks$estimated.variable),] # remove NA's so they don't affect the x-limits and throw a warning
 	
 	result <- ggplot(peaks, aes_(as.name(variable), as.name("estimated.variable"), color = as.name("peak.observations"))) +
 		geom_abline() +
 		geom_point() +
-		geom_smooth(method = "lm", formula = y ~ x) +
 		xlab(paste("software-reported", variable.label(electrophoresis, variable))) +
 		ylab(paste("estimated", variable.label(electrophoresis, variable))) +
 		facet_wrap(~ sample.index, labeller = labeller.electrophoresis(electrophoresis))
