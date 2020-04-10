@@ -186,8 +186,8 @@ if (! is.null(args$region_ratio)) {
 	bounds.list <- lapply(strsplit(args$region_ratio, "-"), as.numeric)
 	result <- data.frame(result, do.call(region.ratio, c(list(data), bounds.list, list(bound.variable = args$bound_variable, sum.variable = args$sum_variable))), check.names = F, stringsAsFactors = F)
 }
-if (args$dv200) result <- data.frame(result, DV200 = dv200(data), check.names = F, stringsAsFactors = F)
-if (args$illumina) result <- data.frame(result, `Illumina library ratio` = illumina.library.ratio(data), check.names = F, stringsAsFactors = F)
+if (args$dv200) result$DV200 <- dv200(data)
+if (args$illumina) result$`Illumina library ratio` <- illumina.library.ratio(data)
 write.table(result, file = if (is.null(args$output_file)) stdout() else args$output_file, quote = F, sep = "\t", row.names = F)
 
 if (! is.null(args$plot_file)) {
