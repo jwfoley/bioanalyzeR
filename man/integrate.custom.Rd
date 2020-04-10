@@ -27,5 +27,5 @@ integrate.custom(
 Compute the sum of some electrophoresis variable in an \code{electrophoresis} object between specified boundaries. The variable is summed individually for each sample.
 }
 \seealso{
-\code{\link{integrate.peaks}}, \code{\link{integrate.regions}}, \code{\link{region.ratio}}
+\code{\link{integrate.peak}}, \code{\link{integrate.region}}, \code{\link{region.ratio}}
 }
