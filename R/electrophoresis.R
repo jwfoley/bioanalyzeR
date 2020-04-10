@@ -43,14 +43,21 @@ rbind.electrophoresis <- function(...) {
 #' Spline fitting seems to perform reasonably well on all data. Agilent appears to use linear interpolation with DNA data and log-linear regression on RNA data, so you could choose those options if you want to reproduce the results of the software more precisely. However, linear interpolation creates sudden spikes in the derivative that make the concentration and molarity estimates unstable; spline fitting is basically a smoother version of that. Log-linear regression is the standard theoretical approach but does not actually fit the data very well; more sophisticated parametric models may be added in the future.
 #'
 #' @param xml.file The filename of an XML file exported from the Bioanalyzer or TapeStation software. The XML file may be compressed with `gzip` and the filename can be a remote URL. The filename is expected to end in \code{.xml} or \code{.xml.gz} and the name before that extension is used as the name of the batch.
-#' @param gel.image.file The filename of a TapeStation gel image with blue highlight, in PNG format. If \code{NULL}, the gel image file is expected to have the same name as the XML file with a different extension, e.g. \code{experiment1.xml} and \code{experiment1.png}, so if you name your files in that pattern you don't need to fill out this argument.
 #' @param ... One or more XML files exported from the Bioanalyzer or TapeStation software. TapeStation XML files must have corresponding PNG files with matching names.
-#' @param fit The method used to fit the mobility model of molecule length vs. migration distance, one of \code{"interpolation"} (linear interpolation via \code{\link{approxfun}}), \code{"spline"} (splines via \code{\link{splinefun}}), or \code{"regression"} (log-linear regression via \code{\link{lm}} with the model \code{relative.distance ~ log(length)}).
+#' @param mc.cores Maximum number of CPU cores to use (passed to \code{\link[parallel]{mclapply}}). Only one core is used per input file.
+#'
+#' @inheritParams read.bioanalyzer
+#' @inheritParams read.tapestation
 #'
 #' @name read.electrophoresis
 #' 
 #' @export
-read.electrophoresis <- function(..., fit = "spline") do.call(rbind, lapply(list(...), function(xml.file) {
+#' @importFrom parallel mclapply detectCores
+read.electrophoresis <- function(
+	...,
+	fit = "spline",
+	mc.cores = if (.Platform$OS.type == "windows") 1 else detectCores()
+) do.call(rbind, mclapply(list(...), function(xml.file) {
 	xml.con <- file(xml.file)
 	first.char <- readChar(xml.con, 1)
 	if (first.char == GZIP.FIRST.CHAR) first.char <- readChar(gzcon(xml.con), 1) # if gzipped, uncompress and try again
@@ -61,7 +68,7 @@ read.electrophoresis <- function(..., fit = "spline") do.call(rbind, lapply(list
 		read.tapestation(xml.file, fit = fit)
 	else
 		stop("unrecognized XML file format")
-}))
+}, mc.cores = mc.cores))
 
 
 #' Subset samples an electrophoresis object
@@ -118,17 +125,18 @@ subset.electrophoresis <- function(electrophoresis, ...) {
 
 #' Get the original x-variable
 #'
-#' This function takes an \code{electrophoresis} object and returns the name of the x-value that was used to fit the mobility model.
+#' This function takes an \code{electrophoresis} object and returns the name of the x-variable that was used to fit the mobility model.
 #'
-#' The result should only be either \code{"aligned time"} for Bioanalyzer data or \code{"relative.distance"} for TapeStation data.
+#' If `raw == FALSE` the result should only be either \code{"aligned time"} for Bioanalyzer data or \code{"relative.distance"} for TapeStation data. If `raw == TRUE` the result should be \code{"time"} or \code{"distance"}.
 #'
 #' @param electrophoresis An \code{electrophoresis} object.
+#' @param raw Whether to return the name of the raw variable instead of the aligned variable.
 #'
-#' @return A character giving the name of the x-value.
+#' @return A character giving the name of the x-variable.
 #'
 #' @export
-get.x.name <- function(electrophoresis) {
-	possible.x.names <- c("aligned.time", "relative.distance")
+get.x.name <- function(electrophoresis, raw = FALSE) {
+	possible.x.names <- if (raw) c("time", "distance") else c("aligned.time", "relative.distance")
 	result <- possible.x.names[possible.x.names %in% colnames(electrophoresis$data)]
 	stopifnot(length(result) == 1)
 	result
@@ -277,7 +285,7 @@ between.markers <- function(electrophoresis, lower.marker.spread = 5) {
 #'
 #' @export
 differential.scale <- function(electrophoresis, x, y) {
-	stopifnot(all(diff(electrophoresis$data$sample.index) %in% c(0, 1))) # assume data points from each sample are contiguous and ordered by sample
+	stopifnot(all(diff(electrophoresis$data$sample.index) >= 0)) # assume data points from each sample are contiguous and ordered by sample; no backsies
 	delta.x <- unlist(by(electrophoresis$data, electrophoresis$data$sample.index, function(data.subset) c(NA, diff(data.subset[[x]])), simplify = F)) # apply by sample to make sure we don't get a weird delta at the sample boundary
 	if (all(delta.x < 0, na.rm = T)) delta.x <- -delta.x else stopifnot(all(delta.x > 0, na.rm = T)) # assume data points are monotonic; if negative (like migration distance) make them positive so the math comes out clean
 	

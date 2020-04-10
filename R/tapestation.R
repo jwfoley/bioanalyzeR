@@ -3,10 +3,10 @@ LOWER.MARKER.NAMES <- c("Lower Marker", "edited Lower Marker")
 UPPER.MARKER.NAMES <- c("Upper Marker", "edited Upper Marker")
 
 # hardcoded colors
-RGB.HIGHLIGHT <-     c(209, 228, 250)  # highlight around selected lane is light blue
-RGB.GOOD <-          c(138, 208, 160)  # label for high RIN is green
-RGB.MEDIUM <-        c(255, 237, 101)  # label for medium RIN is yellow
-RGB.BAD <-           c(255, 106,  71)  # label for low RIN is red
+RGB.HIGHLIGHT <-  c(209, 228, 250)  # highlight around selected lane is light blue
+RGB.GOOD <-       c(138, 208, 160)  # label for high RIN is green
+RGB.MEDIUM <-     c(255, 237, 101)  # label for medium RIN is yellow
+RGB.BAD <-        c(255, 106,  71)  # label for low RIN is red
 
 # hardcoded margin widths, in pixels
 LEFT.MARGIN <- 8
@@ -133,12 +133,9 @@ read.tapestation.xml <- function(xml.file) {
 	result.list <- xmlApply(xml.root[["Samples"]], function(sample.xml) {
 		well.number <- xmlValue(sample.xml[["WellNumber"]])
 		sample.name <- trimws(xmlValue(sample.xml[["Comment"]]))
-		if (sample.name == "") sample.name <- well.number
 		sample.observations <- trimws(xmlValue(sample.xml[["Observations"]]))
-		if (sample.observations == "Marker(s) not detected") {
-			warning(paste(sample.observations, "for well", well.number, sample.name))
-			return(NULL)
-		}
+		if (sample.observations == "Marker(s) not detected") warning(paste(sample.observations, "for well", well.number, sample.name))
+		if (sample.name == "") sample.name <- well.number
 		suppressWarnings(RINe <- as.numeric(xmlValue(sample.xml[["RNA"]][["RINe"]])))
 		suppressWarnings(DIN <- as.numeric(xmlValue(sample.xml[["DIN"]])))
 		
@@ -203,8 +200,11 @@ read.tapestation.xml <- function(xml.file) {
 	# determine ladder scheme
 	ladder.wells <- result$samples$well.number[result$samples$sample.observations == "Ladder"]
 	result$samples$ladder.well <- factor(NA, levels = levels(result$samples$well.number))
+	# missing ladder! leave NA
+	if (length(ladder.wells) == 0) {
+		return(result)
 	# scheme: only one ladder for the whole run
-	if (length(ladder.wells) == 1) {
+	} else if (length(ladder.wells) == 1) {
 		result$samples$ladder.well <- ladder.wells
 	# scheme: one electronic ladder for the whole run but it's displayed more than once
 	} else if (
@@ -221,6 +221,10 @@ read.tapestation.xml <- function(xml.file) {
 
 
 #' @describeIn read.electrophoresis Read a TapeStation XML and PNG file pair
+#'
+#' @inheritParams read.tapestation.xml
+#' @inheritParams read.tapestation.gel.image
+#' @inheritParams calibrate.electrophoresis
 #'
 #' @export
 read.tapestation <- function(xml.file, gel.image.file = NULL, fit = "spline") {
@@ -282,88 +286,18 @@ read.tapestation <- function(xml.file, gel.image.file = NULL, fit = "spline") {
 	
 	# abort early if there aren't ladders to use
 	if (sum(! is.na(result$samples$ladder.well)) == 0) {
-		warning("unknown ladder scheme so lengths and molarities are not calculated")
+		warning("no ladder identified so calibrations are not performed")
 		return(result)
 	}
 	
-	# prepare more fields to be filled in piecemeal from each ladder
-	result$data$length <- NA
-	result$peaks$lower.length <- NA
-	result$peaks$upper.length <- NA
-	if (! is.null(result$regions)) {
-		result$regions$lower.relative.distance <- NA
-		result$regions$upper.relative.distance <- NA
-	}
-	result$mobility.functions <- list(list())
-	names(result$mobility.functions) <- batch
+	# perform calibrations
+	result <- calculate.molarity(calculate.concentration(calculate.length(result, fit)))
 	
-	# fit a mobility model for each ladder and apply it to the appropriate samples
-	for (ladder.well in unique(result$samples$ladder.well)) {
-		which.ladder.index <- which(result$samples$well.number == ladder.well)
-		peaks.ladder <- subset(result$peaks, sample.index == which.ladder.index)
-		which.samples <- which(result$samples$ladder.well == ladder.well)
-		which.rows <- which(result$data$sample.index %in% which.samples)
-		which.peaks <- which(result$peaks$sample.index %in% which.samples)
-		which.regions <- which(result$regions$sample.index %in% which.samples)
-		
-		# fit standard curve for molecule length vs. migration distance
-		# do this in relative-distance space so it's effectively recalibrated for each sample's markers
-		if (fit == "interpolation") {
-			warning("linear interpolation gives ugly results for molarity estimation")
-			standard.curve.function <- approxfun(peaks.ladder$relative.distance, peaks.ladder$length)
-			standard.curve.inverse <- approxfun(peaks.ladder$length, peaks.ladder$relative.distance)
-		} else if (fit == "spline") {
-			standard.curve.function <- splinefun(peaks.ladder$relative.distance, peaks.ladder$length, method = "natural")
-			standard.curve.inverse <- splinefun(peaks.ladder$length, peaks.ladder$relative.distance, method = "natural")
-		} else if (fit == "regression") {
-			mobility.model <- lm(relative.distance ~ log(length), peaks.ladder)
-			standard.curve.function <- function(relative.distance) exp((relative.distance - mobility.model$coefficients[1]) / mobility.model$coefficients[2])
-			standard.curve.inverse <- function(length) mobility.model$coefficients[1] + mobility.model$coefficients[2] * log(length)
-		}
-		result$mobility.functions[[1]][[ladder.well]] <- standard.curve.function
-		
-		# apply model to raw data
-		result$data$length[which.rows] <- standard.curve.function(result$data$relative.distance[which.rows])
-		result$data$length[! (
-			in.custom.region(result$data, min(peaks.ladder$length), max(peaks.ladder$length)) &
-			in.custom.region(result$data, min(peaks.ladder$relative.distance), max(peaks.ladder$relative.distance), bound.variable = "relative.distance")
-		)] <- NA # avoid extrapolation
-		
-		# apply model to peaks
-		result$peaks$lower.length[which.peaks] <- standard.curve.function(result$peaks$upper.relative.distance[which.peaks])
-		result$peaks$upper.length[which.peaks] <- standard.curve.function(result$peaks$lower.relative.distance[which.peaks])
-		
-		# apply inverse model to regions
-		if (! is.null(result$regions)) {
-			result$regions$lower.relative.distance[which.regions] <- standard.curve.inverse(result$regions$upper.length[which.regions])
-			result$regions$upper.relative.distance[which.regions] <- standard.curve.inverse(result$regions$lower.length[which.regions])
-		}
-	}
-	# convert inferred relative distances of regions back to raw distances
+	# convert inferred relative distance of regions back to raw distance
 	if (! is.null(result$regions)) {
 		result$regions$lower.distance <- result$regions$lower.relative.distance * marker.distances$range[result$regions$sample.index] + marker.distances$upper[result$regions$sample.index]
 		result$regions$upper.distance <- result$regions$upper.relative.distance * marker.distances$range[result$regions$sample.index] + marker.distances$upper[result$regions$sample.index]
 	}
-	
-	# convert to concentration and molarity 
-	data.calibration <- cbind(result$data, peak = in.peaks(result), do.call(rbind, by(result$data, result$data$sample.index, function(data.subset) data.frame(
-		delta.fluorescence = c(NA, diff(data.subset$fluorescence)),
-		delta.distance = c(NA, -diff(data.subset$distance))
-	), simplify = F)))
-	# estimate area under each measurement with the trapezoidal rule; to simplify math, each point's sum is for the trapezoid to the left of it
-	data.calibration$area <- (2 * data.calibration$fluorescence - data.calibration$delta.fluorescence) * data.calibration$delta.distance
-	# in kits with upper marker, only upper marker's true concentration is given, so calibrate only to that; otherwise, lower marker's true concentration is given so calibrate only to that
-	peaks.calibration <- cbind(result$peaks, area = sapply(1:nrow(result$peaks), function(i) sum(data.calibration$area[which(data.calibration$peak == i)]))) # can't use tapply or by because some peaks might not have any area (like gDNA sample wells)
-	has.upper.marker <- any(result$peaks$peak.observations %in% UPPER.MARKER.NAMES)
-	marker.areas <- do.call(rbind, by(peaks.calibration, peaks.calibration$sample.index, function(peaks.subset) peaks.subset[which(
-		(has.upper.marker & peaks.subset$peak.observations %in% UPPER.MARKER.NAMES) |
-		(! has.upper.marker & peaks.subset$peak.observations %in% LOWER.MARKER.NAMES)
-	), c("concentration", "area")], simplify = F))
-	stopifnot(all(marker.areas$concentration == marker.areas$concentration[1]))
-	# calculate the coefficient that relates known concentrations to area under the electropherograms
-	mass.coefficients <- marker.areas$concentration / marker.areas$area
-	result$data$concentration <- mass.coefficients[result$data$sample.index] * data.calibration$area	
-	result$data$molarity <- result$data$concentration / molecular.weight(result$data$length, parsed.data$assay.info$assay.type) * 1E6 # we're converting ng/uL to nmol/L or pg/uL to pmol/L so we need to scale by 1E6
 	
 	result
 }

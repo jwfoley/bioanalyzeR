@@ -1,7 +1,8 @@
 #! /usr/bin/Rscript
 
-library(bioanalyzeR)
+library(parallel)
 library(argparse)
+library(bioanalyzeR)
 
 parser <- ArgumentParser(description = "Simple automation of bioanalyzeR functions.")
 
@@ -28,6 +29,12 @@ files$add_argument("--fit",
 	help = "mobility standard curve method",
 	default = "spline",
 	choices = c("spline", "interpolation", "regression")
+)
+files$add_argument("--mc_cores",
+	help = "maximum CPU cores",
+	default = if (.Platform$OS.type == "windows") 1 else detectCores(),
+	type = "integer",
+	metavar = "N"
 )
 
 plotting <- parser$add_argument_group("plotting", "Settings for the electropherogram plot. See help(qplot.electrophoresis) for more information.")
@@ -166,7 +173,7 @@ qc$add_argument("--qc",
 
 args <- parser$parse_args()
 
-data <- do.call(read.electrophoresis, c(as.list(args$xml_files), fit = args$fit))
+data <- do.call(read.electrophoresis, c(as.list(args$xml_files), fit = args$fit, mc.cores = args$mc_cores))
 
 # integration and table generation
 result <- data$samples
@@ -179,8 +186,8 @@ if (! is.null(args$region_ratio)) {
 	bounds.list <- lapply(strsplit(args$region_ratio, "-"), as.numeric)
 	result <- data.frame(result, do.call(region.ratio, c(list(data), bounds.list, list(bound.variable = args$bound_variable, sum.variable = args$sum_variable))), check.names = F, stringsAsFactors = F)
 }
-if (args$dv200) result <- data.frame(result, DV200 = dv200(data), check.names = F, stringsAsFactors = F)
-if (args$illumina) result <- data.frame(result, `Illumina library ratio` = illumina.library.ratio(data), check.names = F, stringsAsFactors = F)
+if (args$dv200) result$DV200 <- dv200(data)
+if (args$illumina) result$`Illumina library ratio` <- illumina.library.ratio(data)
 write.table(result, file = if (is.null(args$output_file)) stdout() else args$output_file, quote = F, sep = "\t", row.names = F)
 
 if (! is.null(args$plot_file)) {

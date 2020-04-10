@@ -1,36 +1,33 @@
-#' Integrate a variable in each peak or region
+#' Integrate a variable in peaks or regions
 #'
-#' Compute the sum of some electrophoresis variable between the boundaries of each reported peak or region in an \code{electrophoresis} object.
+#' Compute the sum of some electrophoresis variable between the boundaries of reported peaks or regions in an \code{electrophoresis} object.
 #'
 #' @param electrophoresis An \code{electrophoresis} object.
+#' @param index The index, or a vector of indexes, of the peaks or regions to integrate (row numbers in \code{electrophoresis$peaks} or \code{electrophoresis$regions}).
 #' @param sum.variable Which variable to sum in each peak.
 #'
 #' @seealso \code{\link{integrate.custom}}
 #'
-#' @name integrate.peaks.regions
+#' @name integrate.peak.region
 NULL
 
 
-#' @rdname integrate.peaks.regions
+#' @rdname integrate.peak.region
 #' @export
-integrate.peaks <- function(
+integrate.peak <- function(
 	electrophoresis,
+	index,
 	sum.variable = "concentration"
-) {
-	peak <- in.peaks(electrophoresis)
-	sapply(1:nrow(electrophoresis$peaks), function(i) sum(electrophoresis$data[[sum.variable]][which(peak == i)]))
-}
+) sapply(index, function(i) sum(electrophoresis$data[[sum.variable]][in.peak(electrophoresis, i)]))
 
 
-#' @rdname integrate.peaks.regions
+#' @rdname integrate.peak.region
 #' @export
-integrate.regions <- function(
+integrate.region <- function(
 	electrophoresis,
+	index,
 	sum.variable = "concentration"
-) {
-	region <- in.regions(electrophoresis)
-	sapply(1:nrow(electrophoresis$regions), function(i) sum(electrophoresis$data[[sum.variable]][which(region == i)]))
-}
+) sapply(index, function(i) sum(electrophoresis$data[[sum.variable]][in.region(electrophoresis, i)]))
 
 
 #' Integrate a variable in a custom region
@@ -43,7 +40,7 @@ integrate.regions <- function(
 #' @param bound.variable Which variable the boundaries refer to.
 #' @param sum.variable Which variable to sum in each region.
 #'
-#' @seealso \code{\link{integrate.peaks}}, \code{\link{integrate.regions}}, \code{\link{region.ratio}}
+#' @seealso \code{\link{integrate.peak}}, \code{\link{integrate.region}}, \code{\link{region.ratio}}
 #'
 #' @export
 integrate.custom <- function(

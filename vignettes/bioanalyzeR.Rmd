@@ -668,9 +668,9 @@ compare.estimates <- function(dirname, filename, title, sample.names) {
 		data$peaks$length[which.rerun.peaks],
 		data$mobility.functions[[1]][[1]](data$peaks[[x.name]][which.rerun.peaks]),
 		data$peaks$concentration[which.rerun.peaks],
-		integrate.peaks(data, "concentration")[which.rerun.peaks],
+		integrate.peak(data, which.rerun.peaks, "concentration"),
 		data$peaks$molarity[which.rerun.peaks],
-		integrate.peaks(data, "molarity")[which.rerun.peaks]
+		integrate.peak(data, which.rerun.peaks, "molarity")
 	)
 	ladder.comparison$error <- (ladder.comparison$estimate - ladder.comparison$true.value) / ladder.comparison$estimate
 	ggplot(ladder.comparison, aes(x = length, y = error, color = replicate)) +
@@ -702,38 +702,38 @@ You may wish to copy it to somewhere in your system path for easy access.
 When you run this script on an XML file, it will print a tab-delimited sample table to stdout (or you can put it in a file with the `-o` argument). If you provide a filename with the `-p` argument, it will save the results of `qplot.electrophoresis` as a PDF image.
 
 ```
-$ bioanalyze.R -p D1000.pdf D1000-Tubes-16.xml.gz
-batch	well.number	sample.name	sample.observations	reagent.id	ladder.well
-D1000-Tubes-16	A1	D1000 Ladder	Ladder	01-S029-160125-05-000010	A1
-D1000-Tubes-16	B1	Smear sample (1:2)		01-S029-160125-05-000010	A1
-D1000-Tubes-16	C1	Smear sample (1:4)		01-S029-160125-05-000010	A1
-D1000-Tubes-16	D1	Smear sample (1:8)		01-S029-160125-05-000010	A1
-D1000-Tubes-16	E1	Smear sample (1:32)		01-S029-160125-05-000010	A1
-D1000-Tubes-16	F1	Ladder 1		01-S029-160125-05-000010	A1
-D1000-Tubes-16	G1	Fragment mix		01-S029-160125-05-000010	A1
-D1000-Tubes-16	H1	Ladder 2		01-S029-160125-05-000010	A1
-D1000-Tubes-16	A2	300 bp fragment		01-S029-160125-05-000010	A1
-D1000-Tubes-16	B2	300 bp fragment (1:2)		01-S029-160125-05-000010	A1
-D1000-Tubes-16	C2	300 bp fragment (1:10)		01-S029-160125-05-000010	A1
-D1000-Tubes-16	D2	300 bp fragment (1:70)		01-S029-160125-05-000010	A1
-D1000-Tubes-16	E2	Ladder 3		01-S029-160125-05-000010	A1
-D1000-Tubes-16	F2	150 bp fragment (1:10)		01-S029-160125-05-000010	A1
-D1000-Tubes-16	G2	150 bp fragment (1:30)		01-S029-160125-05-000010	A1
-D1000-Tubes-16	H2	150 bp fragment (1:60)		01-S029-160125-05-000010	A1
+$ bioanalyze.R -p D1000.pdf D1000-Tubes-16.xml.gz | column -ents $'\t'
 writing D1000.pdf
 done
+batch           well.number  sample.name             sample.observations  reagent.id                ladder.well
+D1000-Tubes-16  A1           D1000 Ladder            Ladder               01-S029-160125-05-000010  A1
+D1000-Tubes-16  B1           Smear sample (1:2)                           01-S029-160125-05-000010  A1
+D1000-Tubes-16  C1           Smear sample (1:4)                           01-S029-160125-05-000010  A1
+D1000-Tubes-16  D1           Smear sample (1:8)                           01-S029-160125-05-000010  A1
+D1000-Tubes-16  E1           Smear sample (1:32)                          01-S029-160125-05-000010  A1
+D1000-Tubes-16  F1           Ladder 1                                     01-S029-160125-05-000010  A1
+D1000-Tubes-16  G1           Fragment mix                                 01-S029-160125-05-000010  A1
+D1000-Tubes-16  H1           Ladder 2                                     01-S029-160125-05-000010  A1
+D1000-Tubes-16  A2           300 bp fragment                              01-S029-160125-05-000010  A1
+D1000-Tubes-16  B2           300 bp fragment (1:2)                        01-S029-160125-05-000010  A1
+D1000-Tubes-16  C2           300 bp fragment (1:10)                       01-S029-160125-05-000010  A1
+D1000-Tubes-16  D2           300 bp fragment (1:70)                       01-S029-160125-05-000010  A1
+D1000-Tubes-16  E2           Ladder 3                                     01-S029-160125-05-000010  A1
+D1000-Tubes-16  F2           150 bp fragment (1:10)                       01-S029-160125-05-000010  A1
+D1000-Tubes-16  G2           150 bp fragment (1:30)                       01-S029-160125-05-000010  A1
+D1000-Tubes-16  H2           150 bp fragment (1:60)                       01-S029-160125-05-000010  A1
 ```
 
 Of course you may want to customize the figure, so command-line arguments are provided for all the arguments to `qplot.electrophoresis`. Additionally, you can perform integration analysis from the command line; the results are included as additional columns in the tab-delimited sample table:
 
 ```
-$ bioanalyze.R --integrate_region 200-500 --illumina HSD1000-HaloplexHS-4.xml.gz
-batch	well.number	sample.name	sample.observations	reagent.id	ladder.well	concentration in 200-500	Illumina library ratio
-HSD1000-HaloplexHS-4	A1	Ladder	Ladder	01-S030-170109-01-000059	A1	871.977686627144	1.68496642056565
-HSD1000-HaloplexHS-4	B1	Haloplex HS amplified library 1 1/50 dilution		01-S030-170109-01-000059	A1	445.529718181388	9.08025650617749
-HSD1000-HaloplexHS-4	C1	Haloplex HS amplified library 2 1/30 dilution		01-S030-170109-01-000059	A1	1520.71234972229	8.77495297042303
-HSD1000-HaloplexHS-4	D1	Haloplex HS amplified library 3 1/10 dilution		01-S030-170109-01-000059	A1	1980.27320572808	13.2304668073971
-HSD1000-HaloplexHS-4	E1	Haloplex HS amplified library 4 1/40 dilution		01-S030-170109-01-000059	A1	1406.40116297398	10.304852237037
+$ bioanalyze.R --integrate_region 200-500 --illumina HSD1000-HaloplexHS-4.xml.gz | column -ents $'\t'
+batch                 well.number  sample.name                                    sample.observations  reagent.id                ladder.well  concentration in 200-500  Illumina library ratio
+HSD1000-HaloplexHS-4  A1           Ladder                                         Ladder               01-S030-170109-01-000059  A1           903.315682531863          1.61037620118153
+HSD1000-HaloplexHS-4  B1           Haloplex HS amplified library 1 1/50 dilution                       01-S030-170109-01-000059  A1           246.168295764346          8.7614775552482
+HSD1000-HaloplexHS-4  C1           Haloplex HS amplified library 2 1/30 dilution                       01-S030-170109-01-000059  A1           1079.82552722961          9.41677787478742
+HSD1000-HaloplexHS-4  D1           Haloplex HS amplified library 3 1/10 dilution                       01-S030-170109-01-000059  A1           1891.94257995375          14.5793009002519
+HSD1000-HaloplexHS-4  E1           Haloplex HS amplified library 4 1/40 dilution                       01-S030-170109-01-000059  A1           924.678493957236          10.5888841668172
 ```
 
 You can see instructions for all the other command-line arguments with `bioanalyze.R --help`.

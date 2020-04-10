@@ -310,28 +310,29 @@ stdcrv.mobility <- function(electrophoresis, n.simulate = 100, line.color = "red
 #' @export
 #' @import ggplot2
 qc.electrophoresis <- function(electrophoresis, variable, log = TRUE) {
-	peaks <- switch(variable,
+	if (all(electrophoresis$peaks[[variable]] == 0)) stop(paste("Agilent software did not report any", variable, "values to compare")) # Bioanalyzer reports all zero molarities in RNA kits
+
+	peaks <- cbind(electrophoresis$peaks, estimated.variable = switch(variable,
 		length = {
 			x.name <- get.x.name(electrophoresis)			
-			result <- cbind(electrophoresis$peaks, estimated.variable = NA)
+			result <- rep(NA, nrow(electrophoresis$peaks))
 			for (i in 1:nrow(electrophoresis$samples)) {
-				which.peaks <- result$sample.index == i
-				result$estimated.variable[which.peaks] <- electrophoresis$mobility.functions[[as.character(electrophoresis$samples$batch[i])]][[as.character(electrophoresis$samples$ladder.well[i])]](result[[x.name]][which.peaks])
+				which.peaks <- electrophoresis$peaks$sample.index == i
+				result[which.peaks] <- electrophoresis$mobility.functions[[as.character(electrophoresis$samples$batch[i])]][[as.character(electrophoresis$samples$ladder.well[i])]](electrophoresis$peaks[[x.name]][which.peaks])
 			}
 			result
 		},
 		
-		concentration = cbind(electrophoresis$peaks, estimated.variable = integrate.peaks(electrophoresis, "concentration")),
+		concentration = integrate.peak(electrophoresis, 1:nrow(electrophoresis$peaks), sum.variable = "concentration"),
 		
-		molarity = cbind(electrophoresis$peaks, estimated.variable = integrate.peaks(electrophoresis, "molarity"))
-	)
+		molarity = integrate.peak(electrophoresis, 1:nrow(electrophoresis$peaks), sum.variable = "molarity")
+	))
 	
-	peaks <- subset(peaks, ! is.na(estimated.variable)) # remove NA's so they don't affect the x-limits and throw a warning
+	peaks <- peaks[! is.na(peaks[[variable]]) & ! is.na(peaks$estimated.variable),] # remove NA's so they don't affect the x-limits and throw a warning
 	
 	result <- ggplot(peaks, aes_(as.name(variable), as.name("estimated.variable"), color = as.name("peak.observations"))) +
 		geom_abline() +
 		geom_point() +
-		geom_smooth(method = "lm", formula = y ~ x) +
 		xlab(paste("software-reported", variable.label(electrophoresis, variable))) +
 		ylab(paste("estimated", variable.label(electrophoresis, variable))) +
 		facet_wrap(~ sample.index, labeller = labeller.electrophoresis(electrophoresis))
