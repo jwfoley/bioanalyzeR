@@ -3,10 +3,10 @@ LOWER.MARKER.NAMES <- c("Lower Marker", "edited Lower Marker")
 UPPER.MARKER.NAMES <- c("Upper Marker", "edited Upper Marker")
 
 # hardcoded colors
-RGB.HIGHLIGHT <-     c(209, 228, 250)  # highlight around selected lane is light blue
-RGB.GOOD <-          c(138, 208, 160)  # label for high RIN is green
-RGB.MEDIUM <-        c(255, 237, 101)  # label for medium RIN is yellow
-RGB.BAD <-           c(255, 106,  71)  # label for low RIN is red
+RGB.HIGHLIGHT <-  c(209, 228, 250)  # highlight around selected lane is light blue
+RGB.GOOD <-       c(138, 208, 160)  # label for high RIN is green
+RGB.MEDIUM <-     c(255, 237, 101)  # label for medium RIN is yellow
+RGB.BAD <-        c(255, 106,  71)  # label for low RIN is red
 
 # hardcoded margin widths, in pixels
 LEFT.MARGIN <- 8
@@ -286,7 +286,7 @@ read.tapestation <- function(xml.file, gel.image.file = NULL, fit = "spline") {
 	
 	# abort early if there aren't ladders to use
 	if (sum(! is.na(result$samples$ladder.well)) == 0) {
-		warning("no ladder identified so lengths and molarities are not calculated")
+		warning("no ladder identified so calibrations are not performed")
 		return(result)
 	}
 	
