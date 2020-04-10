@@ -1,5 +1,7 @@
 #' @describeIn read.electrophoresis Read a Bioanalyzer XML file
 #'
+#' @inheritParams calibrate.electrophoresis
+#'
 #' @export
 #' @importFrom XML xmlRoot xmlParse xmlValue xmlToDataFrame xmlApply
 #' @importFrom base64enc base64decode

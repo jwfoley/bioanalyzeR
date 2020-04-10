@@ -11,7 +11,7 @@ integrate.peak(electrophoresis, index, sum.variable = "concentration")
 integrate.region(electrophoresis, index, sum.variable = "concentration")
 }
 \arguments{
-\item{electrophoresis}{An \code{electrophoresis} object}
+\item{electrophoresis}{An \code{electrophoresis} object.}
 
 \item{index}{The index, or a vector of indexes, of the peaks or regions to integrate (row numbers in \code{electrophoresis$peaks} or \code{electrophoresis$regions}).}
 

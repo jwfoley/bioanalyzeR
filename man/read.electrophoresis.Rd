@@ -22,7 +22,7 @@ read.tapestation(xml.file, gel.image.file = NULL, fit = "spline")
 
 \item{mc.cores}{Maximum number of CPU cores to use (passed to \code{\link[parallel]{mclapply}}). Only one core is used per input file.}
 
-\item{gel.image.file}{The filename of a TapeStation gel image with blue highlight, in PNG format. If \code{NULL}, the gel image file is expected to have the same name as the XML file with a different extension, e.g. \code{experiment1.xml} and \code{experiment1.png}, so if you name your files in that pattern you don't need to fill out this argument.}
+\item{gel.image.file}{The filename of a TapeStation gel image with blue highlight, in PNG format. The filename can be a URL.}
 }
 \description{
 These functions read one or more XML files exported from the Agilent software (and accompanying PNG files if from a TapeStation) and calls the appropriate function to read them into an \code{electrophoresis} object, which is filled out with estimates of molecule length, concentration, and molarity. \code{read.electrophoresis} is the easiest to use as it automatically infers the correct file type.

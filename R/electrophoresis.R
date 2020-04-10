@@ -43,10 +43,11 @@ rbind.electrophoresis <- function(...) {
 #' Spline fitting seems to perform reasonably well on all data. Agilent appears to use linear interpolation with DNA data and log-linear regression on RNA data, so you could choose those options if you want to reproduce the results of the software more precisely. However, linear interpolation creates sudden spikes in the derivative that make the concentration and molarity estimates unstable; spline fitting is basically a smoother version of that. Log-linear regression is the standard theoretical approach but does not actually fit the data very well; more sophisticated parametric models may be added in the future.
 #'
 #' @param xml.file The filename of an XML file exported from the Bioanalyzer or TapeStation software. The XML file may be compressed with `gzip` and the filename can be a remote URL. The filename is expected to end in \code{.xml} or \code{.xml.gz} and the name before that extension is used as the name of the batch.
-#' @param gel.image.file The filename of a TapeStation gel image with blue highlight, in PNG format. If \code{NULL}, the gel image file is expected to have the same name as the XML file with a different extension, e.g. \code{experiment1.xml} and \code{experiment1.png}, so if you name your files in that pattern you don't need to fill out this argument.
 #' @param ... One or more XML files exported from the Bioanalyzer or TapeStation software. TapeStation XML files must have corresponding PNG files with matching names.
-#' @param fit The method used to fit the mobility model of molecule length vs. migration distance, one of \code{"interpolation"} (linear interpolation via \code{\link{approxfun}}), \code{"spline"} (splines via \code{\link{splinefun}}), or \code{"regression"} (log-linear regression via \code{\link{lm}} with the model \code{relative.distance ~ log(length)}).
 #' @param mc.cores Maximum number of CPU cores to use (passed to \code{\link[parallel]{mclapply}}). Only one core is used per input file.
+#'
+#' @inheritParams read.bioanalyzer
+#' @inheritParams read.tapestation
 #'
 #' @name read.electrophoresis
 #' 

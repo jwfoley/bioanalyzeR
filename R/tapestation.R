@@ -222,6 +222,10 @@ read.tapestation.xml <- function(xml.file) {
 
 #' @describeIn read.electrophoresis Read a TapeStation XML and PNG file pair
 #'
+#' @inheritParams read.tapestation.xml
+#' @inheritParams read.tapestation.gel.image
+#' @inheritParams calibrate.electrophoresis
+#'
 #' @export
 read.tapestation <- function(xml.file, gel.image.file = NULL, fit = "spline") {
 	stopifnot(fit %in% c("interpolation", "spline", "regression"))

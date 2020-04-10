@@ -2,7 +2,7 @@
 #'
 #' Compute the sum of some electrophoresis variable between the boundaries of reported peaks or regions in an \code{electrophoresis} object.
 #'
-#' @param electrophoresis An \code{electrophoresis} object
+#' @param electrophoresis An \code{electrophoresis} object.
 #' @param index The index, or a vector of indexes, of the peaks or regions to integrate (row numbers in \code{electrophoresis$peaks} or \code{electrophoresis$regions}).
 #' @param sum.variable Which variable to sum in each peak.
 #'
