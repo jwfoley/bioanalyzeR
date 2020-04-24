@@ -61,7 +61,7 @@ qplot.electrophoresis(
 
 \item{region.alpha}{Alpha-transparency of the highlight in the reported regions of interested. Set to \code{NA} to skip plotting the regions.}
 
-\item{area.alpha}{Alpha-transparency of the filled areas under the curves, if they are overlaid in one graph (\code{facet = FALSE} and \code{geom = "area"}), to make them visible through one another.}
+\item{area.alpha}{Alpha-transparency of the filled areas under the curves, if \code{geom = "area"}, to make them visible through one another.}
 
 \item{title, xlab, ylab}{Plot title, x-axis label, and y-axis label.}
 }

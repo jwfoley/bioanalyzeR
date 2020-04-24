@@ -89,7 +89,7 @@ labeller.electrophoresis <- function(electrophoresis) function(factor.frame) {
 #' @param xlim,ylim Limits of x- and y-axes 
 #' @param show.peaks Whether to fill the areas under reported peaks.
 #' @param region.alpha Alpha-transparency of the highlight in the reported regions of interested. Set to \code{NA} to skip plotting the regions.
-#' @param area.alpha Alpha-transparency of the filled areas under the curves, if they are overlaid in one graph (\code{facet = FALSE} and \code{geom = "area"}), to make them visible through one another.
+#' @param area.alpha Alpha-transparency of the filled areas under the curves, if \code{geom = "area"}, to make them visible through one another.
 #' @param title,xlab,ylab Plot title, x-axis label, and y-axis label.
 #'
 #' @return A ggplot object containing several layers. You can draw it directly or customize it like any other ggplot object by adding more layers.
@@ -165,7 +165,7 @@ qplot.electrophoresis <- function(
 			aes(x = x.value, y = y.scaled, group = sample.index, color = sample.name, ...)
 		),
 		area = if (! is.null(facets))
-			geom_area(aes(x = x.value, y = y.scaled, group = sample.index, ...))
+			geom_area(aes(x = x.value, y = y.scaled, group = sample.index, ...), alpha = area.alpha)
 		else
 			geom_area(aes(x = x.value, y = y.scaled, group = sample.index, fill = sample.name, ...), alpha = area.alpha)
 	)
