@@ -88,6 +88,7 @@ read.bioanalyzer <- function(xml.file, fit = "spline") {
 			)
 		}
 	})
+	for (i in length(result.list):1) if (is.null(result.list[[i]])) result.list[[i]] <- NULL # delete empty elements; go in reverse because indexes will change as elements are deleted
 	result <- structure(list(
 		data = do.call(rbind, c(lapply(1:length(result.list), function(i) cbind(sample.index = i, result.list[[i]]$data)), make.row.names = F)),
 		assay.info = list(assay.info),
@@ -117,7 +118,7 @@ read.bioanalyzer <- function(xml.file, fit = "spline") {
 	)
 	
 	# analyze ladder
-	which.ladder <- which(result$samples$is.ladder)
+	which.ladder <- result$samples$well.number[result$samples$is.ladder]
 	stopifnot(length(which.ladder) == 1)
 	result$samples$is.ladder <- NULL
 	result$samples$ladder.well <- factor(which.ladder, levels = levels(result$samples$well.number))
