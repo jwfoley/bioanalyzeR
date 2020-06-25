@@ -71,6 +71,55 @@ read.electrophoresis <- function(
 }, mc.cores = mc.cores))
 
 
+#' Add annotations to an electrophoresis object
+#'
+#' This function adds columns of annotations to the \code{$samples} table of an \code{electrophoresis} object. These new annotations can be used for subsetting, plot faceting, etc.
+#'
+#' The input annotations can be a data frame or either a \code{\link{connection}} or a \code{\link{character}} containing the path of a file, which is then read into a data frame by \code{\link{read.table}}. Therefore a file will probably need to be in CSV format or similar.
+#'
+#' The first column of \code{annotations} is used to identify samples in the matching column of \code{electrophoresis$samples}, so it needs a matching column name, usually \code{sample.name} or \code{well.number}. But you can use any column that exists in the table, such as \code{batch} or \code{reagent.id} or even a column added by a previous call to this function. The elements of this first column are interpreted as class \code{\link{character}} and cannot contain any duplicates. However, this column does not need to be in the same order as \code{electrophoresis$samples} and not all identifiers in the sample table (e.g. sample names) need to appear in the annotation table, nor vice versa.
+#'
+#' Each additional column of \code{annotations} produces a new column of the same name in \code{electrophoresis$samples}. If there is already a column of that name, it is overwritten. Samples that do not appear in the annotation table receive \code{NA} for their new annotations. Samples with the same identifier (e.g. the same \code{sample.name} because they are replicates) receive the same annotations.
+#'
+#' @param electrophoresis An \code{electrophoresis} object.
+#' @param annotation Either a data frame or the path of a file that can be read by \code{\link{read.table}}.
+#' @param ... Additional arguments passed to \code{\link{read.table}}.
+#'
+#' @return A new \code{electrophoresis} object with additional columns added to its \code{$samples} element.
+#'
+#' @export
+annotate.electrophoresis <- function(
+	electrophoresis,
+	annotations,
+	header = TRUE,
+	row.names = NULL,
+	sep = "\t",
+	stringsAsFactors = FALSE,
+	...
+) {
+	if (any(class(annotations) %in% c("character", "connection"))) annotations <- read.table(
+		annotations,
+		header = header,
+		row.names = row.names,
+		sep = sep,
+		stringsAsFactors = stringsAsFactors,
+		...
+	)
+	stopifnot(ncol(annotations) > 1) # need at least one column of new annotations
+	stopifnot(colnames(annotations)[1] %in% colnames(electrophoresis$samples)) # first column must be a valid target
+	stopifnot(anyDuplicated(annotations[,1]) == 0) # can't have duplicate annotations
+	
+	identifiers <- as.character(electrophoresis$samples[,colnames(annotations)[1]])
+	for (col in 2:ncol(annotations)) {
+		annotation.lookup <- annotations[,col]
+		names(annotation.lookup) <- annotations[,1]
+		electrophoresis$samples[,colnames(annotations)[col]] <- annotation.lookup[identifiers]
+	}
+	
+	electrophoresis
+}
+
+
 #' Subset samples an electrophoresis object
 #'
 #' This function takes a subset of the samples in an \code{electrophoresis} object.

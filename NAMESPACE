@@ -2,6 +2,7 @@
 
 S3method(rbind,electrophoresis)
 S3method(subset,electrophoresis)
+export(annotate.electrophoresis)
 export(between.markers)
 export(calculate.concentration)
 export(calculate.length)
