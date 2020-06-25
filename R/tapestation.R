@@ -26,6 +26,9 @@ find.matching.pixels.vec <- function(rgb.vec, rgb.values) {
 	return(rgb.vec[,1] == rgb.fractions[1] & rgb.vec[,2] == rgb.fractions[2] & rgb.vec[,3] == rgb.fractions[3])
 }
 
+# identify which samples are ladders (takes an electrophoresis-like object and returns TRUE or FALSE for each sample)
+find.ladder <- function(electrophoresis) grepl("Ladder", electrophoresis$samples$sample.observations) # grep instead of complete match because sometimes there are other observations like expired ScreenTape
+
 
 #' Read a TapeStation gel image
 #'
@@ -198,7 +201,7 @@ read.tapestation.xml <- function(xml.file) {
 	if (has.regions) for (field in c("region.comment")) result$regions[,field] <- factor(result$regions[,field])
 	
 	# determine ladder scheme
-	ladder.wells <- result$samples$well.number[result$samples$sample.observations == "Ladder"]
+	ladder.wells <- result$samples$well.number[which(find.ladder(result))]
 	result$samples$ladder.well <- factor(NA, levels = levels(result$samples$well.number))
 	# missing ladder! leave NA
 	if (length(ladder.wells) == 0) {
@@ -247,8 +250,8 @@ read.tapestation <- function(xml.file, gel.image.file = NULL, fit = "spline") {
 	names(result$assay.info) <- batch
 	
 	# remove duplicate ladders
-	if (sum(result$samples$sample.observations == "Ladder") > 1 && length(unique(result$samples$ladder.well)) == 1) {
-		result <- subset(result, ! (sample.observations == "Ladder" & well.number != ladder.well))
+	if (sum(find.ladder(result)) > 1 && length(unique(result$samples$ladder.well)) == 1) {
+		result <- subset(result, ! (find.ladder(result) & well.number != ladder.well))
 	}
 	
 	# calculate relative distances
