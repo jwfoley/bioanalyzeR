@@ -452,6 +452,19 @@ dilutions$samples$dilution <- factor(as.integer(sub('.*:', "", dilutions$samples
 unique(dilutions$samples[,c("sample.name", "sample.type", "dilution")])
 ```
 
+Or, if we've already prepared the new variables in some other table (like a spreadsheet file), we can use the `annotate.electrophoresis` function to add them easily:
+
+```{r}
+annotation.file <- system.file(
+	"extdata",
+	"tapestation",
+	"D1000-Plate-96.annotations.csv",
+	package = "bioanalyzeR"
+)
+dilutions <- annotate.electrophoresis(dilutions, annotation.file)
+unique(dilutions$samples[,c("sample.name", "sample.type2", "dilution2")])
+```
+
 Now that we've added new variables, we can facet on them:
 
 ```{r}
