@@ -37,7 +37,17 @@ files$add_argument("--mc_cores",
 	metavar = "N"
 )
 
-plotting <- parser$add_argument_group("plotting", "Settings for the electropherogram plot. See help(qplot.electrophoresis) for more information.")
+annotations <- parser$add_argument_group("annotations", "Add sample annotations from a table. See help(annotate.electrophoresis).")
+annotations$add_argument("--annotation_file", "-a",
+	help = "annotation file",
+	metavar = "ANNOTATIONS.csv"
+)
+annotations$add_argument("--annot_args",
+	help = "string of arguments for read.table, e.g. 'sep = \",\"' for comma-separated values",
+	metavar = "ARG_STRING"
+)
+
+plotting <- parser$add_argument_group("plotting", "Settings for the electropherogram plot. See help(qplot.electrophoresis).")
 plotting$add_argument("-x", help = "x-variable",
 	default = "length",
 	metavar = "VARIABLE"
@@ -129,7 +139,7 @@ plotting$add_argument("--ylab",
 	metavar = "LABEL"
 )
 
-integration <- parser$add_argument_group("integration", "Integrate a variable under the curve. See help(integrate.custom) and help(region.ratio) for more information.")
+integration <- parser$add_argument_group("integration", "Integrate a variable under the curve. See help(integrate.custom) and help(region.ratio).")
 integration$add_argument("--integrate_region", "-i",
 	help = "integrate within the selected boundaries",
 	nargs = "*",
@@ -160,7 +170,7 @@ integration$add_argument("--sum_variable",
 )
 
 
-qc <- parser$add_argument_group("QC", "Quality-control plots.")
+qc <- parser$add_argument_group("QC", "Quality-control plots. See help(qc.electrophoresis).")
 qc$add_argument("--stdcrv",
 	help = "draw mobility standard curve(s)",
 	action = "store_true"
@@ -174,6 +184,12 @@ qc$add_argument("--qc",
 args <- parser$parse_args()
 
 data <- do.call(read.electrophoresis, c(as.list(args$xml_files), fit = args$fit, mc.cores = args$mc_cores))
+
+# annotations
+if (! is.null(args$annotation_file)) {
+	annot.args <- if (is.null(args$annot_args)) NULL else eval(parse(textConnection(paste0("list(", args$annot_args, ")")))) # put annotation arguments into a list expression, then parse and evaluate it
+	data <- do.call(annotate.electrophoresis, c(list(data, args$annotation_file), annot.args)) 
+}
 
 # integration and table generation
 result <- data$samples
