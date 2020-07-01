@@ -26,9 +26,6 @@ find.matching.pixels.vec <- function(rgb.vec, rgb.values) {
 	return(rgb.vec[,1] == rgb.fractions[1] & rgb.vec[,2] == rgb.fractions[2] & rgb.vec[,3] == rgb.fractions[3])
 }
 
-# identify which samples are ladders (takes an electrophoresis-like object and returns TRUE or FALSE for each sample)
-find.ladder <- function(electrophoresis) grepl("Ladder", electrophoresis$samples$sample.observations) # grep instead of complete match because sometimes there are other observations like expired ScreenTape
-
 
 #' Read a TapeStation gel image
 #'
@@ -138,6 +135,7 @@ read.tapestation.xml <- function(xml.file) {
 		sample.name <- trimws(xmlValue(sample.xml[["Comment"]]))
 		sample.observations <- trimws(xmlValue(sample.xml[["Observations"]]))
 		if (sample.observations == "Marker(s) not detected") warning(paste(sample.observations, "for well", well.number, sample.name))
+		is.ladder <- grepl("Ladder", sample.observations) 
 		if (sample.name == "") sample.name <- well.number
 		suppressWarnings(RINe <- as.numeric(xmlValue(sample.xml[["RNA"]][["RINe"]])))
 		suppressWarnings(DIN <- as.numeric(xmlValue(sample.xml[["DIN"]])))
@@ -178,7 +176,7 @@ read.tapestation.xml <- function(xml.file) {
 		)
 		
 		list(
-			samples = data.frame(batch, well.number, sample.name, sample.observations, reagent.id, RINe, DIN, stringsAsFactors = F),
+			samples = data.frame(batch, well.number, sample.name, sample.observations, reagent.id, RINe, DIN, is.ladder, stringsAsFactors = F),
 			peaks = peaks,
 			regions = regions
 		)
@@ -201,7 +199,7 @@ read.tapestation.xml <- function(xml.file) {
 	if (has.regions) for (field in c("region.comment")) result$regions[,field] <- factor(result$regions[,field])
 	
 	# determine ladder scheme
-	ladder.wells <- result$samples$well.number[which(find.ladder(result))]
+	ladder.wells <- result$samples$well.number[which(result$samples$is.ladder)]
 	result$samples$ladder.well <- factor(NA, levels = levels(result$samples$well.number))
 	# missing ladder! leave NA
 	if (length(ladder.wells) == 0) {
@@ -250,8 +248,8 @@ read.tapestation <- function(xml.file, gel.image.file = NULL, fit = "spline") {
 	names(result$assay.info) <- batch
 	
 	# remove duplicate ladders
-	if (sum(find.ladder(result)) > 1 && length(unique(result$samples$ladder.well)) == 1) {
-		result <- subset(result, ! (find.ladder(result) & well.number != ladder.well))
+	if (sum(result$samples$is.ladder) > 1 && length(unique(result$samples$ladder.well)) == 1) {
+		result <- subset(result, ! (is.ladder & well.number != ladder.well))
 	}
 	
 	# calculate relative distances
@@ -301,6 +299,8 @@ read.tapestation <- function(xml.file, gel.image.file = NULL, fit = "spline") {
 		result$regions$lower.distance <- result$regions$lower.relative.distance * marker.distances$range[result$regions$sample.index] + marker.distances$upper[result$regions$sample.index]
 		result$regions$upper.distance <- result$regions$upper.relative.distance * marker.distances$range[result$regions$sample.index] + marker.distances$upper[result$regions$sample.index]
 	}
+	
+	result$samples$is.ladder <- NULL # remove extraneous temporary field
 	
 	result
 }
