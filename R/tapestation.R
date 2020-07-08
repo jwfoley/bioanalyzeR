@@ -75,7 +75,7 @@ read.tapestation.gel.image <- function(gel.image.file, n.lanes) {
 	bad.pixels <- ! (lane.pixels[,,1] == lane.pixels[,,2] & lane.pixels[,,1] == lane.pixels[,,3]) # find non-grayscale pixels, indicating annotations that block the data
 	for (col in which(colSums(bad.pixels) > 0)) {
 		bad.rows <- which(bad.pixels[,col])
-		lane.pixels[(min(bad.rows) - WARNING.PAD):(max(bad.rows) + WARNING.PAD), col,] <- NA # set bad pixels and pad around them to NA
+		lane.pixels[max((min(bad.rows) - WARNING.PAD), 1):min((max(bad.rows) + WARNING.PAD), n.readings), col,] <- NA # set bad pixels and pad around them to NA (don't let pad go outside the range)
 	}
 	
 	data.frame(
