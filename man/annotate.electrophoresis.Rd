@@ -10,7 +10,7 @@ annotate.electrophoresis(
   header = TRUE,
   row.names = NULL,
   sep = "\\t",
-  stringsAsFactors = FALSE,
+  stringsAsFactors = TRUE,
   ...
 )
 }
@@ -33,4 +33,6 @@ The input annotations can be a data frame or either a \code{\link{connection}} o
 The first column of \code{annotations} is used to identify samples in the matching column of \code{electrophoresis$samples}, so it needs a matching column name, usually \code{sample.name} or \code{well.number}. But you can use any column that exists in the table, such as \code{batch} or \code{reagent.id} or even a column added by a previous call to this function. The elements of this first column are interpreted as class \code{\link{character}} and cannot contain any duplicates. However, this column does not need to be in the same order as \code{electrophoresis$samples} and not all identifiers in the sample table (e.g. sample names) need to appear in the annotation table, nor vice versa.
 
 Each additional column of \code{annotations} produces a new column of the same name in \code{electrophoresis$samples}. If there is already a column of that name, it is overwritten. Samples that do not appear in the annotation table receive \code{NA} for their new annotations. Samples with the same identifier (e.g. the same \code{sample.name} because they are replicates) receive the same annotations.
+
+If \code{stringsAsFactors} is true then variables parsed as strings will be cast as factors, but the factor levels will be kept in the order they appear in the table, unlike the behavior of \code{\link{read.table}}, which alphabetizes them. Thus the order in the annotation file determines the order of factor levels.
 }

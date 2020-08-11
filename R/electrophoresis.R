@@ -81,6 +81,8 @@ read.electrophoresis <- function(
 #'
 #' Each additional column of \code{annotations} produces a new column of the same name in \code{electrophoresis$samples}. If there is already a column of that name, it is overwritten. Samples that do not appear in the annotation table receive \code{NA} for their new annotations. Samples with the same identifier (e.g. the same \code{sample.name} because they are replicates) receive the same annotations.
 #'
+#' If \code{stringsAsFactors} is true then variables parsed as strings will be cast as factors, but the factor levels will be kept in the order they appear in the table, unlike the behavior of \code{\link{read.table}}, which alphabetizes them. Thus the order in the annotation file determines the order of factor levels.
+#'
 #' @param electrophoresis An \code{electrophoresis} object.
 #' @param annotation Either a data frame or the path of a file that can be read by \code{\link{read.table}}.
 #' @param ... Additional arguments passed to \code{\link{read.table}}.
@@ -94,7 +96,7 @@ annotate.electrophoresis <- function(
 	header = TRUE,
 	row.names = NULL,
 	sep = "\t",
-	stringsAsFactors = FALSE,
+	stringsAsFactors = TRUE,
 	...
 ) {
 	if (any(class(annotations) %in% c("character", "connection"))) annotations <- read.table(
@@ -102,7 +104,7 @@ annotate.electrophoresis <- function(
 		header = header,
 		row.names = row.names,
 		sep = sep,
-		stringsAsFactors = stringsAsFactors,
+		stringsAsFactors = F, # cast them as factors later
 		...
 	)
 	stopifnot(ncol(annotations) > 1) # need at least one column of new annotations
@@ -112,6 +114,7 @@ annotate.electrophoresis <- function(
 	identifiers <- as.character(electrophoresis$samples[,colnames(annotations)[1]])
 	for (col in 2:ncol(annotations)) {
 		annotation.lookup <- annotations[,col]
+		if (stringsAsFactors && class(annotation.lookup) == "character") annotation.lookup <- factor(annotation.lookup, levels = unique(annotation.lookup))
 		names(annotation.lookup) <- annotations[,1]
 		electrophoresis$samples[,colnames(annotations)[col]] <- annotation.lookup[identifiers]
 	}
