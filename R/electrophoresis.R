@@ -1,5 +1,5 @@
 BIOANALYZER.FIRST.CHAR <- "<" # XML opening bracket that distinguishes Bioanalyzer XML exports
-TAPESTATION.FIRST.CHAR <- rawToChar(as.raw(239)) # byte order mark that distinguishes TapeStation XML exports
+TAPESTATION.FIRST.CHAR <- rawToChar(as.raw(239)) # first byte of the byte order mark that distinguishes TapeStation XML exports
 GZIP.FIRST.CHAR <- rawToChar(as.raw(31)) # first byte of the gzip magic number
 
 
