@@ -8,11 +8,11 @@ Install required dependencies:
 
 Easy way to get the newest release (includes 30 MB of demo data):
 
-    > install.packages("https://github.com/jwfoley/bioanalyzeR/releases/download/v0.4.3/bioanalyzeR_0.4.3.tar.gz", repos = NULL)
+    > install.packages("https://github.com/jwfoley/bioanalyzeR/releases/download/v0.4.4/bioanalyzeR_0.4.4.tar.gz", repos = NULL)
 
 or, easy way without the demo data:
 
-    > install.packages("https://github.com/jwfoley/bioanalyzeR/releases/download/v0.4.3/bioanalyzeR_0.4.3-no_data.tar.gz", repos = NULL)
+    > install.packages("https://github.com/jwfoley/bioanalyzeR/releases/download/v0.4.4/bioanalyzeR_0.4.4-no_data.tar.gz", repos = NULL)
 
 or, for hackers (it may take a minute to build the vignette):
 
