@@ -1,5 +1,5 @@
 BIOANALYZER.FIRST.CHAR <- "<" # XML opening bracket that distinguishes Bioanalyzer XML exports
-TAPESTATION.FIRST.CHAR <- rawToChar(as.raw(c(239, 187, 191))) # byte order mark that distinguishes TapeStation XML exports
+TAPESTATION.FIRST.CHAR <- rawToChar(as.raw(239)) # byte order mark that distinguishes TapeStation XML exports
 GZIP.FIRST.CHAR <- rawToChar(as.raw(31)) # first byte of the gzip magic number
 
 
@@ -59,8 +59,8 @@ read.electrophoresis <- function(
 	mc.cores = if (.Platform$OS.type == "windows") 1 else detectCores()
 ) do.call(rbind, mclapply(list(...), function(xml.file) {
 	xml.con <- file(xml.file)
-	first.char <- readChar(xml.con, 1)
-	if (first.char == GZIP.FIRST.CHAR) first.char <- readChar(gzcon(xml.con), 1) # if gzipped, uncompress and try again
+	first.char <- readChar(xml.con, 1, useBytes = T)
+	if (first.char == GZIP.FIRST.CHAR) first.char <- readChar(gzcon(xml.con), 1, useBytes = T) # if gzipped, uncompress and try again
 	close(xml.con) # if not explicitly closed, R gives a warning
 	if (first.char == BIOANALYZER.FIRST.CHAR)
 		read.bioanalyzer(xml.file, fit = fit)
