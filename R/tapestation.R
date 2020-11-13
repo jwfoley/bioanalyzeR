@@ -137,6 +137,8 @@ read.tapestation.xml <- function(xml.file) {
 		if (sample.observations == "Marker(s) not detected") warning(paste(sample.observations, "for well", well.number, sample.name))
 		is.ladder <- grepl("Ladder", sample.observations) 
 		if (sample.name == "") sample.name <- well.number
+		well.row <- ifelse(is.ladder && sample.name == "Electronic Ladder", NA, substr(well.number, 1, 1))
+		well.col <- ifelse(is.ladder && sample.name == "Electronic Ladder", NA, substr(well.number, 2, 3))
 		suppressWarnings(RINe <- as.numeric(xmlValue(sample.xml[["RNA"]][["RINe"]])))
 		suppressWarnings(DIN <- as.numeric(xmlValue(sample.xml[["DIN"]])))
 		
@@ -176,7 +178,7 @@ read.tapestation.xml <- function(xml.file) {
 		)
 		
 		list(
-			samples = data.frame(batch, well.number, sample.name, sample.observations, reagent.id, RINe, DIN, is.ladder, stringsAsFactors = F),
+			samples = data.frame(batch, well.number, well.row, well.col, sample.name, sample.observations, reagent.id, RINe, DIN, is.ladder, stringsAsFactors = F),
 			peaks = peaks,
 			regions = regions
 		)
@@ -194,6 +196,9 @@ read.tapestation.xml <- function(xml.file) {
 	
 	# convert sample metadata into factors, ensuring all frames have the same levels and the levels are in the observed order
 	for (field in c("batch", "well.number", "sample.name", "reagent.id", "sample.observations")) result$samples[,field] <- factor(result$samples[,field], levels = unique(result$samples[,field]))
+	# convert well row and column into factors but use the range of all possible rows/columns as levels
+	result$samples$well.row <- factor(result$samples$well.row, levels = LETTERS[1:8])
+	result$samples$well.col <- factor(result$samples$well.col, levels = 1:12)
 	# convert other text into factors without those restrictions
 	if (has.peaks) for (field in c("peak.observations", "peak.comment")) result$peaks[,field] <- factor(result$peaks[,field])
 	if (has.regions) for (field in c("region.comment")) result$regions[,field] <- factor(result$regions[,field])
