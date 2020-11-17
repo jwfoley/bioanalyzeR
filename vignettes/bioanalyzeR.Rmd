@@ -611,6 +611,47 @@ qplot.electrophoresis(
 ) + geom_vline(xintercept = c(100, 200, 700), linetype = 2)
 ```
 
+## Peak and region summaries
+
+Since we have molarity estimates at the fine resolution of the input data, we can do detailed analysis on the molar distribution of molecule lengths. This may tell us what to expect from downstream processing of the samples, e.g. sequencing. The `summarize.peak` function computes several summary statistics of peaks reported by the Agilent software:
+
+```{r}
+d1000 <- read.electrophoresis(system.file(
+    "extdata",
+    "tapestation",
+    "D1000-Tubes-16.xml.gz",
+    package = "bioanalyzeR"
+))
+subset(d1000$peaks, sample.index == 1)
+peak.summaries <- summarize.peak(d1000, 2:9)
+peak.summaries
+qplot.electrophoresis(subset(d1000, sample.name == "D1000 Ladder"), include.ladder = T) + geom_vline(xintercept = peak.summaries[,"Median"])
+```
+
+We can see how the ladder peaks' median molecule lengths stay close to the expected values while the standard deviation, and to a lesser extent the skewness and kurtosis, increases from short to long molecules. (Note that the graph above shows concentration rather than molarity because the molarities of the ladder peaks are too different to graph together.)
+
+Likewise `summarize.region` computes those statistics for regions reported by the Agilent software:
+
+```{r}
+smear.dilutions <- subset(d1000, startsWith(as.character(sample.name), "Smear sample"))
+qplot.electrophoresis(smear.dilutions, facets = NULL)
+smear.dilutions$regions
+summarize.region(smear.dilutions, 1:4)
+```
+
+Here we see that when the same sample is diluted several times, the summary statistics of its length distribution change very little.
+
+Alternatively, the `summarize.custom` function allows us to set a custom region and compare it across all samples:
+
+```{r}
+fragment.dilutions <- subset(d1000, grepl("fragment", as.character(sample.name)))
+qplot.electrophoresis(fragment.dilutions)
+integrate.custom(fragment.dilutions, 80, 500)
+summarize.custom(fragment.dilutions, 80, 500)
+```
+
+Now we can see that the length distribution's statistics do become less reliable as the sample becomes too faint to detect clearly, viz. the 1/70 dilution that is measured as 1.6 nM.
+
 
 # Checking the accuracy of the results
 
