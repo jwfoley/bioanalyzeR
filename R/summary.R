@@ -44,7 +44,7 @@ NULL
 summarize.peak <- function(
 	electrophoresis,
 	index
-) t(sapply(index, function(i) summarize.subset(electrophoresis$data[in.peak(electrophoresis, i),])))
+) as.data.frame(t(sapply(index, function(i) summarize.subset(electrophoresis$data[in.peak(electrophoresis, i),]))))
 
 
 #' @rdname summarize.peak.region
@@ -52,7 +52,7 @@ summarize.peak <- function(
 summarize.region <- function(
 	electrophoresis,
 	index
-) t(sapply(index, function(i) summarize.subset(electrophoresis$data[in.region(electrophoresis, i),])))
+) as.data.frame(t(sapply(index, function(i) summarize.subset(electrophoresis$data[in.region(electrophoresis, i),]))))
 
 
 #' Summarize lengths in a custom region
@@ -73,7 +73,7 @@ summarize.custom <- function(
 ) {
 	stopifnot(upper.bound > lower.bound)
 	in.this.region <- in.custom.region(electrophoresis$data, lower.bound, upper.bound, "length")
-	result <- t(simplify2array(by(electrophoresis$data[in.this.region,], electrophoresis$data$sample.index[in.this.region], summarize.subset)))
+	result <- as.data.frame(t(simplify2array(by(electrophoresis$data[in.this.region,], electrophoresis$data$sample.index[in.this.region], summarize.subset))))
 	
 	if (lower.bound == -Inf) {
 		if (upper.bound != Inf) { # bounded only on right

@@ -625,10 +625,10 @@ d1000 <- read.electrophoresis(system.file(
 subset(d1000$peaks, sample.index == 1)
 peak.summaries <- summarize.peak(d1000, 2:9)
 peak.summaries
-qplot.electrophoresis(subset(d1000, sample.name == "D1000 Ladder"), include.ladder = T) + geom_vline(xintercept = peak.summaries[,"Median"])
+qplot.electrophoresis(subset(d1000, sample.name == "D1000 Ladder"), include.ladder = T) + geom_vline(xintercept = peak.summaries$Median)
 ```
 
-We can see how the ladder peaks' median molecule lengths stay close to the expected values while the standard deviation, and to a lesser extent the skewness and kurtosis, increases from short to long molecules. (Note that the graph above shows concentration rather than molarity because the molarities of the ladder peaks are too different to graph together.)
+We can see how the ladder peaks' median molecule lengths stay close to the expected values while the spread increases from short to long molecules. (Note that the graph above shows concentration rather than molarity because the molarities of the ladder peaks are too different to graph together.)
 
 Likewise `summarize.region` computes those statistics for regions reported by the Agilent software:
 
