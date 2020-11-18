@@ -135,7 +135,7 @@ read.tapestation.xml <- function(xml.file) {
 		sample.name <- trimws(xmlValue(sample.xml[["Comment"]]))
 		sample.observations <- trimws(xmlValue(sample.xml[["Observations"]]))
 		if (sample.observations == "Marker(s) not detected") warning(paste(sample.observations, "for well", well.number, sample.name))
-		is.ladder <- grepl("Ladder", sample.observations) 
+		is.ladder <- grepl("Ladder", sample.observations) & ! grepl("Ladder run as sample", sample.observations)
 		if (sample.name == "") sample.name <- well.number
 		well.row <- ifelse(is.ladder && sample.name == "Electronic Ladder", NA, substr(well.number, 1, 1))
 		well.col <- ifelse(is.ladder && sample.name == "Electronic Ladder", NA, substr(well.number, 2, 3))
