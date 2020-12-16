@@ -57,17 +57,21 @@ read.electrophoresis <- function(
 	...,
 	fit = "spline",
 	mc.cores = if (.Platform$OS.type == "windows") 1 else detectCores()
-) do.call(rbind, mclapply(list(...), function(xml.file) {
-	xml.con <- file(xml.file)
-	first.char <- readChar(xml.con, 1, useBytes = T)
-	if (first.char == GZIP.FIRST.CHAR) first.char <- readChar(gzcon(xml.con), 1, useBytes = T) # if gzipped, uncompress and try again
-	close(xml.con) # if not explicitly closed, R gives a warning
-	if (first.char == BIOANALYZER.FIRST.CHAR)
-		read.bioanalyzer(xml.file, fit = fit)
-	else if (first.char == TAPESTATION.FIRST.CHAR)
-		read.tapestation(xml.file, fit = fit)
-	else
-		stop("unrecognized XML file format")
+) do.call(rbind, mclapply(list(...), function(file.path) {
+	if (endsWith(file.path, ".csv")) {
+		read.prosize(file.path, fit = fit)
+	} else {
+		xml.con <- file(file.path)
+		first.char <- readChar(xml.con, 1, useBytes = T)
+		if (first.char == GZIP.FIRST.CHAR) first.char <- readChar(gzcon(xml.con), 1, useBytes = T) # if gzipped, uncompress and try again
+		close(xml.con) # if not explicitly closed, R gives a warning
+		if (first.char == BIOANALYZER.FIRST.CHAR)
+			read.bioanalyzer(file.path, fit = fit)
+		else if (first.char == TAPESTATION.FIRST.CHAR)
+			read.tapestation(file.path, fit = fit)
+		else
+			stop("unrecognized XML file format")
+	}
 }, mc.cores = mc.cores))
 
 
