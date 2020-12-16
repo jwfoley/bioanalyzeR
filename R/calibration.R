@@ -94,14 +94,23 @@ calculate.length <- function(electrophoresis, fit = "spline") {
 				in.custom.region(electrophoresis$data, min(peaks.ladder$x), max(peaks.ladder$x), bound.variable = x.name)
 			)] <- NA # avoid extrapolation
 			
+			# before applying model to other annotations, lower and upper depend on the x.name (inverse directions)
+			if (x.name == "relative.distance") {
+				lower.length.analog <- upper.name
+				upper.length.analog <- lower.name
+			} else if (x.name == "aligned.time") {
+				lower.length.analog <- lower.name
+				upper.length.analog <- upper.name
+			}
+			
 			# apply model to peaks
-			electrophoresis$peaks$lower.length[which.peaks] <- standard.curve.function(electrophoresis$peaks[[upper.name]][which.peaks])
-			electrophoresis$peaks$upper.length[which.peaks] <- standard.curve.function(electrophoresis$peaks[[lower.name]][which.peaks])
+			electrophoresis$peaks$lower.length[which.peaks] <- standard.curve.function(electrophoresis$peaks[[lower.length.analog]][which.peaks])
+			electrophoresis$peaks$upper.length[which.peaks] <- standard.curve.function(electrophoresis$peaks[[upper.length.analog]][which.peaks])
 			
 			# apply inverse model to regions
 			if (! is.null(electrophoresis$regions)) {
-				electrophoresis$regions[[lower.name]][which.regions] <- standard.curve.inverse(electrophoresis$regions$upper.length[which.regions])
-				electrophoresis$regions[[upper.name]][which.regions] <- standard.curve.inverse(electrophoresis$regions$lower.length[which.regions])
+				electrophoresis$regions[[lower.length.analog]][which.regions] <- standard.curve.inverse(electrophoresis$regions$lower.length[which.regions])
+				electrophoresis$regions[[upper.length.analog]][which.regions] <- standard.curve.inverse(electrophoresis$regions$upper.length[which.regions])
 			}
 		}
 	}
