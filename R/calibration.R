@@ -123,60 +123,59 @@ calculate.concentration <- function(electrophoresis, ladder.concentrations = NUL
 	electrophoresis$data$area <- (2 * electrophoresis$data$fluorescence - delta$fluorescence) * delta$x
 	if (x.name == "aligned.time") electrophoresis$data$area <- electrophoresis$data$area / electrophoresis$data[[x.name]] # compensate for time spent in the detector (faster-moving molecules get less signal)
 	
-	# calculate coefficients relating concentration to area under the curve
 	has.upper.marker <- any(electrophoresis$peaks$peak.observations %in% UPPER.MARKER.NAMES)
-	mass.coefficients <- if (! is.null(ladder.concentrations)) {
-		# if ladder concentrations are given, fit a mass coefficient on the non-marker ladder peaks
-		# exclude markers because they are at extreme values and Bioanalyzer RNA kits don't report the concentration of their marker anyway
-		which.markers <- lapply(1:nrow(electrophoresis$samples), function(sample.index) which(
-			electrophoresis$peaks$sample.index == sample.index & (
-				(
-					electrophoresis$peaks$peak.observations %in% LOWER.MARKER.NAMES & 
-					electrophoresis$peaks$concentration == ladder.concentrations[1] # verify this is the right peak (sometimes Bioanalyzer annotates more than one as the marker but it only assigns the hardcoded concentration to one)
-				) | (
-					electrophoresis$peaks$peak.observations %in% UPPER.MARKER.NAMES &
+	which.markers <- lapply(seq(nrow(electrophoresis$samples)), function(sample.index) which(
+		electrophoresis$peaks$sample.index == sample.index & (
+			(electrophoresis$peaks$peak.observations %in% LOWER.MARKER.NAMES & (
+				is.null(ladder.concentrations) ||
+				electrophoresis$peaks$concentration == ladder.concentrations[1] # verify this is the right peak (sometimes Bioanalyzer annotates more than one as the marker but it only assigns the hardcoded concentration to one)
+				)
+			) | (
+				electrophoresis$peaks$peak.observations %in% UPPER.MARKER.NAMES & (
+					is.null(ladder.concentrations) || 
 					electrophoresis$peaks$concentration == ladder.concentrations[length(ladder.concentrations)]
 				)
 			)
-		))
-		marker.areas <- lapply(which.markers, function(peak.indexes) integrate.peak(electrophoresis, peak.indexes, "area"))
-		result <- rep(NA, nrow(electrophoresis$samples))
-		for (batch in unique(electrophoresis$samples$batch)) {
-			in.this.batch <- electrophoresis$samples$batch == batch
-			for (ladder.well in unique(electrophoresis$samples$ladder.well[which(in.this.batch)])) {
-				ladder.index <- which(in.this.batch & electrophoresis$samples$well.number == ladder.well)
-				stopifnot(length(ladder.index) == 1)
-				which.samples <- which(in.this.batch & electrophoresis$samples$ladder.well == ladder.well)
-				non.marker.concentrations <- ladder.concentrations[-c(1, if (has.upper.marker) length(ladder.concentrations) else NULL)]
-				which.ladder.peaks <- which(
-					electrophoresis$peaks$sample.index == ladder.index &
-					(! electrophoresis$peaks$peak.observations %in% c(LOWER.MARKER.NAMES, UPPER.MARKER.NAMES)) &
-					electrophoresis$peaks$concentration %in% non.marker.concentrations
-				)
-				ladder.mass.coefficient <- mean(electrophoresis$peaks$concentration[which.ladder.peaks] / integrate.peak(electrophoresis, which.ladder.peaks, "area"))
-				
-				# then modify the mass coefficient for each sample according to the ratio of its marker area(s) to the ladder's
-				result[which.samples] <- ladder.mass.coefficient * sapply(marker.areas[which.samples], function(these.areas) mean(marker.areas[[ladder.index]] / these.areas)) # if there are two markers per sample, this gives the mean area ratio relative to their counterparts in the ladder well; if only one marker, the mean ratio is just the ratio 
+		)
+	))
+	integrable <- ! any(is.na(electrophoresis$peaks[unlist(which.markers), c("lower.length", "upper.length")])) # peak boundaries aren't given so don't rely on integration
+	
+	mass.coefficients <- rep(NA, nrow(electrophoresis$samples))
+	for (batch in unique(electrophoresis$samples$batch)) {
+		in.this.batch <- electrophoresis$samples$batch == batch
+		for (ladder.well in unique(electrophoresis$samples$ladder.well[which(in.this.batch)])) {
+			ladder.index <- which(in.this.batch & electrophoresis$samples$well.number == ladder.well)
+			stopifnot("conflicting ladders" = length(ladder.index) == 1)
+			which.samples <- which(in.this.batch & electrophoresis$samples$ladder.well == ladder.well)
+			this.ladder.concentrations <- if (! is.null(ladder.concentrations)) ladder.concentrations else subset(electrophoresis$peaks, sample.index == ladder.index)$concentration # if true concentrations aren't provided, use the reported ones in the peak table
+			non.marker.concentrations <- this.ladder.concentrations[-c(1, if (has.upper.marker) length(this.ladder.concentrations) else NULL)]
+			ladder.peaks <- which(
+				electrophoresis$peaks$sample.index == ladder.index &
+				(is.null(ladder.concentrations) || electrophoresis$peaks$concentration %in% ladder.concentrations)
+			)
+			non.marker.peaks <- ladder.peaks[! ladder.peaks %in% which.markers[[ladder.index]]]
+			ladder.areas <- if (integrable) {
+				integrate.peak(electrophoresis, ladder.peaks, "area")
+			} else {
+				# we can't directly integrate peaks because we don't have the boundaries, so use the entire ladder electropherogram to relate the reported peak areas to the actual area we can integrate (assuming all of the ladder area is in peaks), then infer the areas of the marker peaks from that relationship
+				reported.area.ratio <- integrate.custom(subset(electrophoresis, well.number == ladder.well), sum.variable = "area") / sum(electrophoresis$peaks$area[ladder.peaks])
+				electrophoresis$peaks$area[ladder.peaks] * reported.area.ratio
+			}
+			non.marker.areas <- ladder.areas[! ladder.peaks %in% which.markers[[ladder.index]]]
+			ladder.marker.areas <- ladder.areas[ladder.peaks %in% which.markers[[ladder.index]]]
+			
+			ladder.mass.coefficient <- mean(electrophoresis$peaks$concentration[non.marker.peaks] / non.marker.areas)
+			
+			# then modify the mass coefficient for each sample according to the ratio of its marker area(s) to the ladder's (compensate for differential fluorescence/detection/loading)
+			for (sample.index in which.samples) {
+				sample.marker.areas <- if (integrable) {
+					integrate.peak(electrophoresis, which.markers[[sample.index]], "area")
+				} else {
+					electrophoresis$peaks$area[which.markers[[sample.index]]] * reported.area.ratio
+				}
+				mass.coefficients[sample.index] <- ladder.mass.coefficient * mean(ladder.marker.areas / sample.marker.areas)
 			}
 		}
-		
-		result
-		
-	} else {
-		# without known ladder concentrations, just calibrate by the upper marker if present, lower marker otherwise
-		# this is the TapeStation's approach and that's the only known concentration it reports so it's the only way
-		which.markers <- sapply(1:nrow(electrophoresis$samples), function(sample.index) {
-			result <- which(
-				electrophoresis$peaks$sample.index == sample.index & (
-					(has.upper.marker & electrophoresis$peaks$peak.observations %in% UPPER.MARKER.NAMES) |
-					(! has.upper.marker & electrophoresis$peaks$peak.observations %in% LOWER.MARKER.NAMES)
-				)
-			)
-			if (length(result) == 1) result else NA
-		})
-		marker.concentrations <- electrophoresis$peaks$concentration[which.markers]
-		stopifnot(all(marker.concentrations == marker.concentrations[1], na.rm = T))
-		marker.concentrations / integrate.peak(electrophoresis, which.markers, "area")
 	}
 	
 	electrophoresis$data$concentration <- mass.coefficients[electrophoresis$data$sample.index] * electrophoresis$data$area	
