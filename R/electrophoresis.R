@@ -299,8 +299,10 @@ in.regions <- function(electrophoresis) {
 #'
 #' The peak boundaries reported by Agilent tend to be too narrow for the lower marker and leave some residual fluorescence that can greatly distort some calculations, so by default this function overrides the 
 #'
+#' Note: Data exported from the ProSize software are missing the peak boundaries, so in that situation only the precise lengths of the marker peaks are set as the boundaries. The inner half of each marker peak will still be included in the result.
+#'
 #' @param electrophoresis An \code{electrophoresis} object.
-#' @param lower.marker.spread Proportion to scale the width of the lower marker peak, to compensate for underreporting in the Agilent software. Set to 1 to use the reported peak boundary, which works poorly.
+#' @param lower.marker.spread Proportion to scale the width of the lower marker peak, along the computed length scale, to compensate for underreporting in the Agilent software. Set to 1 to use the reported peak boundary, which works poorly.
 #'
 #' @return A vector of logicals with length \code{nrow{electrophoresis$data}}.
 #'
@@ -310,15 +312,21 @@ in.regions <- function(electrophoresis) {
 between.markers <- function(electrophoresis, lower.marker.spread = 5) {
 	result <- rep(F, nrow(electrophoresis$data))
 	# first set all points above the lower marker to TRUE
-	for (lower.marker in which(electrophoresis$peaks$peak.observations %in% c("Lower Marker", "edited Lower Marker"))) result[
-		electrophoresis$data$sample.index == electrophoresis$peaks$sample.index[lower.marker] & 
-		electrophoresis$data$length > electrophoresis$peaks$length[lower.marker] + lower.marker.spread * (electrophoresis$peaks$upper.length[lower.marker] - electrophoresis$peaks$length[lower.marker])
-	] <- T
+	for (lower.marker in which(electrophoresis$peaks$peak.observations %in% LOWER.MARKER.NAMES)) {
+		lower.bound <- if (is.na(electrophoresis$peaks$upper.length[lower.marker])) electrophoresis$peaks$length[lower.marker] else lower.marker.spread * (electrophoresis$peaks$upper.length[lower.marker] - electrophoresis$peaks$length[lower.marker])
+		result[
+			electrophoresis$data$sample.index == electrophoresis$peaks$sample.index[lower.marker] & 
+			electrophoresis$data$length > lower.bound
+		] <- T
+	}
 	# then set all points in or above the upper marker, if there is one, to FALSE
-	for (upper.marker in which(electrophoresis$peaks$peak.observations %in% c("Upper Marker", "edited Upper Marker"))) result[
-		electrophoresis$data$sample.index == electrophoresis$peaks$sample.index[upper.marker] &
-		electrophoresis$data$length > electrophoresis$peaks$lower.length[upper.marker]
-	] <- F
+	for (upper.marker in which(electrophoresis$peaks$peak.observations %in% UPPER.MARKER.NAMES)) {
+		upper.bound <- if (is.na(electrophoresis$peaks$lower.length[upper.marker])) electrophoresis$peaks$length[upper.marker] else electrophoresis$peaks$lower.length[upper.marker]
+		result[
+			electrophoresis$data$sample.index == electrophoresis$peaks$sample.index[upper.marker] &
+			electrophoresis$data$length >= upper.bound
+		] <- F
+	}
 	result
 }
 
