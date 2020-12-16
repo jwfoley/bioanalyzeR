@@ -41,6 +41,16 @@ REGIONS.COL <- list(
 	AVG.LENGTH = 7
 )
 
+#' Read a ProSize electropherogram
+#'
+#' This function reads an electropherogram (fluorescence vs. migration table) from the ProSize software saved in CSV format. The electropherogram must have been exported with migration times, not estimated sizes.
+#'
+#' @param csv.file The filename of an electropherogram CSV exported by ProSize. The filename can be a URL.
+#'
+#' @return A list containing a data frame of the raw fluorescence data and a data frame of the sample metadata (a partial \code{electrophoresis} object).
+#'
+#' @seealso \code{\link{read.prosize}}, \code{\link{read.prosize.peaks}}, \code{\link{read.prosize.regions}}
+#'
 #' @export
 read.prosize.electropherogram <- function(csv.file) {
 	data.raw <- read.csv(csv.file, check.names = F)
@@ -73,6 +83,16 @@ read.prosize.electropherogram <- function(csv.file) {
 	)
 }
 
+#' Read a ProSize peak table
+#'
+#' This function reads a peak table from the ProSize software saved in CSV format. The peak table must have been exported in the "alternate" format.
+#'
+#' @param csv.file The filename of a peak table CSV exported by ProSize. The filename can be a URL.
+#'
+#' @return A list containing a list of assay metadata and a data frame of peaks (a partial \code{electrophoresis} object).
+#'
+#' @seealso \code{\link{read.prosize}}, \code{\link{read.prosize.electropherogram}}, \code{\link{read.prosize.regions}}
+#'
 #' @export
 read.prosize.peaks <- function(csv.file) {
 	peaks.raw <- read.csv(csv.file, check.names = F)
@@ -112,6 +132,16 @@ read.prosize.peaks <- function(csv.file) {
 	)
 }
 
+#' Read a ProSize smear analysis
+#'
+#' This function reads smear analysis table from the ProSize software saved in CSV format. The smear analysis must have been exported in the "alternate" format.
+#'
+#' @param csv.file The filename of a smear analysis CSV exported by ProSize. The filename can be a URL.
+#'
+#' @return A list containing a list of assay metadata and a data frame of regions (a partial \code{electrophoresis} object).
+#'
+#' @seealso \code{\link{read.prosize}}, \code{\link{read.prosize.electropherogram}}, \code{\link{read.prosize.peaks}}
+#'
 #' @export
 read.prosize.regions <- function(csv.file) {
 	regions.raw <- subset(read.csv(csv.file, check.names = F), Range != "") # regions aren't reported for ladder well but they get a partially empty line
@@ -141,6 +171,8 @@ read.prosize.regions <- function(csv.file) {
 	)
 }
 
+#' @describeIn read.electrophoresis Read ProSize CSV files
+#'
 #' @export
 read.prosize <- function(csv.file, fit = "spline") {
 	root.path <- sub(paste0(SUFFIX$ELECTROPHEROGRAM, "$"), "", csv.file)
