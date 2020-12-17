@@ -29,7 +29,7 @@ read.tapestation(xml.file, gel.image.file = NULL, fit = "spline")
 
 \item{mc.cores}{Maximum number of CPU cores to use (passed to \code{\link[parallel]{mclapply}}). Only one core is used per input file.}
 
-\item{csv.file}{The filename of an electropherogram CSV file exported from the ProSize software. The filename must be in the original exported format and it must be accompanied by matching CSVs for the size calibration and peak table. The electropherogram must give the migration time, not estimated molecule size. The peak table must be exported in the "alternate" format. If a smear analysis CSV is present it will also be read.}
+\item{csv.file}{The filename of an electropherogram CSV file exported from the ProSize software. The filename must be in the original exported format and it must be accompanied by matching CSVs for the size calibration and peak table. The electropherogram must give the migration time, not estimated molecule size. The peak table must be exported in the "alternate" format and must contain the "From" and "To" columns. If a smear analysis CSV is present it will also be read.}
 
 \item{gel.image.file}{The filename of a TapeStation gel image with blue highlight, in PNG format. The filename can be a URL.}
 }
