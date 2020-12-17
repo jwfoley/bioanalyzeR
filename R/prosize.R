@@ -42,7 +42,7 @@ read.prosize.electropherogram <- function(csv.file) {
 	n.samples <- length(sample.long.names)
 	well.numbers <- sub(":.*", "", sample.long.names)
 	sample.names <- sub("^[^:]+: ", "", sample.long.names)
-	which.ladder <- which(sample.names == "Ladder")
+	which.ladder <- grep("ladder", sample.names, ignore.case = T)
 	if (length(which.ladder) > 1) {
 		which.ladder <- which.ladder[length(which.ladder)]
 		warning(paste("multiple ladders detected; only well", well.numbers[which.ladder], "used for calibration"))
@@ -102,6 +102,13 @@ read.prosize.peaks <- function(csv.file) {
 	conc.unit <- CONCENTRATION.UNITS[[colnames(peaks.raw)[cols$conc]]]
 	molarity.unit <- MOLARITY.UNITS[[colnames(peaks.raw)[cols$molarity]]]
 	colnames(peaks.raw)[unlist(cols)] <- names(cols)
+	
+	# handle bad values
+	peaks.raw <- subset(peaks.raw, ! is.na(conc))
+	for (field in c("length", "lower.length", "upper.length")) if (class(peaks.raw[,field]) == "character") { # unparsed because of bad values
+		peaks.raw[startsWith(peaks.raw[,field], ">"),field] <- NA
+		peaks.raw[,field] <- as.integer(peaks.raw[,field])
+	}
 	
 	# guess which peaks are markers: they don't have percent concentrations
 	peak.observations <- rep("", nrow(peaks.raw))
