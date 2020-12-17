@@ -9,10 +9,13 @@ SUFFIX <- list(
 # reformatting units
 CONCENTRATION.UNITS <- list(
 	`ng/ul` = "ng/µl",
-	`ng/uL` = "ng/µl"
+	`ng/uL` = "ng/µl",
+	`pg/ul` = "pg/µl",
+	`pg/uL` = "pg/µl"
 )
 MOLARITY.UNITS <- list(
-	`nmole/L` = "nM"
+	`nmole/L` = "nM",
+	`pmole/L` = "pM"
 )
 
 # guessing assay type from length column label
