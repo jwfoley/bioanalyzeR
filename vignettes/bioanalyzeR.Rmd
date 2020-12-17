@@ -30,7 +30,7 @@ library(scales)
 
 # Introduction
 
-This package imports electrophoresis data from the Agilent Bioanalyzer and TapeStation systems and includes functions to graph and analyze the data.
+This package imports data from Agilent automated electrophoresis systems (Bioanalyzer, TapeStation, Fragment Analyzer, ZAG DNA Analyzer, Femto Pulse) and includes functions to graph and analyze the data.
 
 ## Features
 
@@ -93,6 +93,7 @@ Suggested workflow to process many files quickly:
 The data must be exported with a specific configuration. Unfortunately this precludes the use of Batch Processing mode.
 
 1. Open your file and verify there are no problems.
+1. Verify that the marker peaks are shown in the lower right peak table. If not, click the tool icon above the peak table, then in "Advanced Settings" fill the circle for "Show Marker Information on Peak Table".
 1. In the top-left "File" menu select "Export Data".
 1. Click the gear icon next to "Peak Table" to configure the peak table.
 1. Verify that all of these fields are present; order is not important (you can save this configuration as a "custom pattern"):
@@ -116,7 +117,6 @@ The data must be exported with a specific configuration. Unfortunately this prec
 	* peak table (`...Peak Table.csv`)
 	* size calibration (`...Size Calibration.csv`)
 	* smear analysis, if applicable (`...Smear Analysis Result.csv`)
-1. (Optional) Delete the other extraneous files to reduce clutter.
 
 ## Data storage and transfer
 This package can read XML files compressed with `gzip`. Although the Agilent software does not automatically compress its exported XML files, it may be helpful to compress them yourself for long-term storage, particularly the large Bioanalyzer XML files that contain all the raw data.
@@ -128,7 +128,7 @@ The filename you import can be a local path or a URL, so in principle you can di
 
 # Importing data
 
-This package includes the `read.bioanalyzer` and `read.tapestation` functions to import data from the different platforms, but it is easier to use the wrapper function `read.electrophoresis`, which automatically determines the type of data and can read multiple files into a single object. 
+This package includes the `read.bioanalyzer`, `read.tapestation`, and `read.prosize` functions to import data from the different platforms, but it is easier to use the wrapper function `read.electrophoresis`, which automatically determines the type of data and can read multiple files into a single object. 
 
 ## Demo data included in this package
 
@@ -200,8 +200,8 @@ head(dna1000$regions)
 Each `electrophoresis` object contains the main data in its `$data` member and has several other members with metadata like the sample names and software-reported peaks and regions of interest (though this particular example had no regions in it).
 
 * `data` - a tall data frame of the run data, specifically:
-	* `time` (Bioanalyzer) - time when this data point was measured
-	* `aligned.time` (Bioanalyzer) - measurement time aligned between the expected times of the marker peaks
+	* `time` (Bioanalyzer, ProSize) - time when this data point was measured
+	* `aligned.time` (Bioanalyzer, ProSize) - measurement time aligned between the expected times of the marker peaks
 	* `distance` (TapeStation) - migration distance of the measurement from the top of the gel area
 	* `relative.distance` (TapeStation) - migration distance normalized relative to the marker peaks
 	* `fluorescence` - fluorescence reading at this point
@@ -392,7 +392,7 @@ qplot.electrophoresis(
 )
 ```
 
-This is still not quite the same as the electropherograms from the Agilent software because the x-axis is linear. You could log-scale it as above, but to get a truly analogous graph you can simply change the x-variable to `relative.distance`, which for TapeStation data is the migration distance normalized to the markers (the Bioanalyzer has `aligned.time` instead):
+This is still not quite the same as the electropherograms from the Agilent software because the x-axis is linear. You could log-scale it as above, but to get a truly analogous graph you can simply change the x-variable to `relative.distance`, which for TapeStation data is the migration distance normalized to the markers (the capillary instruments have `aligned.time` instead):
 
 ```{r}
 qplot.electrophoresis(
@@ -689,7 +689,7 @@ This package faithfully reports the fluorescence signal and peak/region concentr
 
 ## `stdcrv.mobility`
 
-This function displays the standard curve of molecule length vs. the observed measurement that corresponds to migration speed (marker-aligned read time for Bioanalyzer, marker-relative migration distance for TapeStation), using the data from the ladder(s). In addition to the reported main position of each ladder peak, the fluorescence signal within the peak boundaries is also shown.
+This function displays the standard curve of molecule length vs. the observed measurement that corresponds to migration speed (marker-aligned read time for Bioanalyzer and ProSize instruments, marker-relative migration distance for TapeStation), using the data from the ladder(s). In addition to the reported main position of each ladder peak, the fluorescence signal within the peak boundaries is also shown.
 
 ```{r}
 dna1000 <- read.electrophoresis(system.file(
@@ -827,9 +827,10 @@ You can see instructions for all the other command-line arguments with `bioanaly
 
 Some of these features would not be difficult to implement but haven't been because I don't need them. Please contact me if they would be useful to you and you are willing to help test them.
 
-* Protein assays, the Bioanalyzer Small RNA assay, and the entire Fragment Analyzer platform are not currently supported.
+* Protein assays, the Bioanalyzer Small RNA assay, and the entire Oligo Pro II system are unsupported.
 * It might be possible to read Bioanalyzer `.xad` files directly rather than require exporting them to XML. The original files are also XML but store their main data in a compressed base64 block and I have not attempted to decode it.
 * It would definitely be possible to read TapeStation data files directly, because they are simply ZIP archives containing XML files, but they are encrypted (except the demo data provided with the TapeStation Analysis software). I have asked Agilent about this and they stated that they do not want the raw data to be accessible to users.
+* It would also be possible to read ProSize data files directly, but they are in binary formats and Agilent refuses to divulge the specifications so they would have to be reverse-engineered.
 * Data from very different assays, such as RNA vs. DNA or Bioanalyzer vs. TapeStation, cannot necessarily be combined with `rbind.electrophoresis` because of mismatched metadata.
 * The importing functions have not been thoroughly tested with anomalous data (missing markers, cross-contamination) and may fail to import an entire batch rather than salvage the samples that worked.
 * `qplot.electrophoresis` function should preferably be an S3 method treating `ggplot2::qplot` as the generic, so `qplot` will simply dispatch to it. But the inheritance is complicated because `qplot` is in another namespace and its first argument is a variable name for an aesthetic. It might be possible to fix this with a closer look at how method dispatching works, or maybe `qplot.electrophoresis` should simply be renamed because it isn't completely analogous to `qplot`.
