@@ -88,6 +88,36 @@ Suggested workflow to process many files quickly:
 1. Press Ctrl-N to start a new file in Paint.
 1. Repeat.
 
+## ProSize (Fragment Analyzer, ZAG DNA Analyzer, Femto Pulse)
+
+The data must be exported with a specific configuration. Unfortunately this precludes the use of Batch Processing mode.
+
+1. Open your file and verify there are no problems.
+1. In the top-left "File" menu select "Export Data".
+1. Click the gear icon next to "Peak Table" to configure the peak table.
+1. Verify that all of these fields are present; order is not important (you can save this configuration as a "custom pattern"):
+	* size, e.g. "Size (bp)"
+	* "% (Conc.)"
+	* molarity, e.g. "nmole/L"
+	* concentration, e.g. "ng/ul"
+	* lower boundary, e.g. "From (bp)"
+	* upper boundary, e.g. "To (bp)" ![](peak_table_screenshot.png)
+1. Click "Apply" to use this configuration for the peak table.
+1. Fill the circles to export the "Alternate" peak table format.
+1. Fill the circle to export the "Smear Analysis Table" if applicable.
+1. Fill the circles to export the "Electropherogram" as a "Single File".
+1. Fill the circle to set the "X Axis Scale Option" to "Time Scale".
+1. Fill the circle to export the "Size Calibration Data".
+1. It is not necessary to export the quality table or gel, or set the image format.
+1. Set the desired "Export File Path".
+1. When all the settings are correct, click "Export". ![](export_screenshot.png)
+1. (Optional) When the "Export Complete" window pops up, click "Open Folder Now" to verify all of these files are present:
+	* electropherogram (`...Electropherogram.csv`)
+	* peak table (`...Peak Table.csv`)
+	* size calibration (`...Size Calibration.csv`)
+	* smear analysis, if applicable (`...Smear Analysis Result.csv`)
+1. (Optional) Delete the other extraneous files to reduce clutter.
+
 ## Data storage and transfer
 This package can read XML files compressed with `gzip`. Although the Agilent software does not automatically compress its exported XML files, it may be helpful to compress them yourself for long-term storage, particularly the large Bioanalyzer XML files that contain all the raw data.
 
