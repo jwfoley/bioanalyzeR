@@ -58,6 +58,8 @@ read.prosize.electropherogram <- function(csv.file) {
 		samples = data.frame(
 			batch,
 			well.number = well.numbers,
+			well.row = substr(well.numbers, 1, 1),
+			well.col = substr(well.numbers, 2, 3),
 			sample.name = sample.names,
 			ladder.well = well.numbers[which.ladder]
 		)
@@ -222,6 +224,15 @@ read.prosize <- function(csv.file, fit = "spline") {
 		peaks = peaks,
 		regions = regions
 	), class = "electrophoresis")
+	
+	# convert sample metadata into factors, ensuring all frames have the same levels and the levels are in the observed order
+	for (field in c("batch", "well.number", "sample.name")) result$samples[,field] <- factor(result$samples[,field], levels = unique(result$samples[,field]))
+	result$samples$ladder.well <- factor(result$samples$ladder.well, levels = levels(result$samples$well.number))
+	# convert well row and column into factors but use the range of all possible rows/columns as levels
+	result$samples$well.row <- factor(result$samples$well.row, levels = LETTERS[1:8])
+	result$samples$well.col <- factor(result$samples$well.col, levels = 1:12)
+	# convert other text into factors without those restrictions
+	result$peaks$peak.observations <- factor(result$peaks$peak.observations)
 	
 	# read ladder calibration and reverse ProSize's calibration to get peak times
 	ladder.peaks <- read.csv(paste0(root.path, SUFFIX$CALIBRATION), check.names = F)
