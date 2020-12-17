@@ -7,10 +7,12 @@ SUFFIX <- list(
 )
 
 # reformatting units
-UNIT <- list(
-	`nmole/L` = "nM",
+CONCENTRATION.UNITS <- list(
 	`ng/ul` = "ng/µl",
 	`ng/uL` = "ng/µl"
+)
+MOLARITY.UNITS <- list(
+	`nmole/L` = "nM"
 )
 
 # guessing assay type from length column label
@@ -19,27 +21,6 @@ ASSAY.TYPE <- list(
 	nt = "RNA"
 )
 
-# columns in peak table
-PEAKS.COL <- list(
-	WELL.NUMBER = 1,
-	SAMPLE.NAME = 2,
-	LENGTH = 4,
-	CONC.PERCENT = 5,
-	MOLARITY = 6,
-	CONC = 7,
-	AREA = 8
-)
-
-# columns in region table
-REGIONS.COL <- list(
-	WELL.NUMBER = 1,
-	SAMPLE.NAME = 2,
-	RANGE = 3,
-	CONC = 4,
-	PERCENT.TOTAL = 5,
-	MOLARITY = 6,
-	AVG.LENGTH = 7
-)
 
 #' Read a ProSize electropherogram
 #'
@@ -85,7 +66,7 @@ read.prosize.electropherogram <- function(csv.file) {
 
 #' Read a ProSize peak table
 #'
-#' This function reads a peak table from the ProSize software saved in CSV format. The peak table must have been exported in the "alternate" format.
+#' This function reads a peak table from the ProSize software saved in CSV format. The peak table must have been exported in the "alternate" format and it must include the "From" and "To" columns.
 #'
 #' @param csv.file The filename of a peak table CSV exported by ProSize. The filename can be a URL.
 #'
@@ -97,37 +78,57 @@ read.prosize.electropherogram <- function(csv.file) {
 read.prosize.peaks <- function(csv.file) {
 	peaks.raw <- read.csv(csv.file, check.names = F)
 	batch <- sub(paste0(SUFFIX$PEAKS, "$"), "", basename(csv.file))
-	length.unit <- sub("\\)$", "", sub("^Size \\(", "", colnames(peaks.raw)[PEAKS.COL$LENGTH]))
+	
+	# parse units and rename columns for easy reference later
+	cols <- list(
+		length = which(startsWith(colnames(peaks.raw), "Size (")),
+		conc = which(colnames(peaks.raw) %in% names(CONCENTRATION.UNITS)),
+		molarity = which(colnames(peaks.raw) %in% names(MOLARITY.UNITS)),
+		percent = which(startsWith(colnames(peaks.raw), "% (Conc.) (")),
+		lower.length = which(startsWith(colnames(peaks.raw), "From (")),
+		upper.length = which(startsWith(colnames(peaks.raw), "To ("))
+	)
+	stopifnot(
+		"missing or duplicated size column" = length(cols$length) == 1,
+		"missing or duplicated concentration column" = length(cols$conc) == 1,
+		"missing or duplicated molarity column" = length(cols$molarity) == 1,
+		"missing or duplicated percent concentration column" = length(cols$percent) == 1,
+		"missing or duplicated From column" = length(cols$lower.length) == 1,
+		"missing or duplicated To column" = length(cols$upper.length) == 1
+	)
+	length.unit <- sub("\\)$", "", sub("^Size \\(", "", colnames(peaks.raw)[cols$length]))
+	conc.unit <- CONCENTRATION.UNITS[[colnames(peaks.raw)[cols$conc]]]
+	molarity.unit <- MOLARITY.UNITS[[colnames(peaks.raw)[cols$molarity]]]
+	colnames(peaks.raw)[unlist(cols)] <- names(cols)
 	
 	# guess which peaks are markers: they don't have percent concentrations
 	peak.observations <- rep("", nrow(peaks.raw))
-	is.marker <- is.na(peaks.raw[,PEAKS.COL$CONC.PERCENT])
-	marker.lengths <- unique(peaks.raw[is.marker,PEAKS.COL$LENGTH])
-	# this assumes there are always two markers: is that true?
-	stopifnot("wrong number of markers detected" = length(marker.lengths) == 2)
-	peak.observations[is.marker & peaks.raw[,PEAKS.COL$LENGTH] == marker.lengths[1]] <- "Lower Marker"
-	peak.observations[is.marker & peaks.raw[,PEAKS.COL$LENGTH] == marker.lengths[2]] <- "Upper Marker"
+	is.marker <- is.na(peaks.raw$percent)
+	marker.lengths <- unique(peaks.raw$length[is.marker])
+	peak.observations[is.marker & peaks.raw$length == marker.lengths[1]] <- "Lower Marker"
+	if (length(marker.lengths) > 1) {
+		stopifnot("too many markers" = length(marker.lengths) == 2)
+		peak.observations[is.marker & peaks.raw$length == marker.lengths[2]] <- "Upper Marker"
+	}
 	
 	list(
 		assay.info = setNames(list(list(
 			creation.date = batch,
 			assay.type = ASSAY.TYPE[[length.unit]],
 			length.unit = length.unit,
-			concentration.unit = UNIT[[colnames(peaks.raw)[PEAKS.COL$CONC]]],
-			molarity.unit = UNIT[[colnames(peaks.raw)[PEAKS.COL$MOLARITY]]]
+			concentration.unit = conc.unit,
+			molarity.unit = molarity.unit
 		)), batch),
 		peaks = data.frame(
 			batch,
-			well.number = peaks.raw[,PEAKS.COL$WELL.NUMBER],
-			sample.name = peaks.raw[,PEAKS.COL$SAMPLE.NAME],
+			well.number = peaks.raw$Well,
+			sample.name = peaks.raw$`Sample ID`,
 			peak.observations,
-			length = peaks.raw[,PEAKS.COL$LENGTH],
-			aligned.time = NA,
-			lower.aligned.time = NA,
-			upper.aligned.time = NA,
-			area = peaks.raw[,PEAKS.COL$AREA],
-			concentration = peaks.raw[,PEAKS.COL$CONC],
-			molarity = peaks.raw[,PEAKS.COL$MOLARITY]
+			length = peaks.raw$length,
+			lower.length = peaks.raw$lower.length,
+			upper.length = peaks.raw$upper.length,
+			concentration = peaks.raw$conc,
+			molarity = peaks.raw$molarity
 		)
 	)
 }
@@ -146,7 +147,20 @@ read.prosize.peaks <- function(csv.file) {
 read.prosize.regions <- function(csv.file) {
 	regions.raw <- subset(read.csv(csv.file, check.names = F), Range != "") # regions aren't reported for ladder well but they get a partially empty line
 	batch <- sub(paste0(SUFFIX$REGIONS, "$"), "", basename(csv.file))
-	length.unit <- unique(sub(".* ", "", regions.raw[,REGIONS.COL$RANGE]))
+	
+	# parse units and rename columns for easy reference later
+	cols <- list(
+		conc = which(colnames(regions.raw) %in% names(CONCENTRATION.UNITS)),
+		molarity = which(colnames(regions.raw) %in% names(MOLARITY.UNITS))
+	)
+	stopifnot(
+		"missing or duplicated concentration column" = length(cols$conc) == 1,
+		"missing or duplicated molarity column" = length(cols$molarity) == 1
+	)
+	conc.unit <- CONCENTRATION.UNITS[[colnames(regions.raw)[cols$conc]]]
+	molarity.unit <- MOLARITY.UNITS[[colnames(regions.raw)[cols$molarity]]]
+	colnames(regions.raw)[unlist(cols)] <- names(cols)
+	length.unit <- unique(sub(".* ", "", regions.raw$Range))
 	stopifnot("conflicting units detected" = length(length.unit) == 1)
 	
 	list(
@@ -154,19 +168,17 @@ read.prosize.regions <- function(csv.file) {
 			creation.date = batch,
 			assay.type = ASSAY.TYPE[[length.unit]],
 			length.unit = length.unit,
-			concentration.unit = UNIT[[colnames(regions.raw)[REGIONS.COL$CONC]]],
-			molarity.unit = UNIT[[colnames(regions.raw)[REGIONS.COL$MOLARITY]]]
+			concentration.unit = conc.unit,
+			molarity.unit = molarity.unit
 		)), batch),
 		regions = data.frame(
 			batch,
-			well.number = regions.raw[,REGIONS.COL$WELL.NUMBER],
-			sample.name = regions.raw[,REGIONS.COL$SAMPLE.NAME],
-			lower.length = as.integer(sub(" bp to .*$", "", regions.raw[,REGIONS.COL$RANGE])),
-			upper.length = as.integer(sub(" bp$", "", sub("^.* bp to ", "", regions.raw[,REGIONS.COL$RANGE]))),
-			average.length = regions.raw[,REGIONS.COL$AVG.LENGTH],
-			concentration = regions.raw[,REGIONS.COL$CONC],
-			molarity = regions.raw[,REGIONS.COL$MOLARITY],
-			proportion.of.total = regions.raw[,REGIONS.COL$PERCENT.TOTAL] / 100
+			well.number = regions.raw$Well,
+			sample.name = regions.raw$`Sample ID`,
+			lower.length = as.integer(sub(" bp to .*$", "", regions.raw$Range)),
+			upper.length = as.integer(sub(" bp$", "", sub("^.* bp to ", "", regions.raw$Range))),
+			concentration = regions.raw$conc,
+			molarity = regions.raw$molarity
 		)
 	)
 }
@@ -211,13 +223,16 @@ read.prosize <- function(csv.file, fit = "spline") {
 		regions = regions
 	), class = "electrophoresis")
 	
-	# add ladder calibration
+	# read ladder calibration and reverse ProSize's calibration to get peak times
 	ladder.peaks <- read.csv(paste0(root.path, SUFFIX$CALIBRATION), check.names = F)
 	which.ladder <- which(result$samples$well.number == result$samples$ladder.well)
 	stopifnot("multiple ladders" = length(which.ladder) == 1) # assume only one ladder
 	which.ladder.peaks <- result$peaks$sample.index == which.ladder
-	stopifnot("conflicting ladder peaks in calibration" = all(ladder.peaks$`Ladder Size (bp)` == result$peaks$length[which.ladder.peaks]))
-	result$peaks$aligned.time[which.ladder.peaks] <- ladder.peaks$`Time (sec)`
+	stopifnot("conflicting ladder peaks in calibration" = all(ladder.peaks[,1] == result$peaks$length[which.ladder.peaks]))
+	reverse.calibration <- approxfun(ladder.peaks[,1], ladder.peaks[,2], rule = 2) # extrapolates values outside the marker peaks to be the same! so basically each marker peak's coordinates are missing its outer part (lower marker's lower.aligned.time = aligned.time, upper marker's upper.aligned.time = aligned.time)
+	result$peaks$aligned.time <- reverse.calibration(result$peaks$length)
+	result$peaks$lower.aligned.time <- reverse.calibration(result$peaks$lower.length)
+	result$peaks$upper.aligned.time <- reverse.calibration(result$peaks$upper.length)
 	
 	calculate.molarity(calculate.concentration(calculate.length(result, fit)))
 }
