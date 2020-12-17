@@ -41,7 +41,7 @@ read.prosize.electropherogram <- function(csv.file) {
 	sample.long.names <- names(data.raw)[-1]
 	n.samples <- length(sample.long.names)
 	well.numbers <- sub(":.*", "", sample.long.names)
-	sample.names <- sub("^[^:]+: ", "", sample.long.names)
+	sample.names <- sub("^[^:]+: *", "", sample.long.names)
 	which.ladder <- grep("ladder", sample.names, ignore.case = T)
 	if (length(which.ladder) > 1) {
 		which.ladder <- which.ladder[length(which.ladder)]
@@ -130,7 +130,7 @@ read.prosize.peaks <- function(csv.file) {
 		)), batch),
 		peaks = data.frame(
 			batch,
-			well.number = peaks.raw$Well,
+			well.number = sub(":", "", peaks.raw$Well), # for empty sample name the colon may be in the well number (ProSize bug)
 			sample.name = peaks.raw$`Sample ID`,
 			peak.observations,
 			length = peaks.raw$length,
@@ -182,7 +182,7 @@ read.prosize.regions <- function(csv.file) {
 		)), batch),
 		regions = data.frame(
 			batch,
-			well.number = regions.raw$Well,
+			well.number = sub(":", "", regions.raw$Well), # for empty sample name the colon may be in the well number (ProSize bug)
 			sample.name = regions.raw$`Sample ID`,
 			lower.length = as.integer(sub(" bp to .*$", "", regions.raw$Range)),
 			upper.length = as.integer(sub(" bp$", "", sub("^.* bp to ", "", regions.raw$Range))),
