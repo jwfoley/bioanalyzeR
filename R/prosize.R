@@ -195,7 +195,7 @@ read.prosize.regions <- function(csv.file) {
 #' @describeIn read.electrophoresis Read ProSize CSV files
 #'
 #' @export
-read.prosize <- function(csv.file, fit = "spline") {
+read.prosize <- function(csv.file, method = "hyman") {
 	root.path <- sub(paste0(SUFFIX$ELECTROPHEROGRAM, "$"), "", csv.file)
 	batch <- basename(root.path)
 	
@@ -252,6 +252,6 @@ read.prosize <- function(csv.file, fit = "spline") {
 	result$peaks$lower.aligned.time <- reverse.calibration(result$peaks$lower.length)
 	result$peaks$upper.aligned.time <- reverse.calibration(result$peaks$upper.length)
 	
-	calculate.molarity(calculate.concentration(calculate.length(result, fit)))
+	calculate.molarity(calculate.concentration(calculate.length(result, method)))
 }
 

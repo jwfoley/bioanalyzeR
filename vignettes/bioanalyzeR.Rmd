@@ -709,7 +709,7 @@ dna1000.regression <- read.electrophoresis(system.file(
 	"bioanalyzer",
 	"Demo DNA 1000 Series II.xml.gz",
 	package = "bioanalyzeR"
-), fit = "regression")
+), method = "regression")
 stdcrv.mobility(dna1000.regression) + ggtitle("Bioanalyzer DNA 1000 standard curve from logarithmic regression")
 ```
 

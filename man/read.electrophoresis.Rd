@@ -8,22 +8,22 @@
 \alias{read.tapestation}
 \title{Read files into an electrophoresis object}
 \usage{
-read.bioanalyzer(xml.file, fit = "spline")
+read.bioanalyzer(xml.file, method = "hyman")
 
 read.electrophoresis(
   ...,
-  fit = "spline",
+  method = "hyman",
   mc.cores = if (.Platform$OS.type == "windows") 1 else detectCores()
 )
 
-read.prosize(csv.file, fit = "spline")
+read.prosize(csv.file, method = "hyman")
 
-read.tapestation(xml.file, gel.image.file = NULL, fit = "spline")
+read.tapestation(xml.file, gel.image.file = NULL, method = "hyman")
 }
 \arguments{
 \item{xml.file}{The filename of an XML file exported from the Bioanalyzer or TapeStation software. The XML file may be compressed with `gzip` and the filename can be a remote URL. The filename is expected to end in \code{.xml} or \code{.xml.gz} and the name before that extension is used as the name of the batch. TapeStation XML files must have corresponding PNG files with matching names.}
 
-\item{fit}{The method used to fit the mobility model of molecule length vs. migration distance, one of \code{"interpolation"} (linear interpolation via \code{\link{approxfun}}), \code{"spline"} (splines via \code{\link{splinefun}}), or \code{"regression"} (log-linear regression via \code{\link{lm}} with the model \code{relative.distance ~ log(length)}).}
+\item{method}{The method used to fit the mobility model of molecule length vs. migration distance, either \code{"interpolation"} (linear interpolation via \code{\link{approxfun}}), \code{"regression"} (log-linear regression via \code{\link{lm}} with the model \code{relative.distance ~ log(length)}), or one of the methods of \code{\link{splinefun}} (monotone methods recommended).}
 
 \item{...}{One or more XML or electropherogram CSV files exported from the Bioanalyzer, TapeStation, or ProSize software.}
 

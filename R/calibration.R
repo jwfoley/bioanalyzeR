@@ -24,7 +24,7 @@ molecular.weight <- function(length, type) switch(type,
 #' Ladder peaks of known length and possibly concentration are used to fit mobility models and coefficients of fluorescence area vs. concentration. If there are multiple ladders (e.g. one per ScreenTape), each sample is fit according to the corresponding ladder. Derived values are estimated for every row in \code{electrophoresis$data}, though they are \code{NA} outside the range of interpolation from the ladder.
 #'
 #' @param electrophoresis An \code{electrophoresis} object.
-#' @param fit The method used to fit the mobility model of molecule length vs. migration distance, one of \code{"interpolation"} (linear interpolation via \code{\link{approxfun}}), \code{"spline"} (splines via \code{\link{splinefun}}), or \code{"regression"} (log-linear regression via \code{\link{lm}} with the model \code{relative.distance ~ log(length)}).
+#' @param method The method used to fit the mobility model of molecule length vs. migration distance, either \code{"interpolation"} (linear interpolation via \code{\link{approxfun}}), \code{"regression"} (log-linear regression via \code{\link{lm}} with the model \code{relative.distance ~ log(length)}), or one of the methods of \code{\link{splinefun}} (monotone methods recommended).
 #' @param ladder.concentrations The true concentrations of the ladder peaks. If provided (from the Bioanalyzer), the concentration coefficient is fit according to the non-marker ladder peaks and then adjusted for each sample according to the relative fluorescence area of its markers compared with the ladder. If \code{NULL} (TapeStation), concentrations are fit according to only the upper marker if present or the lower marker otherwise; these marker concentrations are assumed to be correct.
 #'
 #' @return The same \code{electrophoresis} object with the new estimated variable added to its \code{$data} member. \code{calculate.length} also adds estimated length boundaries to the \code{$peaks} member and aligned-time or relative-distance boundaries to \code{$regions}.
@@ -35,7 +35,7 @@ NULL
 
 #' @rdname calibrate.electrophoresis
 #' @export
-calculate.length <- function(electrophoresis, fit = "spline") {
+calculate.length <- function(electrophoresis, method = "hyman") {
 	x.name <- get.x.name(electrophoresis)
 	lower.name <- paste0("lower.", x.name)
 	upper.name <- paste0("upper.", x.name)
@@ -66,14 +66,11 @@ calculate.length <- function(electrophoresis, fit = "spline") {
 			
 			# fit standard curve for molecule length vs. x-value
 			# do this in relative x space so it's effectively recalibrated for each sample's markers
-			if (fit == "interpolation") {
+			if (method == "interpolation") {
 				warning("linear interpolation gives ugly results for molarity estimation")
 				standard.curve.function <- approxfun(peaks.ladder$x, peaks.ladder$length)
 				standard.curve.inverse <- approxfun(peaks.ladder$length, peaks.ladder$x)
-			} else if (fit == "spline") {
-				standard.curve.function <- splinefun(peaks.ladder$x, peaks.ladder$length, method = "natural")
-				standard.curve.inverse <- splinefun(peaks.ladder$length, peaks.ladder$x, method = "natural")
-			} else if (fit == "regression") {
+			} else if (method == "regression") {
 				if (x.name == "relative.distance") {
 					mobility.model <- lm(x ~ log(length), peaks.ladder)
 					standard.curve.function <- function(x) exp((x - mobility.model$coefficients[1]) / mobility.model$coefficients[2])
@@ -84,6 +81,9 @@ calculate.length <- function(electrophoresis, fit = "spline") {
 					standard.curve.function <- function(aligned.time) exp((1 / aligned.time - mobility.model$coefficients[1]) / mobility.model$coefficients[2])
 					standard.curve.inverse <- function(length) 1/(mobility.model$coefficients[1] + log(length) * mobility.model$coefficients[2])
 				}
+			} else { # if it's not one of those then it must be one of the splinefun methods
+				standard.curve.function <- splinefun(peaks.ladder$x, peaks.ladder$length, method = method)
+				standard.curve.inverse <- splinefun(peaks.ladder$length, peaks.ladder$x, method = method)
 			}
 			electrophoresis$mobility.functions[[batch]][[ladder.well]] <- standard.curve.function
 			
@@ -113,6 +113,7 @@ calculate.length <- function(electrophoresis, fit = "spline") {
 				electrophoresis$regions[[upper.length.analog]][which.regions] <- standard.curve.inverse(electrophoresis$regions$upper.length[which.regions])
 			}
 		}
+		electrophoresis$assay.info[[batch]]$method <- method
 	}
 	
 	electrophoresis
