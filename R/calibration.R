@@ -173,7 +173,7 @@ calculate.concentration <- function(electrophoresis, ladder.concentrations = NUL
 			non.marker.areas <- ladder.areas[! ladder.peaks %in% which.markers[[ladder.index]]]
 			ladder.marker.areas <- ladder.areas[ladder.peaks %in% which.markers[[ladder.index]]]
 			
-			ladder.mass.coefficient <- mean(electrophoresis$peaks$concentration[non.marker.peaks] / non.marker.areas)
+			ladder.mass.coefficient <- mean(electrophoresis$peaks$concentration[non.marker.peaks] / non.marker.areas, na.rm = T)
 			
 			# then modify the mass coefficient for each sample according to the ratio of its marker area(s) to the ladder's (compensate for differential fluorescence/detection/loading)
 			for (sample.index in which.samples) {
@@ -182,7 +182,7 @@ calculate.concentration <- function(electrophoresis, ladder.concentrations = NUL
 				} else {
 					electrophoresis$peaks$area[which.markers[[sample.index]]] * reported.area.ratio
 				}
-				mass.coefficients[sample.index] <- ladder.mass.coefficient * mean(ladder.marker.areas / sample.marker.areas)
+				mass.coefficients[sample.index] <- ladder.mass.coefficient * mean(ladder.marker.areas / sample.marker.areas, na.rm = T)
 			}
 		}
 	}
