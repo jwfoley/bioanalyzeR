@@ -4,10 +4,10 @@
 \alias{read.prosize.electropherogram}
 \title{Read a ProSize electropherogram}
 \usage{
-read.prosize.electropherogram(csv.file)
+read.prosize.electropherogram(electropherogram.csv)
 }
 \arguments{
-\item{csv.file}{The filename of an electropherogram CSV exported by ProSize. The filename can be a URL.}
+\item{electropherogram.csv}{An electropherogram CSV exported by ProSize.}
 }
 \value{
 A list containing a data frame of the raw fluorescence data and a data frame of the sample metadata (a partial \code{electrophoresis} object).

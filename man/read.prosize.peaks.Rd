@@ -4,10 +4,10 @@
 \alias{read.prosize.peaks}
 \title{Read a ProSize peak table}
 \usage{
-read.prosize.peaks(csv.file)
+read.prosize.peaks(peaks.csv)
 }
 \arguments{
-\item{csv.file}{The filename of a peak table CSV exported by ProSize. The filename can be a URL.}
+\item{peaks.csv}{A peak table CSV exported by ProSize.}
 }
 \value{
 A list containing a list of assay metadata and a data frame of peaks (a partial \code{electrophoresis} object).

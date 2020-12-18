@@ -4,10 +4,10 @@
 \alias{read.prosize.regions}
 \title{Read a ProSize smear analysis}
 \usage{
-read.prosize.regions(csv.file)
+read.prosize.regions(smear.csv)
 }
 \arguments{
-\item{csv.file}{The filename of a smear analysis CSV exported by ProSize. The filename can be a URL.}
+\item{smear.csv}{A smear analysis CSV exported by ProSize.}
 }
 \value{
 A list containing a list of assay metadata and a data frame of regions (a partial \code{electrophoresis} object).

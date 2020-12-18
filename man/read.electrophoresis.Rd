@@ -5,6 +5,7 @@
 \alias{read.bioanalyzer}
 \alias{read.electrophoresis}
 \alias{read.prosize}
+\alias{read.prosize.zip}
 \alias{read.tapestation}
 \title{Read files into an electrophoresis object}
 \usage{
@@ -16,7 +17,17 @@ read.electrophoresis(
   mc.cores = if (.Platform$OS.type == "windows") 1 else detectCores()
 )
 
-read.prosize(csv.file, method = "hyman")
+read.prosize(
+  electropherogram.csv,
+  calibration.csv = NULL,
+  peaks.csv = NULL,
+  smear.csv = NULL,
+  quality.csv = NULL,
+  method = "hyman",
+  batch = NULL
+)
+
+read.prosize.zip(prosize.zip, method = "hyman")
 
 read.tapestation(xml.file, gel.image.file = NULL, method = "hyman")
 }
@@ -29,7 +40,19 @@ read.tapestation(xml.file, gel.image.file = NULL, method = "hyman")
 
 \item{mc.cores}{Maximum number of CPU cores to use (passed to \code{\link[parallel]{mclapply}}). Only one core is used per input file.}
 
-\item{csv.file}{The filename of an electropherogram CSV file exported from the ProSize software. The filename must be in the original exported format and it must be accompanied by matching CSVs for the size calibration and peak table. The electropherogram must give the migration time, not estimated molecule size. The peak table must be exported in the "alternate" format and must contain the "From" and "To" columns. If a smear analysis CSV is present it will also be read.}
+\item{electropherogram.csv}{An electropherogram CSV exported by ProSize.}
+
+\item{calibration.csv}{A size calibration CSV exported by ProSize.}
+
+\item{peaks.csv}{A peak table CSV exported by ProSize.}
+
+\item{smear.csv}{A smear analysis CSV exported by ProSize.}
+
+\item{quality.csv}{A quality table CSV exported by ProSize.}
+
+\item{batch}{Name of the batch.}
+
+\item{prosize.zip}{Path of a ZIP file containing the required CSVs exported by ProSize.}
 
 \item{gel.image.file}{The filename of a TapeStation gel image with blue highlight, in PNG format. The filename can be a URL.}
 }
@@ -44,6 +67,8 @@ Spline fitting seems to perform reasonably well on all data. Agilent appears to 
 \item \code{read.bioanalyzer}: Read a Bioanalyzer XML file
 
 \item \code{read.prosize}: Read ProSize CSV files
+
+\item \code{read.prosize.zip}: Read a ProSize ZIP file
 
 \item \code{read.tapestation}: Read a TapeStation XML and PNG file pair
 }}

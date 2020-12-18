@@ -38,17 +38,16 @@ QUALITY.METRICS <- c(
 #'
 #' This function reads an electropherogram (fluorescence vs. migration table) from the ProSize software saved in CSV format. The electropherogram must have been exported with migration times, not estimated sizes.
 #'
-#' @param csv.file The filename of an electropherogram CSV exported by ProSize. The filename can be a URL.
+#' @param electropherogram.csv An electropherogram CSV exported by ProSize.
 #'
 #' @return A list containing a data frame of the raw fluorescence data and a data frame of the sample metadata (a partial \code{electrophoresis} object).
 #'
 #' @seealso \code{\link{read.prosize}}, \code{\link{read.prosize.peaks}}, \code{\link{read.prosize.regions}}
 #'
 #' @export
-read.prosize.electropherogram <- function(csv.file) {
-	data.raw <- read.csv(csv.file, check.names = F)
+read.prosize.electropherogram <- function(electropherogram.csv) {
+	data.raw <- read.csv(electropherogram.csv, check.names = F)
 	stopifnot("electropherogram must be exported with times, not sizes" = colnames(data.raw)[1] == "Time (sec)")
-	batch <- sub(paste0(SUFFIX$ELECTROPHEROGRAM, "$"), "", basename(csv.file))
 	
 	sample.long.names <- names(data.raw)[-1]
 	n.samples <- length(sample.long.names)
@@ -68,7 +67,6 @@ read.prosize.electropherogram <- function(csv.file) {
 			row.names = NULL
 		),
 		samples = data.frame(
-			batch,
 			well.number = well.numbers,
 			well.row = substr(well.numbers, 1, 1),
 			well.col = substr(well.numbers, 2, 3),
@@ -82,16 +80,15 @@ read.prosize.electropherogram <- function(csv.file) {
 #'
 #' This function reads a peak table from the ProSize software saved in CSV format. The peak table must have been exported in the "alternate" format and it must include the "From" and "To" columns.
 #'
-#' @param csv.file The filename of a peak table CSV exported by ProSize. The filename can be a URL.
+#' @param peaks.csv A peak table CSV exported by ProSize.
 #'
 #' @return A list containing a list of assay metadata and a data frame of peaks (a partial \code{electrophoresis} object).
 #'
 #' @seealso \code{\link{read.prosize}}, \code{\link{read.prosize.electropherogram}}, \code{\link{read.prosize.regions}}
 #'
 #' @export
-read.prosize.peaks <- function(csv.file) {
-	peaks.raw <- read.csv(csv.file, check.names = F)
-	batch <- sub(paste0(SUFFIX$PEAKS, "$"), "", basename(csv.file))
+read.prosize.peaks <- function(peaks.csv) {
+	peaks.raw <- read.csv(peaks.csv, check.names = F)
 	
 	# parse units and rename columns for easy reference later
 	cols <- list(
@@ -133,15 +130,13 @@ read.prosize.peaks <- function(csv.file) {
 	}
 	
 	list(
-		assay.info = setNames(list(list(
-			creation.date = batch,
+		assay.info = list(
 			assay.type = ASSAY.TYPE[[length.unit]],
 			length.unit = length.unit,
 			concentration.unit = conc.unit,
 			molarity.unit = molarity.unit
-		)), batch),
+		),
 		peaks = data.frame(
-			batch,
 			well.number = sub(":", "", peaks.raw$Well), # for empty sample name the colon may be in the well number (ProSize bug)
 			sample.name = peaks.raw$`Sample ID`,
 			peak.observations,
@@ -158,16 +153,15 @@ read.prosize.peaks <- function(csv.file) {
 #'
 #' This function reads smear analysis table from the ProSize software saved in CSV format. The smear analysis must have been exported in the "alternate" format.
 #'
-#' @param csv.file The filename of a smear analysis CSV exported by ProSize. The filename can be a URL.
+#' @param smear.csv A smear analysis CSV exported by ProSize.
 #'
 #' @return A list containing a list of assay metadata and a data frame of regions (a partial \code{electrophoresis} object).
 #'
 #' @seealso \code{\link{read.prosize}}, \code{\link{read.prosize.electropherogram}}, \code{\link{read.prosize.peaks}}
 #'
 #' @export
-read.prosize.regions <- function(csv.file) {
-	regions.raw <- subset(read.csv(csv.file, check.names = F), Range != "") # regions aren't reported for ladder well but they get a partially empty line
-	batch <- sub(paste0(SUFFIX$REGIONS, "$"), "", basename(csv.file))
+read.prosize.regions <- function(smear.csv) {
+	regions.raw <- subset(read.csv(smear.csv, check.names = F), Range != "") # regions aren't reported for ladder well but they get a partially empty line
 	
 	# parse units and rename columns for easy reference later
 	cols <- list(
@@ -185,15 +179,13 @@ read.prosize.regions <- function(csv.file) {
 	stopifnot("conflicting units detected" = length(length.unit) == 1)
 	
 	list(
-		assay.info = setNames(list(list(
-			creation.date = batch,
+		assay.info = list(
 			assay.type = ASSAY.TYPE[[length.unit]],
 			length.unit = length.unit,
 			concentration.unit = conc.unit,
 			molarity.unit = molarity.unit
-		)), batch),
+		),
 		regions = data.frame(
-			batch,
 			well.number = sub(":", "", regions.raw$Well), # for empty sample name the colon may be in the well number (ProSize bug)
 			sample.name = regions.raw$`Sample ID`,
 			lower.length = as.integer(sub(" bp to .*$", "", regions.raw$Range)),
@@ -206,51 +198,74 @@ read.prosize.regions <- function(csv.file) {
 
 #' @describeIn read.electrophoresis Read ProSize CSV files
 #'
+#' @inheritParams read.prosize.electropherogram
+#' @inheritParams read.prosize.peaks
+#' @inheritParams read.prosize.regions
+#' @param calibration.csv A size calibration CSV exported by ProSize.
+#' @param quality.csv A quality table CSV exported by ProSize.
+#' @param batch Name of the batch.
+#'
 #' @export
-read.prosize <- function(csv.file, method = "hyman") {
-	root.path <- sub(paste0(SUFFIX$ELECTROPHEROGRAM, "$"), "", csv.file)
-	batch <- basename(root.path)
+read.prosize <- function(
+	electropherogram.csv,
+	calibration.csv = NULL,
+	peaks.csv = NULL,
+	smear.csv = NULL,
+	quality.csv = NULL,
+	method = "hyman",
+	batch = NULL
+) {
+	if ("character" %in% class(electropherogram.csv)) { # character or subclass
+		root.path <- sub(paste0(SUFFIX$ELECTROPHEROGRAM, "$"), "", electropherogram.csv)
+		if (is.null(calibration.csv)) calibration.csv <- paste0(root.path, SUFFIX$CALIBRATION)
+		if (is.null(peaks.csv)) peaks.csv <- paste0(root.path, SUFFIX$PEAKS)
+		if (is.null(smear.csv)) {
+			smear.csv <- paste0(root.path, SUFFIX$REGIONS)
+			if (! file.exists(smear.csv)) smear.csv <- NULL
+		}
+		if (is.null(quality.csv)) {
+			quality.csv <- paste0(root.path, SUFFIX$QUALITY)
+			if (! file.exists(quality.csv)) quality.csv <- NULL
+		}
+		if (is.null(batch)) batch <- basename(root.path)
+	}
 	
-	data.import <- read.prosize.electropherogram(paste0(root.path, SUFFIX$ELECTROPHEROGRAM))
-	master.samples <- split(data.import$samples[,c("batch", "well.number", "sample.name")], seq(nrow(data.import$samples))) # table of sample metadata to verify other files have at least a subset of these
-	stopifnot(
-		"conflicting batch names in electropherogram" = length(unique(data.import$samples$batch)) == 1,
-		"duplicate well numbers in electropherogram" = anyDuplicated(data.import$samples$well.number) == 0
-	)
+	data.import <- read.prosize.electropherogram(electropherogram.csv)
+	master.samples <- split(data.import$samples[,c("well.number", "sample.name")], seq(nrow(data.import$samples))) # table of sample metadata to verify other files have at least a subset of these
+	stopifnot("duplicate well numbers in electropherogram" = anyDuplicated(data.import$samples$well.number) == 0)
 	sample.index.lookup <- setNames(as.list(seq(nrow(data.import$samples))), data.import$samples$well.number)
 	
 	# add peaks safely
-	peaks.import <- read.prosize.peaks(paste0(root.path, SUFFIX$PEAKS))
-	stopifnot("conflicting sample metadata in peak table" = all(split(peaks.import$peaks[,c("batch", "well.number", "sample.name")], seq(nrow(peaks.import$peaks))) %in% master.samples))
-	peaks <- data.frame(sample.index = unlist(sample.index.lookup[peaks.import$peaks$well.number]), peaks.import$peaks[,! colnames(peaks.import$peaks) %in% c("batch", "well.number", "sample.name")])
+	peaks.import <- read.prosize.peaks(peaks.csv)
+	stopifnot("conflicting sample metadata in peak table" = all(split(peaks.import$peaks[,c("well.number", "sample.name")], seq(nrow(peaks.import$peaks))) %in% master.samples))
+	peaks <- data.frame(sample.index = unlist(sample.index.lookup[peaks.import$peaks$well.number]), peaks.import$peaks[,! colnames(peaks.import$peaks) %in% c("well.number", "sample.name")])
 	
 	# add regions safely
-	regions.csv <- paste0(root.path, SUFFIX$REGIONS)
-	regions <- if (file.exists(regions.csv)) {
-		regions.import <- read.prosize.regions(regions.csv)
+	regions <- if (! is.null(smear.csv)) {
+		regions.import <- read.prosize.regions(smear.csv)
 		stopifnot(
-			"conflicting sample metadata in smear analysis table" = all(split(regions.import$regions[,c("batch", "well.number", "sample.name")], seq(nrow(regions.import$regions))) %in% master.samples),
+			"conflicting sample metadata in smear analysis table" = all(split(regions.import$regions[,c("well.number", "sample.name")], seq(nrow(regions.import$regions))) %in% master.samples),
 			"conflicting batch metadata between smear analysis and peaks" = all.equal(regions.import$assay.info, peaks.import$assay.info)
 		)
-		data.frame(sample.index = unlist(sample.index.lookup[regions.import$regions$well.number]), regions.import$regions[,! colnames(regions.import$regions) %in% c("batch", "well.number", "sample.name")])
+		data.frame(sample.index = unlist(sample.index.lookup[regions.import$regions$well.number]), regions.import$regions[,! colnames(regions.import$regions) %in% c("well.number", "sample.name")])
 	} else NULL
 	
 	# build the electrophoresis object	
 	result <- structure(list(
 		data = data.import$data,
-		assay.info = peaks.import$assay.info,
-		samples = data.import$samples,
+		assay.info = setNames(list(peaks.import$assay.info), batch),
+		samples = cbind(batch, data.import$samples),
 		peaks = peaks,
 		regions = regions
 	), class = "electrophoresis")
 	
 	# add quality safely
-	quality.csv <- paste0(root.path, SUFFIX$QUALITY)
-	if (file.exists(quality.csv)) {
+	if (! is.null(quality.csv)) {
 		quality.raw <- read.csv(quality.csv, check.names = F)
+		quality.raw$Well <- sub(":", "", quality.raw$Well) # for empty sample name the colon may be in the well number (ProSize bug)
 		stopifnot("conflicting sample metadata in quality table" =
-			all.equal(data.import$samples$well.number, quality.raw$Well) &&
-			all.equal(data.import$samples$sample.name, quality.raw$`Sample ID`)
+			all(data.import$samples$well.number == quality.raw$Well) &&
+			all(data.import$samples$sample.name == quality.raw$`Sample ID`)
 		)
 		for (field in intersect(names(quality.raw), QUALITY.METRICS)) result$samples[,field] <- quality.raw[,field]
 	}
@@ -265,7 +280,7 @@ read.prosize <- function(csv.file, method = "hyman") {
 	result$peaks$peak.observations <- factor(result$peaks$peak.observations)
 	
 	# read ladder calibration and reverse ProSize's calibration to get peak times
-	ladder.peaks <- read.csv(paste0(root.path, SUFFIX$CALIBRATION), check.names = F)
+	ladder.peaks <- read.csv(calibration.csv, check.names = F)
 	which.ladder <- which(result$samples$well.number == result$samples$ladder.well)
 	stopifnot("multiple ladders" = length(which.ladder) == 1) # assume only one ladder
 	which.ladder.peaks <- result$peaks$sample.index == which.ladder
@@ -276,5 +291,33 @@ read.prosize <- function(csv.file, method = "hyman") {
 	result$peaks$upper.aligned.time <- reverse.calibration(result$peaks$upper.length)
 	
 	calculate.molarity(calculate.concentration(calculate.length(result, method)))
+}
+
+#' @describeIn read.electrophoresis Read a ProSize ZIP file
+#'
+#' @param prosize.zip Path of a ZIP file containing the required CSVs exported by ProSize.
+#'
+#' @export
+read.prosize.zip <- function(prosize.zip, method = "hyman") {
+	all.files <- unzip(prosize.zip, list = T)$Name
+	electropherogram.csv.name <- grep(SUFFIX$ELECTROPHEROGRAM, all.files, value = T)
+	stopifnot("missing or duplicated electropherogram" = length(electropherogram.csv.name) == 1)
+	root.name <- sub(paste0(SUFFIX$ELECTROPHEROGRAM, "$"), "", electropherogram.csv.name)
+	filenames <- list(
+		electropherogram = electropherogram.csv.name,
+		calibration = paste0(root.name, SUFFIX$CALIBRATION),
+		peaks = paste0(root.name, SUFFIX$PEAKS),
+		regions = paste0(root.name, SUFFIX$REGIONS),
+		quality = paste0(root.name, SUFFIX$QUALITY)
+	)
+	read.prosize(
+		unz(prosize.zip, filenames$electropherogram),
+		unz(prosize.zip, filenames$calibration),
+		unz(prosize.zip, filenames$peaks),
+		if (filenames$regions %in% all.files) unz(prosize.zip, filenames$regions) else NULL,
+		if (filenames$quality %in% all.files) unz(prosize.zip, filenames$quality) else NULL,
+		method,
+		sub("\\.zip$", "", basename(prosize.zip))
+	)
 }
 
