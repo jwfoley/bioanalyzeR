@@ -317,7 +317,7 @@ in.regions <- function(electrophoresis) {
 #' @seealso \code{\link{in.peaks}}, \code{\link{in.regions}}
 #'
 #' @export
-between.markers <- function(electrophoresis, lower.marker.spread = 5) {
+between.markers <- function(electrophoresis, lower.marker.spread = 10) {
 	result <- rep(F, nrow(electrophoresis$data))
 	# first set all points above the lower marker to TRUE
 	for (lower.marker in which(electrophoresis$peaks$peak.observations %in% LOWER.MARKER.NAMES)) {

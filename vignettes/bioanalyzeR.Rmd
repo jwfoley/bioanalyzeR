@@ -333,9 +333,14 @@ eukrna <- read.electrophoresis(system.file(
 	"Eukaryotic RNA-Tubes-16.xml.gz",
 	package = "bioanalyzeR"
 ))
-qplot.electrophoresis(eukrna, title = "TapeStation Eukaryotic RNA with geom_line")
 qplot.electrophoresis(
 	eukrna,
+	xlim = c(100, NA),
+	title = "TapeStation Eukaryotic RNA with geom_line"
+)
+qplot.electrophoresis(
+	eukrna,
+	xlim = c(100, NA),
 	geom = "area",
 	title = "TapeStation Eukaryotic RNA with geom_area"
 )
@@ -370,11 +375,13 @@ Another difference from the electropherograms in the software is that, by defaul
 ```{r}
 qplot.electrophoresis(
 	eukrna,
+	xlim = c(100, 2000),
 	log = "x",
 	title = "TapeStation Eukaryotic RNA with log x-scale"
 )
 qplot.electrophoresis(
 	eukrna,
+	xlim = c(100, 2000),
 	log = "xy",
 	title = "TapeStation Eukaryotic RNA with log x- and y-scales"
 )
