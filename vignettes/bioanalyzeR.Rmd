@@ -739,10 +739,15 @@ qc.electrophoresis(dna1000, "molarity") + ggtitle("Bioanalyzer DNA 1000 molarity
 Because some of the demo batches include *de novo* runs of the ladder, we have example data with peaks of known true length, concentration, and molarity (the correct values are hardcoded in the peak data from the proper ladder sample). We can use these to check the accuracy of the estimates from the Agilent software and from this package. To avoid repetition we'll wrap a lot of operations into a function, then apply it to several datasets.
 
 ```{r}
-compare.estimates <- function(dirname, filename, title, sample.names) {
-	data <- read.electrophoresis(system.file("extdata", dirname, filename, package = "bioanalyzeR"))
+compare.estimates <- function(title, sample.names, ...) {
+	data <- read.electrophoresis(system.file("extdata", ..., package = "bioanalyzeR"))
 	which.ladder.peaks <- which(data$peaks$sample.index == which(data$samples$well.number == data$samples$ladder.well)[1] & ! data$peaks$peak.observations %in% c("Lower Marker", "Upper Marker"))
-	which.reruns <- which(data$samples$sample.name %in% sample.names)
+	which.reruns <- which(data$samples$sample.name %in% sample.names & data$samples$well.number != data$samples$ladder.well)
+	which.reruns <- which.reruns[sapply(which.reruns, function(sample.index) sum(
+		data$peaks$sample.index == sample.index &
+		! data$peaks$peak.observations %in% c("Lower Marker", "Upper Marker")
+	) == length(which.ladder.peaks))] # exclude reruns with wrong number of peaks
+	which.reruns <- which.reruns[seq(min(length(which.reruns), 5))] # don't use more than 5 replicates
 	ladder.comparison <- data.frame(
 		replicate =  factor(rep(paste("replicate", 1:length(which.reruns)), each = length(which.ladder.peaks))),
 		source =     factor(rep(c("Agilent software", "bioanalyzeR"), each = length(which.reruns) * length(which.ladder.peaks))),
@@ -772,13 +777,24 @@ compare.estimates <- function(dirname, filename, title, sample.names) {
 		geom_hline(yintercept = 0, color = "darkgray") +
 		geom_point() +
 		facet_grid(what ~ source) +
+		scale_x_log10() +
 		scale_y_continuous(label = percent) +
 		xlab("length (bp)") +
 		ggtitle(paste(title, "accuracy comparison"))
 }
-compare.estimates("bioanalyzer", "Demo DNA 1000 Series II.xml.gz", "Bioanalyzer DNA 1000", "DNA 1000 ladder")
-compare.estimates("bioanalyzer", "Demo DNA 7500 Series II.xml.gz", "Bioanalyzer DNA 7500", "ladder DNA 7500")
-compare.estimates("tapestation", "D5000-Plate-96.xml.gz", "TapeStation D5000", "D5000 Ladder")
+compare.estimates("Bioanalyzer DNA 1000", "DNA 1000 ladder", "bioanalyzer", "Demo DNA 1000 Series II.xml.gz")
+compare.estimates("Bioanalyzer DNA 7500", "ladder DNA 7500", "bioanalyzer", "Demo DNA 7500 Series II.xml.gz")
+compare.estimates("TapeStation D5000", "D5000 Ladder", "tapestation", "D5000-Plate-96.xml.gz")
+compare.estimates("Fragment Analyzer NGS", "Ladder", "fragmentanalyzer", "DNF-473 NGS Fragment kit (1-6000)", "NGS Libraries SS NGS kit 19-10-40.zip")
+compare.estimates("Fragment Analyzer HS Large Fragment", "DNF-365 Ladder", "fragmentanalyzer", "DNF-464 HS Large Fragment", "Long read library final QC 18-12-47.zip")
+compare.estimates("Fragment Analyzer Genomic DNA kb", "Ladder", "fragmentanalyzer", "DNF-467 Genomic 50 kb", "21-54-28.zip")
+compare.estimates("Fragment Analyzer Small RNA", "Ladder", "fragmentanalyzer", "DNF-470 Small RNA", "17-44-37.zip")
+compare.estimates("ZAG DNA Analyzer 1-500", "Ladder", "zag", "ZAG-105 dsDNA (1-500)", "10-23-09.zip")
+compare.estimates("ZAG DNA Analyzer 1-1500", "Ladder", "zag", "ZAG-135 dsDNA (1-1500)", "09-45-24.zip")
+compare.estimates("ZAG DNA Analyzer 35-5000", "Ladder", "zag", "ZAG-110 dsDNA (35-5000)", "10-25-24.zip")
+compare.estimates("ZAG DNA Analyzer 75-20000", "1kb Plus DNA Ladder", "zag", "ZAG-130 dsDNA (75-20000)", "ZAG-130 GP 20-53-59.zip")
+compare.estimates("Femto Pulse NGS", "Ladder", "femtopulse", "FP-1101 US NGS", "300 bp dilution series 21-30-31.zip")
+compare.estimates("Femto Pulse RNA", "Ladder", "femtopulse", "FP-1201 US RNA", "FP-1201 Mouse mRNA Dilution Series.zip")
 ```
 
 So we see that the length estimates are fairly accurate, as expected because the Agilent software's linear interpolation and this software's spline functions are by definition most accurate near the ladder peaks, but there is a wide range of error in the concentration and molarity estimates from both approaches.
