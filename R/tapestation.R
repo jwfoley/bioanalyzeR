@@ -111,8 +111,7 @@ read.tapestation.xml <- function(xml.file) {
  		assay.type =          NULL,
  		length.unit =         NULL,
  		concentration.unit =  NULL,
- 		molarity.unit =       NULL,
- 		fit =                 NULL
+ 		molarity.unit =       NULL
  	)
  	# try to guess the assay type from the name
  	if (grepl("RNA", assay.info$assay.name)) {
@@ -233,13 +232,11 @@ read.tapestation.xml <- function(xml.file) {
 #' @inheritParams calibrate.electrophoresis
 #'
 #' @export
-read.tapestation <- function(xml.file, gel.image.file = NULL, fit = "spline") {
-	stopifnot(fit %in% c("interpolation", "spline", "regression"))
+read.tapestation <- function(xml.file, gel.image.file = NULL, method = "hyman") {
 	if (is.null(gel.image.file)) gel.image.file <- sub("\\.xml(\\.gz)?$", ".png", xml.file)
 	
 	parsed.data <- read.tapestation.xml(xml.file)
 	stopifnot(length(unique(parsed.data$samples$batch)) == 1)
-	parsed.data$assay.info$fit <- fit
 	batch <- parsed.data$samples$batch[1]
 	result <- structure(list(
 		data = read.tapestation.gel.image(gel.image.file, nrow(parsed.data$samples)),
@@ -297,7 +294,7 @@ read.tapestation <- function(xml.file, gel.image.file = NULL, fit = "spline") {
 	}
 	
 	# perform calibrations
-	result <- calculate.molarity(calculate.concentration(calculate.length(result, fit)))
+	result <- calculate.molarity(calculate.concentration(calculate.length(result, method)))
 	
 	# convert inferred relative distance of regions back to raw distance
 	if (! is.null(result$regions)) {

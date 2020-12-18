@@ -38,16 +38,18 @@ rbind.electrophoresis <- function(...) {
 
 #' Read files into an electrophoresis object
 #'
-#' These functions read one or more XML files exported from the Agilent software (and accompanying PNG files if from a TapeStation) and calls the appropriate function to read them into an \code{electrophoresis} object, which is filled out with estimates of molecule length, concentration, and molarity. \code{read.electrophoresis} is the easiest to use as it automatically infers the correct file type.
+#' These functions read one or more XML, CSV, or ZIP files exported from the Agilent software (and accompanying PNG files if from a TapeStation) and calls the appropriate function to read them into an \code{electrophoresis} object, which is filled out with estimates of molecule length, concentration, and molarity. \code{read.electrophoresis} is the easiest to use as it automatically infers the correct file type.
 #'
 #' Spline fitting seems to perform reasonably well on all data. Agilent appears to use linear interpolation with DNA data and log-linear regression on RNA data, so you could choose those options if you want to reproduce the results of the software more precisely. However, linear interpolation creates sudden spikes in the derivative that make the concentration and molarity estimates unstable; spline fitting is basically a smoother version of that. Log-linear regression is the standard theoretical approach but does not actually fit the data very well; more sophisticated parametric models may be added in the future.
 #'
-#' @param xml.file The filename of an XML file exported from the Bioanalyzer or TapeStation software. The XML file may be compressed with `gzip` and the filename can be a remote URL. The filename is expected to end in \code{.xml} or \code{.xml.gz} and the name before that extension is used as the name of the batch.
-#' @param ... One or more XML files exported from the Bioanalyzer or TapeStation software. TapeStation XML files must have corresponding PNG files with matching names.
+#' @param xml.file The filename of an XML file exported from the Bioanalyzer or TapeStation software. The XML file may be compressed with `gzip` and the filename can be a remote URL. The filename is expected to end in \code{.xml} or \code{.xml.gz} and the name before that extension is used as the name of the batch. TapeStation XML files must have corresponding PNG files with matching names.
+#' @param ... One or more XML, electropherogram CSV, or ZIP files exported from the Bioanalyzer, TapeStation, or ProSize software.
 #' @param mc.cores Maximum number of CPU cores to use (passed to \code{\link[parallel]{mclapply}}). Only one core is used per input file.
 #'
 #' @inheritParams read.bioanalyzer
 #' @inheritParams read.tapestation
+#' @inheritParams read.prosize
+#' @inheritParams read.prosize.zip
 #'
 #' @name read.electrophoresis
 #' 
@@ -55,19 +57,25 @@ rbind.electrophoresis <- function(...) {
 #' @importFrom parallel mclapply detectCores
 read.electrophoresis <- function(
 	...,
-	fit = "spline",
+	method = "hyman",
 	mc.cores = if (.Platform$OS.type == "windows") 1 else detectCores()
-) do.call(rbind, mclapply(list(...), function(xml.file) {
-	xml.con <- file(xml.file)
-	first.char <- readChar(xml.con, 1, useBytes = T)
-	if (first.char == GZIP.FIRST.CHAR) first.char <- readChar(gzcon(xml.con), 1, useBytes = T) # if gzipped, uncompress and try again
-	close(xml.con) # if not explicitly closed, R gives a warning
-	if (first.char == BIOANALYZER.FIRST.CHAR)
-		read.bioanalyzer(xml.file, fit = fit)
-	else if (first.char == TAPESTATION.FIRST.CHAR)
-		read.tapestation(xml.file, fit = fit)
-	else
-		stop("unrecognized XML file format")
+) do.call(rbind, mclapply(list(...), function(file.path) {
+	if (endsWith(file.path, ".csv")) {
+		read.prosize(file.path, method = method)
+	} else if (endsWith(file.path, ".zip")) {
+		read.prosize.zip(file.path, method = method)
+	} else {
+		xml.con <- file(file.path)
+		first.char <- readChar(xml.con, 1, useBytes = T)
+		if (first.char == GZIP.FIRST.CHAR) first.char <- readChar(gzcon(xml.con), 1, useBytes = T) # if gzipped, uncompress and try again
+		close(xml.con) # if not explicitly closed, R gives a warning
+		if (first.char == BIOANALYZER.FIRST.CHAR)
+			read.bioanalyzer(file.path, method = method)
+		else if (first.char == TAPESTATION.FIRST.CHAR)
+			read.tapestation(file.path, method = method)
+		else
+			stop("unrecognized XML file format")
+	}
 }, mc.cores = mc.cores))
 
 
@@ -299,26 +307,34 @@ in.regions <- function(electrophoresis) {
 #'
 #' The peak boundaries reported by Agilent tend to be too narrow for the lower marker and leave some residual fluorescence that can greatly distort some calculations, so by default this function overrides the 
 #'
+#' Note: Data exported from the ProSize software are missing the peak boundaries, so in that situation only the precise lengths of the marker peaks are set as the boundaries. The inner half of each marker peak will still be included in the result.
+#'
 #' @param electrophoresis An \code{electrophoresis} object.
-#' @param lower.marker.spread Proportion to scale the width of the lower marker peak, to compensate for underreporting in the Agilent software. Set to 1 to use the reported peak boundary, which works poorly.
+#' @param lower.marker.spread Proportion to scale the width of the lower marker peak, along the computed length scale, to compensate for underreporting in the Agilent software. Set to 1 to use the reported peak boundary, which works poorly.
 #'
 #' @return A vector of logicals with length \code{nrow{electrophoresis$data}}.
 #'
 #' @seealso \code{\link{in.peaks}}, \code{\link{in.regions}}
 #'
 #' @export
-between.markers <- function(electrophoresis, lower.marker.spread = 5) {
+between.markers <- function(electrophoresis, lower.marker.spread = 10) {
 	result <- rep(F, nrow(electrophoresis$data))
 	# first set all points above the lower marker to TRUE
-	for (lower.marker in which(electrophoresis$peaks$peak.observations %in% c("Lower Marker", "edited Lower Marker"))) result[
-		electrophoresis$data$sample.index == electrophoresis$peaks$sample.index[lower.marker] & 
-		electrophoresis$data$length > electrophoresis$peaks$length[lower.marker] + lower.marker.spread * (electrophoresis$peaks$upper.length[lower.marker] - electrophoresis$peaks$length[lower.marker])
-	] <- T
+	for (lower.marker in which(electrophoresis$peaks$peak.observations %in% LOWER.MARKER.NAMES)) {
+		lower.bound <- if (is.na(electrophoresis$peaks$upper.length[lower.marker])) electrophoresis$peaks$length[lower.marker] else lower.marker.spread * (electrophoresis$peaks$upper.length[lower.marker] - electrophoresis$peaks$length[lower.marker])
+		result[
+			electrophoresis$data$sample.index == electrophoresis$peaks$sample.index[lower.marker] & 
+			electrophoresis$data$length > lower.bound
+		] <- T
+	}
 	# then set all points in or above the upper marker, if there is one, to FALSE
-	for (upper.marker in which(electrophoresis$peaks$peak.observations %in% c("Upper Marker", "edited Upper Marker"))) result[
-		electrophoresis$data$sample.index == electrophoresis$peaks$sample.index[upper.marker] &
-		electrophoresis$data$length > electrophoresis$peaks$lower.length[upper.marker]
-	] <- F
+	for (upper.marker in which(electrophoresis$peaks$peak.observations %in% UPPER.MARKER.NAMES)) {
+		upper.bound <- if (is.na(electrophoresis$peaks$lower.length[upper.marker])) electrophoresis$peaks$length[upper.marker] else electrophoresis$peaks$lower.length[upper.marker]
+		result[
+			electrophoresis$data$sample.index == electrophoresis$peaks$sample.index[upper.marker] &
+			electrophoresis$data$length >= upper.bound
+		] <- F
+	}
 	result
 }
 

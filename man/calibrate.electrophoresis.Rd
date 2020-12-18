@@ -7,7 +7,7 @@
 \alias{calculate.molarity}
 \title{Electrophoresis calibrations}
 \usage{
-calculate.length(electrophoresis, fit = "spline")
+calculate.length(electrophoresis, method = "hyman")
 
 calculate.concentration(electrophoresis, ladder.concentrations = NULL)
 
@@ -16,7 +16,7 @@ calculate.molarity(electrophoresis)
 \arguments{
 \item{electrophoresis}{An \code{electrophoresis} object.}
 
-\item{fit}{The method used to fit the mobility model of molecule length vs. migration distance, one of \code{"interpolation"} (linear interpolation via \code{\link{approxfun}}), \code{"spline"} (splines via \code{\link{splinefun}}), or \code{"regression"} (log-linear regression via \code{\link{lm}} with the model \code{relative.distance ~ log(length)}).}
+\item{method}{The method used to fit the mobility model of molecule length vs. migration distance, either \code{"interpolation"} (linear interpolation via \code{\link{approxfun}}), \code{"regression"} (log-linear regression via \code{\link{lm}} with the model \code{relative.distance ~ log(length)}), or one of the methods of \code{\link{splinefun}} (monotone methods recommended).}
 
 \item{ladder.concentrations}{The true concentrations of the ladder peaks. If provided (from the Bioanalyzer), the concentration coefficient is fit according to the non-marker ladder peaks and then adjusted for each sample according to the relative fluorescence area of its markers compared with the ladder. If \code{NULL} (TapeStation), concentrations are fit according to only the upper marker if present or the lower marker otherwise; these marker concentrations are assumed to be correct.}
 }

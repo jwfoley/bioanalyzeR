@@ -5,9 +5,7 @@
 #' @export
 #' @importFrom XML xmlRoot xmlParse xmlValue xmlToDataFrame xmlApply
 #' @importFrom base64enc base64decode
-read.bioanalyzer <- function(xml.file, fit = "spline") {
-	stopifnot(fit %in% c("interpolation", "spline", "regression"))
-	
+read.bioanalyzer <- function(xml.file, method = "hyman") {
 	batch <- sub("\\.xml(\\.gz)?$", "", basename(xml.file))
 	xml.root <- xmlRoot(xmlParse(xml.file))
 	chip.root <- xml.root[["Chips"]][["Chip"]]
@@ -18,8 +16,7 @@ read.bioanalyzer <- function(xml.file, fit = "spline") {
 		assay.type =          xmlValue(chip.root[["AssayHeader"]][["Class"]]),
 		length.unit =         xmlValue(chip.root[["AssayBody"]][["DAAssaySetpoints"]][["DAMAssayInfoMolecular"]][["SizeUnit"]]),
 		concentration.unit =  xmlValue(chip.root[["AssayBody"]][["DAAssaySetpoints"]][["DAMAssayInfoMolecular"]][["ConcentrationUnit"]]),
-		molarity.unit =       NULL,
-		fit =                 fit
+		molarity.unit =       NULL
 	)
 	# hardcode the molarity unit depending on concentration unit, otherwise the MW scales will be wrong
 	assay.info$molarity.unit <- switch(assay.info$concentration.unit,
@@ -124,7 +121,7 @@ read.bioanalyzer <- function(xml.file, fit = "spline") {
 	result$samples$ladder.well <- factor(which.ladder, levels = levels(result$samples$well.number))
 	
 	# perform calibrations
-	result <- calculate.molarity(calculate.concentration(calculate.length(result, fit), defined.ladder.peaks$Concentration))
+	result <- calculate.molarity(calculate.concentration(calculate.length(result, method), defined.ladder.peaks$Concentration))
 	
 	# convert inferred aligned times of regions back to raw times
 	if (! is.null(result$regions)) {
