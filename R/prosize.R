@@ -3,7 +3,8 @@ SUFFIX <- list(
 	ELECTROPHEROGRAM = " Electropherogram.csv",
 	PEAKS = " Peak Table.csv",
 	REGIONS = " Smear Analysis Result.csv",
-	CALIBRATION = " Size Calibration.csv"
+	CALIBRATION = " Size Calibration.csv",
+	QUALITY = " Quality Table.csv"
 )
 
 # reformatting units
@@ -22,6 +23,14 @@ MOLARITY.UNITS <- list(
 ASSAY.TYPE <- list(
 	bp = "DNA",
 	nt = "RNA"
+)
+
+QUALITY.METRICS <- c(
+	"GQN",
+	"RQN",
+	"28S/18S",
+	"% RNA Contamination",
+	"% microRNA"
 )
 
 
@@ -234,6 +243,17 @@ read.prosize <- function(csv.file, method = "hyman") {
 		peaks = peaks,
 		regions = regions
 	), class = "electrophoresis")
+	
+	# add quality safely
+	quality.csv <- paste0(root.path, SUFFIX$QUALITY)
+	if (file.exists(quality.csv)) {
+		quality.raw <- read.csv(quality.csv, check.names = F)
+		stopifnot("conflicting sample metadata in quality table" =
+			all.equal(data.import$samples$well.number, quality.raw$Well) &&
+			all.equal(data.import$samples$sample.name, quality.raw$`Sample ID`)
+		)
+		for (field in intersect(names(quality.raw), QUALITY.METRICS)) result$samples[,field] <- quality.raw[,field]
+	}
 	
 	# convert sample metadata into factors, ensuring all frames have the same levels and the levels are in the observed order
 	for (field in c("batch", "well.number", "sample.name")) result$samples[,field] <- factor(result$samples[,field], levels = unique(result$samples[,field]))

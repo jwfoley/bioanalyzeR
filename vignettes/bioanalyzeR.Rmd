@@ -105,7 +105,7 @@ The data must be exported with a specific configuration. Unfortunately this prec
 	* upper boundary, e.g. "To (bp)" ![](peak_table_screenshot.png)
 1. Click "Apply" to use this configuration for the peak table.
 1. Fill the circles to export the "Alternate" peak table format.
-1. Fill the circle to export the "Smear Analysis Table" if applicable.
+1. Fill the circles to export the "Smear Analysis Table" and "Quality Table" if applicable.
 1. Fill the circles to export the "Electropherogram" as a "Single File".
 1. Fill the circle to set the "X Axis Scale Option" to "Time Scale".
 1. Fill the circle to export the "Size Calibration Data".
@@ -113,10 +113,11 @@ The data must be exported with a specific configuration. Unfortunately this prec
 1. Set the desired "Export File Path".
 1. When all the settings are correct, click "Export". ![](export_screenshot.png)
 1. (Optional) When the "Export Complete" window pops up, click "Open Folder Now" to verify all of these files are present:
-	* electropherogram (`...Electropherogram.csv`)
-	* peak table (`...Peak Table.csv`)
-	* size calibration (`...Size Calibration.csv`)
-	* smear analysis, if applicable (`...Smear Analysis Result.csv`)
+	* electropherogram (`... Electropherogram.csv`)
+	* peak table (`... Peak Table.csv`)
+	* size calibration (`... Size Calibration.csv`)
+	* smear analysis, if applicable (`... Smear Analysis Result.csv`)
+	* quality table, if applicable (`... Quality Table.csv`)
 
 ## Data storage and transfer
 This package can read XML files compressed with `gzip`. Although the Agilent software does not automatically compress its exported XML files, it may be helpful to compress them yourself for long-term storage, particularly the large Bioanalyzer XML files that contain all the raw data.
@@ -216,9 +217,8 @@ Each `electrophoresis` object contains the main data in its `$data` member and h
 	* `sample.observations` - notes about this sample supplied by the user or the Agilent software
 	* `sample.comment` - notes about this sample supplied by the user
 	* `reagent.id` (TapeStation) - the name of the ScreenTape used for this sample
-	* `RIN` or `RINe` (RNA) - the RNA Integrity Number (or equivalent) reported by the Agilent software
-	* `DIN` (genomic DNA) - the DNA Integrity Number reported by the Agilent Software
 	* `ladder.well` - which well contains the ladder that calibrates this sample
+	* `RIN`, `DIN`, `RQN`, `28S/18S`, etc. - sample quality metrics reported by the Agilent software
 * `peaks` - a data frame of peaks reported by the Agilent software, annotated with their lower and upper boundaries in various scales
 * `regions` - a data frame of regions of interest reported by the Agilent software, annotated with their lower and upper boundaries in varous scales
 * `mobility functions` - a list of model functions, one per ladder used for calibration, to convert migration speed measurements (aligned time or relative distance) into estimated molecule lengths
