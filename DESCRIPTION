@@ -1,6 +1,6 @@
 Package: bioanalyzeR
 Title: Analysis of Agilent electrophoresis data
-Version: 0.6.0
+Version: 0.6.1
 Authors@R: 
     person(given = "Joseph",
            family = "Foley",
