@@ -25,10 +25,10 @@ files$add_argument("--dimensions", "-d",
 	metavar = "WxH",
 	default = "8x6"
 )
-files$add_argument("--fit",
+files$add_argument("--method",
 	help = "mobility standard curve method",
-	default = "spline",
-	choices = c("spline", "interpolation", "regression")
+	default = "hyman",
+	choices = c("interpolation", "regression", "fmm", "periodic", "natural", "monoH.FC", "hyman")
 )
 files$add_argument("--mc_cores",
 	help = "maximum CPU cores",
@@ -183,7 +183,7 @@ qc$add_argument("--qc",
 
 args <- parser$parse_args()
 
-data <- do.call(read.electrophoresis, c(as.list(args$xml_files), fit = args$fit, mc.cores = args$mc_cores))
+data <- do.call(read.electrophoresis, c(as.list(args$xml_files), method = args$method, mc.cores = args$mc_cores))
 
 # annotations
 if (! is.null(args$annotation_file)) {
