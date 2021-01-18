@@ -183,7 +183,7 @@ calculate.concentration <- function(electrophoresis, ladder.concentrations = NUL
 				} else {
 					electrophoresis$peaks$area[which.markers[[sample.index]]] * reported.area.ratio
 				}
-				mass.coefficients[sample.index] <- ladder.mass.coefficient * mean(ladder.marker.areas / sample.marker.areas, na.rm = T)
+				mass.coefficients[sample.index] <- if (length(sample.marker.areas) == 0) NA else ladder.mass.coefficient * mean(ladder.marker.areas / sample.marker.areas, na.rm = T)
 			}
 		}
 	}
