@@ -8,11 +8,11 @@ Install required dependencies:
 
 Install the newest release (includes 35 MB of demo data):
 
-    > install.packages("https://github.com/jwfoley/bioanalyzeR/releases/download/v0.6.2/bioanalyzeR_0.6.2.tar.gz", repos = NULL)
+    > install.packages("https://github.com/jwfoley/bioanalyzeR/releases/download/v0.6.3/bioanalyzeR_0.6.3.tar.gz", repos = NULL)
 
 or, install the newest release without the demo data:
 
-    > install.packages("https://github.com/jwfoley/bioanalyzeR/releases/download/v0.6.2/bioanalyzeR_0.6.2-no_data.tar.gz", repos = NULL)
+    > install.packages("https://github.com/jwfoley/bioanalyzeR/releases/download/v0.6.3/bioanalyzeR_0.6.3-no_data.tar.gz", repos = NULL)
 
 
 # Documentation
