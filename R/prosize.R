@@ -57,6 +57,9 @@ read.prosize.electropherogram <- function(electropherogram.csv) {
 	if (length(which.ladder) > 1) {
 		which.ladder <- which.ladder[length(which.ladder)]
 		warning(paste("multiple ladders detected; only well", well.numbers[which.ladder], "used for calibration"))
+	} else if (length(which.ladder) == 0) {
+		which.ladder <- n.samples
+		warning(paste("no sample labeled as ladder; assuming well", well.numbers[which.ladder]))
 	}
 	
 	list(
