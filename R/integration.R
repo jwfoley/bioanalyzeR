@@ -16,7 +16,7 @@ NULL
 #' @export
 integrate.peak <- function(
 	electrophoresis,
-	index,
+	index = seq(nrow(electrophoresis$peaks)),
 	sum.variable = "concentration"
 ) sapply(index, function(i) sum(electrophoresis$data[[sum.variable]][in.peak(electrophoresis, i)]))
 
@@ -25,7 +25,7 @@ integrate.peak <- function(
 #' @export
 integrate.region <- function(
 	electrophoresis,
-	index,
+	index = seq(nrow(electrophoresis$regions)),
 	sum.variable = "concentration"
 ) sapply(index, function(i) sum(electrophoresis$data[[sum.variable]][in.region(electrophoresis, i)]))
 

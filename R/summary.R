@@ -43,7 +43,7 @@ NULL
 #' @export
 summarize.peak <- function(
 	electrophoresis,
-	index
+	index = seq(nrow(electrophoresis$peaks))
 ) as.data.frame(t(sapply(index, function(i) summarize.subset(electrophoresis$data[in.peak(electrophoresis, i),]))))
 
 
@@ -51,7 +51,7 @@ summarize.peak <- function(
 #' @export
 summarize.region <- function(
 	electrophoresis,
-	index
+	index = seq(nrow(electrophoresis$regions))
 ) as.data.frame(t(sapply(index, function(i) summarize.subset(electrophoresis$data[in.region(electrophoresis, i),]))))
 
 

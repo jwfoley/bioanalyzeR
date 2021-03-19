@@ -325,9 +325,8 @@ qc.electrophoresis <- function(electrophoresis, variable, log = TRUE) {
 			result
 		},
 		
-		concentration = integrate.peak(electrophoresis, seq(nrow(electrophoresis$peaks)), sum.variable = "concentration"),
-		
-		molarity = integrate.peak(electrophoresis, seq(nrow(electrophoresis$peaks)), sum.variable = "molarity")
+		concentration = integrate.peak(electrophoresis, sum.variable = "concentration"),
+		molarity = integrate.peak(electrophoresis, sum.variable = "molarity")
 	))
 	
 	peaks <- peaks[! is.na(peaks[[variable]]) & ! is.na(peaks$estimated.variable),] # remove NA's so they don't affect the x-limits and throw a warning
