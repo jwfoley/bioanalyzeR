@@ -52,7 +52,7 @@ read.tapestation.gel.image <- function(gel.image.file, n.lanes) {
 	
 	# find gel boundaries
 	highlight.cols <- which(find.matching.pixels.vec(gel.image.rgb[1,,], RGB.HIGHLIGHT)) # use only the first pixel row to find the highlight
-	stopifnot(all(diff(highlight.cols) == 1)) # assume the highlight is continuous in the first pixel row
+	stopifnot("highlight is not continuous in first pixel row" = all(diff(highlight.cols) == 1)) # assume the highlight is continuous in the first pixel row
 	highlighted.lane.width <- length(highlight.cols)
 	highlighted.subset <- gel.image.rgb[,highlight.cols,]
 	highlight.rows <- which(rowSums(find.matching.pixels.mat(highlighted.subset, RGB.HIGHLIGHT)) == highlighted.lane.width) # find all pixel rows with full highlight (will miss ones with annotation text over them)
@@ -61,8 +61,8 @@ read.tapestation.gel.image <- function(gel.image.file, n.lanes) {
 	subposition.is.quality.label <- find.matching.pixels.mat(highlighted.subset, RGB.GOOD) | find.matching.pixels.mat(highlighted.subset, RGB.MEDIUM) | find.matching.pixels.mat(highlighted.subset, RGB.BAD)
 	start.of.bottom.highlight <- if (any(subposition.is.quality.label)) which(rowSums(subposition.is.quality.label) > 0)[1] else highlight.rows[length(top.highlight.rows) + 1] # quality label supersedes any blue highlight
 	highlight.border.offsets <- which(find.matching.pixels.vec(highlighted.subset[end.of.top.highlight + 1,,], RGB.HIGHLIGHT)) # sometimes will be empty if there's only one pixel of border and the color is off because of antialiasing, but we can live with that much error
-	stopifnot(length(highlight.border.offsets < 2) || all(diff(highlight.border.offsets) == 1)) # assume the border is contiguous
-	stopifnot(length(highlight.border.offsets) == 0 || (highlight.border.offsets[1] %in% 0:1 || highlight.border.offsets[length(highlight.border.offsets)] %in% (highlighted.lane.width - 1:0))) # assume the border is on one edge or the other, allowing one pixel column of error due to antialiasing
+	stopifnot("border is not contiguous" = length(highlight.border.offsets < 2) || all(diff(highlight.border.offsets) == 1)) # assume the border is contiguous
+	stopifnot("border is not on edge" = length(highlight.border.offsets) == 0 || (highlight.border.offsets[1] %in% 0:1 || highlight.border.offsets[length(highlight.border.offsets)] %in% (highlighted.lane.width - 1:0))) # assume the border is on one edge or the other, allowing one pixel column of error due to antialiasing
 	lane.center <- ((if (1 %in% highlight.border.offsets) highlight.border.offsets[length(highlight.border.offsets)] else 0) +(highlighted.lane.width - length(highlight.border.offsets)) / 2) / highlighted.lane.width # approximate x-position of the center of the lane, from the left, as a proportion of the total width
 	
 	# extract fluorescence values by lane
@@ -236,7 +236,7 @@ read.tapestation <- function(xml.file, gel.image.file = NULL, method = "hyman") 
 	if (is.null(gel.image.file)) gel.image.file <- sub("\\.xml(\\.gz)?$", ".png", xml.file)
 	
 	parsed.data <- read.tapestation.xml(xml.file)
-	stopifnot(length(unique(parsed.data$samples$batch)) == 1)
+	stopifnot("multiple batches provided" = length(unique(parsed.data$samples$batch)) == 1)
 	batch <- parsed.data$samples$batch[1]
 	result <- structure(list(
 		data = read.tapestation.gel.image(gel.image.file, nrow(parsed.data$samples)),

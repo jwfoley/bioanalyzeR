@@ -65,10 +65,10 @@ read.bioanalyzer <- function(xml.file, method = "hyman") {
 			
 			# align the observation times according to the markers in this sample		
 			which.lower.marker <- which(peaks$peak.observations == "Lower Marker" & peaks$concentration == defined.ladder.peaks$Concentration[1]) # check the concentration too because sometimes the software annotates more than one as the same marker with no consequences, and sometimes the size is off by a tiny bit, but the concentration is hardcoded
-			stopifnot(length(which.lower.marker) == 1)
+			stopifnot("conflicting lower markers" = length(which.lower.marker) == 1)
 			if (has.upper.marker) {
 				which.upper.marker <- which(peaks$peak.observations == "Upper Marker" & peaks$concentration == defined.ladder.peaks$Concentration[nrow(defined.ladder.peaks)])
-				stopifnot(length(which.upper.marker) == 1)
+				stopifnot("conflicting upper markers" = length(which.upper.marker) == 1)
 				alignment.coefficient <- diff(peaks$aligned.time[c(which.lower.marker, which.upper.marker)]) / diff(peaks$time[c(which.lower.marker, which.upper.marker)])
 				alignment.offset <- peaks$aligned.time[which.lower.marker] - alignment.coefficient * peaks$time[which.lower.marker]
 			} else {
@@ -115,7 +115,7 @@ read.bioanalyzer <- function(xml.file, method = "hyman") {
 	
 	# analyze ladder
 	which.ladder <- result$samples$well.number[result$samples$is.ladder]
-	stopifnot(length(which.ladder) == 1)
+	stopifnot("conflicting ladders" = length(which.ladder) == 1)
 	result$samples$is.ladder <- NULL
 	result$samples$ladder.well <- factor(which.ladder, levels = levels(result$samples$well.number))
 	

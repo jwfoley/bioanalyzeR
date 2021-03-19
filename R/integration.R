@@ -76,7 +76,7 @@ region.ratio <- function(
 	sum.variable = "concentration"
 ) {
 	bounds <- list(...)
-	stopifnot(length(bounds) > 1)
+	stopifnot("need more than one bound" = length(bounds) > 1)
 	sum.matrix <- sapply(bounds, function(bound.pair) integrate.custom(electrophoresis, lower.bound = bound.pair[1], upper.bound = bound.pair[2], bound.variable = bound.variable, sum.variable = sum.variable))
 	matrix(sum.matrix[,-1] / sum.matrix[,1], nrow = nrow(sum.matrix), dimnames = list(NULL, sapply(bounds[-1], function(bound.pair) paste0(sum.variable, " ratio in ", bound.variable, " ", bound.pair[1], "-", bound.pair[2], "/", bounds[[1]][1], "-", bounds[[1]][2]))))
 }

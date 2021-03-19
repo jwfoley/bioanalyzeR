@@ -71,7 +71,7 @@ summarize.custom <- function(
 	lower.bound = -Inf,
 	upper.bound = Inf
 ) {
-	stopifnot(upper.bound > lower.bound)
+	stopifnot("upper bound must be greater than lower bound" = upper.bound > lower.bound)
 	in.this.region <- in.custom.region(electrophoresis$data, lower.bound, upper.bound, "length")
 	result <- as.data.frame(t(simplify2array(by(electrophoresis$data[in.this.region,], electrophoresis$data$sample.index[in.this.region], summarize.subset))))
 	
