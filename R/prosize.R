@@ -266,7 +266,7 @@ read.prosize <- function(
 	
 	# read ladder calibration and reverse ProSize's calibration to get peak times
 	ladder.peaks <- read.csv(calibration.csv, check.names = F)
-	which.ladder <- which(sapply(split(result$peaks, result$peaks$sample.index), function(sample.peaks) nrow(sample.peaks) == nrow(ladder.peaks) && all(sample.peaks$length == ladder.peaks[,1])))
+	which.ladder <- which(sapply(split(result$peaks$length, result$peaks$sample.index), function(lengths) length(lengths) == nrow(ladder.peaks) && all(lengths == ladder.peaks[,1])))
 	if (length(which.ladder) > 1) {
 		warning(paste0("multiple ladders found in wells ", cat(result$samples$well.number[which.ladder]), "; using only ", result$samples$well.number[which.ladder[length(which.ladder)]]))
 		which.ladder <- which.ladder[length(which.ladder)]
