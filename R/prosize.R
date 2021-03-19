@@ -53,14 +53,6 @@ read.prosize.electropherogram <- function(electropherogram.csv) {
 	n.samples <- length(sample.long.names)
 	well.numbers <- sub(":.*", "", sample.long.names)
 	sample.names <- sub("^[^:]+: *", "", sample.long.names)
-	which.ladder <- grep("ladder", sample.names, ignore.case = T)
-	if (length(which.ladder) > 1) {
-		which.ladder <- which.ladder[length(which.ladder)]
-		warning(paste("multiple ladders detected; only well", well.numbers[which.ladder], "used for calibration"))
-	} else if (length(which.ladder) == 0) {
-		which.ladder <- n.samples
-		warning(paste("no sample labeled as ladder; assuming well", well.numbers[which.ladder]))
-	}
 	
 	list(
 		data = data.frame(
@@ -73,8 +65,7 @@ read.prosize.electropherogram <- function(electropherogram.csv) {
 			well.number = well.numbers,
 			well.row = substr(well.numbers, 1, 1),
 			well.col = substr(well.numbers, 2, 3),
-			sample.name = sample.names,
-			ladder.well = well.numbers[which.ladder]
+			sample.name = sample.names
 		)
 	)
 }
@@ -273,25 +264,28 @@ read.prosize <- function(
 		for (field in intersect(names(quality.raw), QUALITY.METRICS)) result$samples[,field] <- quality.raw[,field]
 	}
 	
+	# read ladder calibration and reverse ProSize's calibration to get peak times
+	ladder.peaks <- read.csv(calibration.csv, check.names = F)
+	which.ladder <- which(sapply(split(result$peaks, result$peaks$sample.index), function(sample.peaks) nrow(sample.peaks) == nrow(ladder.peaks) && all(sample.peaks$length == ladder.peaks[,1])))
+	if (length(which.ladder) > 1) {
+		warning(paste0("multiple ladders found in wells ", cat(result$samples$well.number[which.ladder]), "; using only ", result$samples$well.number[which.ladder[length(which.ladder)]]))
+		which.ladder <- which.ladder[length(which.ladder)]
+	}
+	stopifnot("no ladder found" = length(which.ladder) == 1)
+	which.ladder.peaks <- result$peaks$sample.index == which.ladder
+	reverse.calibration <- approxfun(ladder.peaks[,1], ladder.peaks[,2], rule = 2) # extrapolates values outside the marker peaks to be the same! so basically each marker peak's coordinates are missing its outer part (lower marker's lower.aligned.time = aligned.time, upper marker's upper.aligned.time = aligned.time)
+	result$peaks$aligned.time <- reverse.calibration(result$peaks$length)
+	result$peaks$lower.aligned.time <- reverse.calibration(result$peaks$lower.length)
+	result$peaks$upper.aligned.time <- reverse.calibration(result$peaks$upper.length)
+	
 	# convert sample metadata into factors, ensuring all frames have the same levels and the levels are in the observed order
 	for (field in c("batch", "well.number", "sample.name")) result$samples[,field] <- factor(result$samples[,field], levels = unique(result$samples[,field]))
-	result$samples$ladder.well <- factor(result$samples$ladder.well, levels = levels(result$samples$well.number))
+	result$samples$ladder.well <- result$samples$well.number[which.ladder]
 	# convert well row and column into factors but use the range of all possible rows/columns as levels
 	result$samples$well.row <- factor(result$samples$well.row, levels = LETTERS[1:8])
 	result$samples$well.col <- factor(result$samples$well.col, levels = 1:12)
 	# convert other text into factors without those restrictions
 	result$peaks$peak.observations <- factor(result$peaks$peak.observations)
-	
-	# read ladder calibration and reverse ProSize's calibration to get peak times
-	ladder.peaks <- read.csv(calibration.csv, check.names = F)
-	which.ladder <- which(result$samples$well.number == result$samples$ladder.well)
-	stopifnot("multiple ladders" = length(which.ladder) == 1) # assume only one ladder
-	which.ladder.peaks <- result$peaks$sample.index == which.ladder
-	stopifnot("conflicting ladder peaks in calibration" = all(ladder.peaks[,1] == result$peaks$length[which.ladder.peaks]))
-	reverse.calibration <- approxfun(ladder.peaks[,1], ladder.peaks[,2], rule = 2) # extrapolates values outside the marker peaks to be the same! so basically each marker peak's coordinates are missing its outer part (lower marker's lower.aligned.time = aligned.time, upper marker's upper.aligned.time = aligned.time)
-	result$peaks$aligned.time <- reverse.calibration(result$peaks$length)
-	result$peaks$lower.aligned.time <- reverse.calibration(result$peaks$lower.length)
-	result$peaks$upper.aligned.time <- reverse.calibration(result$peaks$upper.length)
 	
 	calculate.molarity(calculate.concentration(calculate.length(result, method)))
 }
