@@ -51,8 +51,10 @@ variable.label <- function(electrophoresis, variable, variable2 = NULL) if (is.n
 #'
 #' @export
 labeller.electrophoresis <- function(electrophoresis) function(factor.frame) {
-	stopifnot("multiple columns in factor frame" = ncol(factor.frame) == 1)
-	stopifnot("non-integer factor frame" = class(factor.frame[,1]) == "integer")
+	stopifnot(
+		"multiple columns in factor frame" = ncol(factor.frame) == 1,
+		"non-integer factor frame" = class(factor.frame[,1]) == "integer"
+	)
 	list(as.character(electrophoresis$samples$sample.name[factor.frame[,1]]))
 }
 

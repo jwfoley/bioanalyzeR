@@ -115,9 +115,11 @@ annotate.electrophoresis <- function(
 		stringsAsFactors = F, # cast them as factors later
 		...
 	)
-	stopifnot("empty annotations" = ncol(annotations) > 1) # need at least one column of new annotations
-	stopifnot("no samples recognized in annotations" = colnames(annotations)[1] %in% colnames(electrophoresis$samples)) # first column must be a valid target
-	stopifnot("duplicate annotations" = anyDuplicated(annotations[,1]) == 0) # can't have duplicate annotations
+	stopifnot(
+		"empty annotations" = ncol(annotations) > 1,
+		"no label recognized in annotations" = colnames(annotations)[1] %in% colnames(electrophoresis$samples),
+		"duplicate annotations" = anyDuplicated(annotations[,1]) == 0
+	)
 	
 	identifiers <- as.character(electrophoresis$samples[,colnames(annotations)[1]])
 	for (col in 2:ncol(annotations)) {
@@ -352,7 +354,7 @@ between.markers <- function(electrophoresis, lower.marker.spread = 10) {
 #'
 #' @export
 differential.scale <- function(electrophoresis, x, y) {
-	stopifnot("sample indexes out of order" = all(diff(electrophoresis$data$sample.index) >= 0)) # assume data points from each sample are contiguous and ordered by sample; no backsies
+	stopifnot("sample indexes out of order" = all(diff(electrophoresis$data$sample.index) >= 0))
 	delta.x <- unlist(by(electrophoresis$data, electrophoresis$data$sample.index, function(data.subset) c(NA, diff(data.subset[[x]])), simplify = F)) # apply by sample to make sure we don't get a weird delta at the sample boundary
 	if (all(delta.x < 0, na.rm = T)) delta.x <- -delta.x else stopifnot("x-values out of order" = all(delta.x > 0, na.rm = T)) # assume data points are monotonic; if negative (like migration distance) make them positive so the math comes out clean
 	
