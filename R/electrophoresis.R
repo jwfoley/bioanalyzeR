@@ -198,7 +198,7 @@ subset.electrophoresis <- function(electrophoresis, ...) {
 #' @export
 get.x.name <- function(electrophoresis, raw = FALSE) {
 	possible.x.names <- if (raw) c("time", "distance") else c("aligned.time", "relative.distance")
-	result <- possible.x.names[possible.x.names %in% colnames(electrophoresis$data)]
+	result <- intersect(possible.x.names, colnames(electrophoresis$data))
 	stopifnot("duplicate x-variables" = length(result) == 1)
 	result
 }

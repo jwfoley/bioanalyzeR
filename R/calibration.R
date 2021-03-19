@@ -163,7 +163,7 @@ calculate.concentration <- function(electrophoresis, ladder.concentrations = NUL
 				electrophoresis$peaks$sample.index == ladder.index &
 				(is.null(ladder.concentrations) || electrophoresis$peaks$concentration %in% ladder.concentrations)
 			)
-			non.marker.peaks <- ladder.peaks[! ladder.peaks %in% which.markers[[ladder.index]]]
+			non.marker.peaks <- setdiff(ladder.peaks, which.markers[[ladder.index]])
 			ladder.areas <- if (integrable) {
 				integrate.peak(electrophoresis, ladder.peaks, "area")
 			} else {
