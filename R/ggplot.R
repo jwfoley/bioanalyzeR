@@ -316,16 +316,16 @@ qc.electrophoresis <- function(electrophoresis, variable, log = TRUE) {
 		length = {
 			x.name <- get.x.name(electrophoresis)			
 			result <- rep(NA, nrow(electrophoresis$peaks))
-			for (i in 1:nrow(electrophoresis$samples)) {
+			for (i in seq(nrow(electrophoresis$samples))) {
 				which.peaks <- electrophoresis$peaks$sample.index == i
 				result[which.peaks] <- electrophoresis$mobility.functions[[as.character(electrophoresis$samples$batch[i])]][[as.character(electrophoresis$samples$ladder.well[i])]](electrophoresis$peaks[[x.name]][which.peaks])
 			}
 			result
 		},
 		
-		concentration = integrate.peak(electrophoresis, 1:nrow(electrophoresis$peaks), sum.variable = "concentration"),
+		concentration = integrate.peak(electrophoresis, seq(nrow(electrophoresis$peaks)), sum.variable = "concentration"),
 		
-		molarity = integrate.peak(electrophoresis, 1:nrow(electrophoresis$peaks), sum.variable = "molarity")
+		molarity = integrate.peak(electrophoresis, seq(nrow(electrophoresis$peaks)), sum.variable = "molarity")
 	))
 	
 	peaks <- peaks[! is.na(peaks[[variable]]) & ! is.na(peaks$estimated.variable),] # remove NA's so they don't affect the x-limits and throw a warning

@@ -69,7 +69,7 @@ read.tapestation.gel.image <- function(gel.image.file, n.lanes) {
 	average.lane.width <- (ncol(gel.image.rgb) - LEFT.MARGIN - RIGHT.MARGIN) / n.lanes
 	lane.pixels <- gel.image.rgb[
 		(start.of.bottom.highlight - 1):(end.of.top.highlight + 1), # reverse rows to put fastest migration first like Bioanalyzer
-		LEFT.MARGIN + 1 + round(average.lane.width * (1:n.lanes - 1 + lane.center)),
+		LEFT.MARGIN + 1 + round(average.lane.width * (seq(n.lanes) - 1 + lane.center)),
 	]
 	n.readings <- nrow(lane.pixels)
 	bad.pixels <- ! (lane.pixels[,,1] == lane.pixels[,,2] & lane.pixels[,,1] == lane.pixels[,,3]) # find non-grayscale pixels, indicating annotations that block the data
@@ -79,7 +79,7 @@ read.tapestation.gel.image <- function(gel.image.file, n.lanes) {
 	}
 	
 	data.frame(
-		sample.index =  rep(1:n.lanes, each = n.readings),
+		sample.index =  rep(seq(n.lanes), each = n.readings),
 		distance =      n.readings:1 / n.readings,
 		fluorescence =  as.vector(1 - lane.pixels[,,1]) # subtract from 1 because it's a negative; use only red channel
 	)
@@ -186,8 +186,8 @@ read.tapestation.xml <- function(xml.file) {
 	has.regions <- ! all(sapply(result.list, function(x) is.null(x$regions)))
 	result <- list(
 		samples = do.call(rbind, c(lapply(result.list, function(x) x$samples), make.row.names = F)),
-		peaks = if (! has.peaks) NULL else do.call(rbind, c(lapply(1:length(result.list), function(i) if (is.null(result.list[[i]]$peaks)) NULL else cbind(sample.index = i, result.list[[i]]$peaks)), make.row.names = F)),
-		regions = if (! has.regions) NULL else do.call(rbind, c(lapply(1:length(result.list), function(i) if (is.null(result.list[[i]]$regions)) NULL else cbind(sample.index = i, result.list[[i]]$regions)), make.row.names = F)),
+		peaks = if (! has.peaks) NULL else do.call(rbind, c(lapply(seq_along(result.list), function(i) if (is.null(result.list[[i]]$peaks)) NULL else cbind(sample.index = i, result.list[[i]]$peaks)), make.row.names = F)),
+		regions = if (! has.regions) NULL else do.call(rbind, c(lapply(seq_along(result.list), function(i) if (is.null(result.list[[i]]$regions)) NULL else cbind(sample.index = i, result.list[[i]]$regions)), make.row.names = F)),
 		assay.info = assay.info
 	)
 	if (all(is.na(result$samples$RINe))) result$samples$RINe <- NULL
@@ -256,7 +256,7 @@ read.tapestation <- function(xml.file, gel.image.file = NULL, method = "hyman") 
 	
 	# calculate relative distances
 	is.lower.marker <- result$peaks$peak.observations %in% LOWER.MARKER.NAMES
-	marker.distances <- data.frame(lower = sapply(1:nrow(result$samples), function(i) {
+	marker.distances <- data.frame(lower = sapply(seq(nrow(result$samples)), function(i) {
 		distance <- result$peaks$distance[is.lower.marker & result$peaks$sample.index == i]
 		if (length(distance) == 0) {
 			return(NA)
@@ -270,7 +270,7 @@ read.tapestation <- function(xml.file, gel.image.file = NULL, method = "hyman") 
 	if (sum(is.upper.marker) == 0) { # kit lacks upper marker
 		marker.distances$upper <- 0 # effectively normalizes only to lower marker
 	} else {
-		marker.distances$upper <- sapply(1:nrow(result$samples), function(i) {
+		marker.distances$upper <- sapply(seq(nrow(result$samples)), function(i) {
 			distance <- result$peaks$distance[is.upper.marker & result$peaks$sample.index == i]
 			if (length(distance) == 0) {
 				return(NA)

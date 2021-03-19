@@ -58,7 +58,7 @@ read.bioanalyzer <- function(xml.file, method = "hyman") {
 			signal.data <- this.sample[["DASignals"]][["DetectorChannels"]][[1]][["SignalData"]]
 			n.values <- as.integer(xmlValue(signal.data[["NumberOfSamples"]]))
 			raw.data <- data.frame(
-				time = as.numeric(xmlValue(signal.data[["XStart"]])) + as.numeric(xmlValue(signal.data[["XStep"]])) * (1:n.values - 1),
+				time = as.numeric(xmlValue(signal.data[["XStart"]])) + as.numeric(xmlValue(signal.data[["XStep"]])) * (seq(n.values) - 1),
 				fluorescence = readBin(base64decode(xmlValue(signal.data[["ProcessedSignal"]])), "numeric", size = 4, n = n.values, endian = "little"),
 				stringsAsFactors = F
 			)
@@ -87,10 +87,10 @@ read.bioanalyzer <- function(xml.file, method = "hyman") {
 	})
 	for (i in length(result.list):1) if (is.null(result.list[[i]])) result.list[[i]] <- NULL # delete empty elements; go in reverse because indexes will change as elements are deleted
 	result <- structure(list(
-		data = do.call(rbind, c(lapply(1:length(result.list), function(i) cbind(sample.index = i, result.list[[i]]$data)), make.row.names = F)),
+		data = do.call(rbind, c(lapply(seq_along(result.list), function(i) cbind(sample.index = i, result.list[[i]]$data)), make.row.names = F)),
 		assay.info = list(assay.info),
 		samples = do.call(rbind, c(lapply(result.list, function(x) x$samples), make.row.names = F)),
-		peaks = do.call(rbind, c(lapply(1:length(result.list), function(i) if (is.null(result.list[[i]]$peaks)) NULL else cbind(sample.index = i, result.list[[i]]$peaks)), make.row.names = F)),
+		peaks = do.call(rbind, c(lapply(seq_along(result.list), function(i) if (is.null(result.list[[i]]$peaks)) NULL else cbind(sample.index = i, result.list[[i]]$peaks)), make.row.names = F)),
 		regions = NULL,
 		mobility.functions = NULL
 	), class = "electrophoresis")
@@ -108,7 +108,7 @@ read.bioanalyzer <- function(xml.file, method = "hyman") {
 	# they are only defined once for the whole assay, but for compatibility with TapeStation data they must be defined repeatedly for each sample (TapeStation can have different regions for different samples)
 	regions.raw <- xmlToDataFrame(chip.root[["AssayBody"]][["DASampleSetpoints"]][["DAMSmearAnalysis"]][["Channel"]][["RegionsMolecularSetpoints"]], stringsAsFactors = F)
 	if (nrow(regions.raw) > 0) result$regions <- data.frame(
-		sample.index = rep(1:nrow(result$samples), each = nrow(regions.raw)),
+		sample.index = rep(seq(nrow(result$samples)), each = nrow(regions.raw)),
 		lower.length = as.numeric(regions.raw$StartBasePair),
 		upper.length = as.numeric(regions.raw$EndBasePair),
 		row.names = NULL
@@ -127,7 +127,7 @@ read.bioanalyzer <- function(xml.file, method = "hyman") {
 	if (! is.null(result$regions)) {
 		result$regions$lower.time <- NA
 		result$regions$upper.time <- NA
-		for (i in 1:nrow(result$samples)) {
+		for (i in seq(nrow(result$samples))) {
 			which.regions <- which(result$regions$sample.index == i)
 			result$regions$lower.time[which.regions] <- (result$regions$lower.aligned.time[which.regions] - alignment.values[[i]][2])/alignment.values[[i]][1]
 			result$regions$upper.time[which.regions] <- (result$regions$upper.aligned.time[which.regions] - alignment.values[[i]][2])/alignment.values[[i]][1]

@@ -166,7 +166,7 @@ subset.electrophoresis <- function(electrophoresis, ...) {
 #	electrophoresis$mobility.functions <- 
 	
 	# renumber sample indices
-	new.indices <- 1:nrow(electrophoresis$samples)
+	new.indices <- seq(nrow(electrophoresis$samples))
 	names(new.indices) <- rownames(electrophoresis$samples)
 	electrophoresis$data$sample.index <- new.indices[as.character(electrophoresis$data$sample.index)]
 	if (! is.null(electrophoresis$peaks)) electrophoresis$peaks$sample.index <- new.indices[as.character(electrophoresis$peaks$sample.index)]
@@ -174,10 +174,10 @@ subset.electrophoresis <- function(electrophoresis, ...) {
 #	electrophoresis$mobility.functions <-
 	
 	# rename rows
-	rownames(electrophoresis$data) <- 1:nrow(electrophoresis$data)
+	rownames(electrophoresis$data) <- seq(nrow(electrophoresis$data))
 	rownames(electrophoresis$samples) <- new.indices
-	if (! is.null(electrophoresis$peaks)) rownames(electrophoresis$peaks) <- 1:nrow(electrophoresis$peaks)
-	if (! is.null(electrophoresis$regions)) rownames(electrophoresis$regions) <- 1:nrow(electrophoresis$regions)
+	if (! is.null(electrophoresis$peaks)) rownames(electrophoresis$peaks) <- seq(nrow(electrophoresis$peaks))
+	if (! is.null(electrophoresis$regions)) rownames(electrophoresis$regions) <- seq(nrow(electrophoresis$regions))
 	
 	electrophoresis
 }
@@ -285,7 +285,7 @@ NULL
 #' @export
 in.peaks <- function(electrophoresis) {
 	result <- rep(NA, nrow(electrophoresis$data))
-	if (! is.null(electrophoresis$peaks)) for (i in 1:nrow(electrophoresis$peaks)) result[which(in.peak(electrophoresis, i))] <- i
+	if (! is.null(electrophoresis$peaks)) for (i in seq(nrow(electrophoresis$peaks))) result[which(in.peak(electrophoresis, i))] <- i
 	result
 }
 
@@ -294,7 +294,7 @@ in.peaks <- function(electrophoresis) {
 #' @export
 in.regions <- function(electrophoresis) {
 	result <- rep(NA, nrow(electrophoresis$data))
-	if (! is.null(electrophoresis$regions)) for (i in 1:nrow(electrophoresis$regions)) result[which(in.region(electrophoresis, i))] <- i
+	if (! is.null(electrophoresis$regions)) for (i in seq(nrow(electrophoresis$regions))) result[which(in.region(electrophoresis, i))] <- i
 	result
 }
 

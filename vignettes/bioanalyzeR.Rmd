@@ -749,7 +749,7 @@ compare.estimates <- function(title, sample.names, ...) {
 	) == length(which.ladder.peaks))] # exclude reruns with wrong number of peaks
 	which.reruns <- which.reruns[seq(min(length(which.reruns), 5))] # don't use more than 5 replicates
 	ladder.comparison <- data.frame(
-		replicate =  factor(rep(paste("replicate", 1:length(which.reruns)), each = length(which.ladder.peaks))),
+		replicate =  factor(rep(paste("replicate", seq_along(which.reruns)), each = length(which.ladder.peaks))),
 		source =     factor(rep(c("Agilent software", "bioanalyzeR"), each = length(which.reruns) * length(which.ladder.peaks))),
 		length =     data$peaks$length[which.ladder.peaks],
 		what =       factor(rep(c("length", "concentration", "molarity"), each = 2 * length(which.reruns) * length(which.ladder.peaks)), levels = c("length", "concentration", "molarity"))
