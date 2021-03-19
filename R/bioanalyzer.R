@@ -88,7 +88,7 @@ read.bioanalyzer <- function(xml.file, method = "hyman") {
 	for (i in length(result.list):1) if (is.null(result.list[[i]])) result.list[[i]] <- NULL # delete empty elements; go in reverse because indexes will change as elements are deleted
 	result <- structure(list(
 		data = do.call(rbind, c(lapply(seq_along(result.list), function(i) cbind(sample.index = i, result.list[[i]]$data)), make.row.names = F)),
-		assay.info = list(assay.info),
+		assay.info = setNames(list(assay.info), batch),
 		samples = do.call(rbind, c(lapply(result.list, function(x) x$samples), make.row.names = F)),
 		peaks = do.call(rbind, c(lapply(seq_along(result.list), function(i) if (is.null(result.list[[i]]$peaks)) NULL else cbind(sample.index = i, result.list[[i]]$peaks)), make.row.names = F)),
 		regions = NULL,
@@ -96,7 +96,6 @@ read.bioanalyzer <- function(xml.file, method = "hyman") {
 	), class = "electrophoresis")
 	if (all(is.na(result$samples$RIN))) result$samples$RIN <- NULL
 	alignment.values <- lapply(result.list, function(x) x$alignment.values)
-	names(result$assay.info) <- batch
 	
 	# convert sample metadata into factors, ensuring all frames have the same levels and the levels are in the observed order
 	for (field in c("batch", "well.number", "sample.name", "sample.observations", "sample.comment")) result$samples[[field]] <- factor(result$samples[[field]], levels = unique(result$samples[[field]]))

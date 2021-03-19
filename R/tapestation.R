@@ -240,14 +240,13 @@ read.tapestation <- function(xml.file, gel.image.file = NULL, method = "hyman") 
 	batch <- parsed.data$samples$batch[1]
 	result <- structure(list(
 		data = read.tapestation.gel.image(gel.image.file, nrow(parsed.data$samples)),
-		assay.info = list(parsed.data$assay.info),
+		assay.info = setNames(list(parsed.data$assay.info), batch),
 		samples = parsed.data$samples,
 		peaks = parsed.data$peaks,
 		regions = parsed.data$regions,
 		mobility.functions = NULL,
 		mass.coefficients = NULL
 	), class = "electrophoresis")
-	names(result$assay.info) <- batch
 	
 	# remove duplicate ladders
 	if (sum(result$samples$is.ladder) > 1 && length(unique(result$samples$ladder.well)) == 1) {

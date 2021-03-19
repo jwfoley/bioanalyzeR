@@ -166,8 +166,7 @@ subset.electrophoresis <- function(electrophoresis, ...) {
 #	electrophoresis$mobility.functions <- 
 	
 	# renumber sample indices
-	new.indices <- seq(nrow(electrophoresis$samples))
-	names(new.indices) <- rownames(electrophoresis$samples)
+	new.indices <- setNames(seq(nrow(electrophoresis$samples)), rownames(electrophoresis$samples))
 	electrophoresis$data$sample.index <- new.indices[as.character(electrophoresis$data$sample.index)]
 	if (! is.null(electrophoresis$peaks)) electrophoresis$peaks$sample.index <- new.indices[as.character(electrophoresis$peaks$sample.index)]
 	if (! is.null(electrophoresis$regions)) electrophoresis$regions$sample.index <- new.indices[as.character(electrophoresis$regions$sample.index)]
