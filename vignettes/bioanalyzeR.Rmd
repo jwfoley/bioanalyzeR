@@ -778,7 +778,7 @@ compare.estimates <- function(title, sample.names, ...) {
 		geom_point() +
 		facet_grid(what ~ source) +
 		scale_x_log10() +
-		scale_y_continuous(label = percent) +
+		scale_y_continuous(label = label_percent(accuracy = 1)) +
 		xlab("length (bp)") +
 		ggtitle(paste(title, "accuracy comparison"))
 }
