@@ -712,7 +712,7 @@ dna1000 <- read.electrophoresis(system.file(
 stdcrv.mobility(dna1000) + ggtitle("Bioanalyzer DNA 1000 standard curve")
 ```
 
-You can see how the spline function bends to accommodate the ladder peaks, which don't fit perfectly with logarithmic regression:
+You can see how the spline function bends to accommodate the ladder peaks, which don't fit perfectly with log-linear regression:
 
 ```{r}
 dna1000.regression <- read.electrophoresis(system.file(
@@ -720,8 +720,8 @@ dna1000.regression <- read.electrophoresis(system.file(
 	"bioanalyzer",
 	"Demo DNA 1000 Series II.xml.gz",
 	package = "bioanalyzeR"
-), method = "regression")
-stdcrv.mobility(dna1000.regression) + ggtitle("Bioanalyzer DNA 1000 standard curve from logarithmic regression")
+), method = "loglinear")
+stdcrv.mobility(dna1000.regression) + ggtitle("Bioanalyzer DNA 1000 standard curve from log-linear regression")
 ```
 
 ## `qc.electrophoresis`

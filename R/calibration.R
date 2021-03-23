@@ -24,7 +24,7 @@ molecular.weight <- function(length, type) switch(type,
 #' Ladder peaks of known length and possibly concentration are used to fit mobility models and coefficients of fluorescence area vs. concentration. If there are multiple ladders (e.g. one per ScreenTape), each sample is fit according to the corresponding ladder. Derived values are estimated for every row in \code{electrophoresis$data}, though they are \code{NA} outside the range of interpolation from the ladder.
 #'
 #' @param electrophoresis An \code{electrophoresis} object.
-#' @param method The method used to fit the mobility model of molecule length vs. migration distance, either \code{"interpolation"} (linear interpolation via \code{\link{approxfun}}), \code{"regression"} (log-linear regression via \code{\link{lm}} with the model \code{relative.distance ~ log(length)}), or one of the methods of \code{\link{splinefun}} (monotone methods recommended).
+#' @param method The method used to fit the mobility model of molecule length vs. migration distance, either \code{"interpolation"} (linear interpolation via \code{\link{approxfun}}), \code{"loglinear"} (log-linear regression via \code{\link{lm}} with the model \code{relative.distance ~ log(length)}), or one of the methods of \code{\link{splinefun}} (monotone methods recommended).
 #' @param ladder.concentrations The true concentrations of the ladder peaks. If provided (from the Bioanalyzer), the concentration coefficient is fit according to the non-marker ladder peaks and then adjusted for each sample according to the relative fluorescence area of its markers compared with the ladder. If \code{NULL} (TapeStation), concentrations are fit according to only the upper marker if present or the lower marker otherwise; these marker concentrations are assumed to be correct.
 #'
 #' @return The same \code{electrophoresis} object with the new estimated variable added to its \code{$data} member. \code{calculate.length} also adds estimated length boundaries to the \code{$peaks} member and aligned-time or relative-distance boundaries to \code{$regions}.
@@ -70,7 +70,7 @@ calculate.length <- function(electrophoresis, method = "hyman") {
 				warning("linear interpolation gives ugly results for molarity estimation")
 				standard.curve.function <- approxfun(peaks.ladder$x, peaks.ladder$length)
 				standard.curve.inverse <- approxfun(peaks.ladder$length, peaks.ladder$x)
-			} else if (method == "regression") {
+			} else if (method == "loglinear") {
 				if (x.name == "relative.distance") {
 					mobility.model <- lm(x ~ log(length), peaks.ladder)
 					standard.curve.function <- function(x) exp((x - mobility.model$coefficients[1]) / mobility.model$coefficients[2])
