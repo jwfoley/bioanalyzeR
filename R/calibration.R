@@ -74,13 +74,14 @@ calculate.length <- function(electrophoresis, method = "hyman") {
 			} else if (method == "loglinear") {
 				if (x.name == "relative.distance") {
 					mobility.model <- lm(x ~ log(length), peaks.ladder)
-					standard.curve.function <- function(relative.distance) exp((relative.distance - mobility.model$coefficients[1]) / mobility.model$coefficients[2])
-					standard.curve.inverse <- function(length) mobility.model$coefficients[1] + mobility.model$coefficients[2] * log(length)
+					coefs <- coefficients(mobility.model)
+					standard.curve.function <- function(relative.distance) exp((relative.distance - coefs[1]) / coefs[2])
+					standard.curve.inverse <- function(length) coefs[1] + coefs[2] * log(length)
 				} else if (x.name == "aligned.time") {
 					# if x-variable is time, we must correct for the fact that faster-moving molecules spend less time in front of the detector
 					mobility.model <- lm(1/aligned.time ~ log(length), data = peaks.ladder)
-					standard.curve.function <- function(aligned.time) exp((1 / aligned.time - mobility.model$coefficients[1]) / mobility.model$coefficients[2])
-					standard.curve.inverse <- function(length) 1/(mobility.model$coefficients[1] + log(length) * mobility.model$coefficients[2])
+					standard.curve.function <- function(aligned.time) exp((1 / aligned.time - coefs[1]) / coefs[2])
+					standard.curve.inverse <- function(length) 1/(coefs[1] + log(length) * coefs[2])
 				}
 				
 			} else { # if it's not one of those then it must be one of the splinefun methods
