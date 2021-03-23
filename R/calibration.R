@@ -70,10 +70,11 @@ calculate.length <- function(electrophoresis, method = "hyman") {
 				warning("linear interpolation gives ugly results for molarity estimation")
 				standard.curve.function <- approxfun(peaks.ladder$x, peaks.ladder$length)
 				standard.curve.inverse <- approxfun(peaks.ladder$length, peaks.ladder$x)
+				
 			} else if (method == "loglinear") {
 				if (x.name == "relative.distance") {
 					mobility.model <- lm(x ~ log(length), peaks.ladder)
-					standard.curve.function <- function(x) exp((x - mobility.model$coefficients[1]) / mobility.model$coefficients[2])
+					standard.curve.function <- function(relative.distance) exp((relative.distance - mobility.model$coefficients[1]) / mobility.model$coefficients[2])
 					standard.curve.inverse <- function(length) mobility.model$coefficients[1] + mobility.model$coefficients[2] * log(length)
 				} else if (x.name == "aligned.time") {
 					# if x-variable is time, we must correct for the fact that faster-moving molecules spend less time in front of the detector
@@ -81,6 +82,7 @@ calculate.length <- function(electrophoresis, method = "hyman") {
 					standard.curve.function <- function(aligned.time) exp((1 / aligned.time - mobility.model$coefficients[1]) / mobility.model$coefficients[2])
 					standard.curve.inverse <- function(length) 1/(mobility.model$coefficients[1] + log(length) * mobility.model$coefficients[2])
 				}
+				
 			} else { # if it's not one of those then it must be one of the splinefun methods
 				standard.curve.function <- splinefun(peaks.ladder$x, peaks.ladder$length, method = method)
 				standard.curve.inverse <- splinefun(peaks.ladder$length, peaks.ladder$x, method = method)
