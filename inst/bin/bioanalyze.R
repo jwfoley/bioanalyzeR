@@ -5,6 +5,10 @@ library(argparse)
 library(bioanalyzeR)
 
 parser <- ArgumentParser(description = "Simple automation of bioanalyzeR functions.")
+parser$add_argument("--version", "-v",
+	action = "version",
+	version = as.character(packageVersion("bioanalyzeR"))
+)
 
 files <- parser$add_argument_group("files", "Filenames and settings for input/output.")
 files$add_argument("xml_files",
