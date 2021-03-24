@@ -14,6 +14,7 @@ GZIP.FIRST.CHAR <- rawToChar(as.raw(31)) # first byte of the gzip magic number
 #' @return A new \code{electrophoresis} object containing all the data from the previous ones in the provided order.
 #'
 #' @export
+#' @importFrom plyr rbind.fill
 rbind.electrophoresis <- function(...) {
 	arg.list <- list(...)
 	if (length(arg.list) == 1) return(arg.list[[1]]) # shortcut if only one input
@@ -26,11 +27,11 @@ rbind.electrophoresis <- function(...) {
 	}
 	
 	structure(list(
-		data = do.call(rbind, lapply(arg.list, function(x) x$data)),
+		data = do.call(rbind.fill, lapply(arg.list, function(x) x$data)),
 		assay.info = do.call(c, lapply(arg.list, function(x) x$assay.info)),
-		samples = do.call(rbind, lapply(arg.list, function(x) x$samples)),
-		peaks = do.call(rbind, lapply(arg.list, function(x) x$peaks)),
-		regions = do.call(rbind, lapply(arg.list, function(x) x$regions)),
+		samples = do.call(rbind.fill, lapply(arg.list, function(x) x$samples)),
+		peaks = do.call(rbind.fill, lapply(arg.list, function(x) x$peaks)),
+		regions = do.call(rbind.fill, lapply(arg.list, function(x) x$regions)),
 		mobility.functions = do.call(c, lapply(arg.list, function(x) x$mobility.functions))
 	), class = "electrophoresis")
 }
@@ -192,14 +193,18 @@ subset.electrophoresis <- function(electrophoresis, ...) {
 #'
 #' @param electrophoresis An \code{electrophoresis} object.
 #' @param raw Whether to return the name of the raw variable instead of the aligned variable.
+#' @param allow.multiple Whether to allow multiple raw variables (data combined from multiple platforms).
 #'
 #' @return A character giving the name of the x-variable.
 #'
 #' @export
-get.x.name <- function(electrophoresis, raw = FALSE) {
+get.x.name <- function(electrophoresis, raw = FALSE, allow.multiple = FALSE) {
 	possible.x.names <- if (raw) c("time", "distance") else c("aligned.time", "relative.distance")
 	result <- intersect(possible.x.names, colnames(electrophoresis$data))
-	stopifnot("duplicate x-variables" = length(result) == 1)
+	stopifnot(
+		"no x-variable found" = length(result) > 0,
+		"multiple x-variables" = allow.multiple || length(result) == 1
+	)
 	result
 }
 
@@ -247,10 +252,12 @@ NULL
 #' @rdname in.peak.region
 #' @export
 in.peak <- function(electrophoresis, which.peak) {
-	x.name <- get.x.name(electrophoresis)
+	x.names <- get.x.name(electrophoresis, allow.multiple = T)
+	peak.x.name <- x.names[which(! is.na(electrophoresis$peaks[2,x.names]))]
+	stopifnot("bad peak x-value" = length(peak.x.name) == 1)
 	electrophoresis$data$sample.index == electrophoresis$peaks$sample.index[which.peak] &
-	electrophoresis$data[[x.name]] >= electrophoresis$peaks[[paste0("lower.", x.name)]][which.peak] &
-	electrophoresis$data[[x.name]] <= electrophoresis$peaks[[paste0("upper.", x.name)]][which.peak]
+		electrophoresis$data[[peak.x.name]] >= electrophoresis$peaks[[paste0("lower.", peak.x.name)]][which.peak] &
+		electrophoresis$data[[peak.x.name]] <= electrophoresis$peaks[[paste0("upper.", peak.x.name)]][which.peak]
 }
 
 
