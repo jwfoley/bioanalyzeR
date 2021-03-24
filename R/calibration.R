@@ -35,7 +35,7 @@ NULL
 
 #' @rdname calibrate.electrophoresis
 #' @export
-calculate.length <- function(electrophoresis, method = c("hyman", "interpolation", "loglinear", setdiff(eval(formals(splinefun)$method), "hyman"))) {
+calculate.length <- function(electrophoresis, method = union(c("hyman", "interpolation", "loglinear"), eval(formals(splinefun)$method))) {
 	method <- match.arg(method)
 	x.name <- get.x.name(electrophoresis)
 	lower.name <- paste0("lower.", x.name)
