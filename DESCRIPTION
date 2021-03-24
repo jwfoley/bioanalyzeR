@@ -11,7 +11,7 @@ Description: This package reads raw data and metadata from Agilent automated ele
 License: LGPL-3
 Encoding: UTF-8
 LazyData: true
-Imports: XML, base64enc, png, plyr, ggplot2
+Imports: XML, base64enc, png, plyr, ggplot2, minpack.lm
 Suggests: 
     argparse,
     knitr,

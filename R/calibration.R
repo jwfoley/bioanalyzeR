@@ -35,7 +35,8 @@ NULL
 
 #' @rdname calibrate.electrophoresis
 #' @export
-calculate.length <- function(electrophoresis, method = union(c("hyman", "interpolation", "loglinear"), eval(formals(splinefun)$method))) {
+#' @importFrom minpack.lm nlsLM nls.lm.control
+calculate.length <- function(electrophoresis, method = union(c("hyman", "interpolation", "loglinear", "reptation"), eval(formals(splinefun)$method))) {
 	method <- match.arg(method)
 	x.name <- get.x.name(electrophoresis)
 	lower.name <- paste0("lower.", x.name)
@@ -84,6 +85,41 @@ calculate.length <- function(electrophoresis, method = union(c("hyman", "interpo
 					standard.curve.function <- function(aligned.time) exp((1 / aligned.time - coefs[1]) / coefs[2])
 					standard.curve.inverse <- function(length) 1/(coefs[1] + log(length) * coefs[2])
 				}
+				
+			} else if (method == "reptation") {
+				if (x.name == "relative.distance") {
+					cat("calibration for ladder well ", ladder.well, ":\n", sep = "") # test
+					d_lower <- peaks.ladder[which(peaks.ladder$peak.observations == "Lower Marker"), "distance"]
+					stopifnot("didn't find exactly one lower marker in ladder" = length(d_lower) == 1)
+					d_upper <- peaks.ladder[which(peaks.ladder$peak.observations == "Upper Marker"), "distance"]
+					if (length(d_upper) == 0) d_upper <- 0
+					stopifnot("multiple upper markers in ladder" = length(d_upper) == 1) # only get here if there weren't 0 or 1 above
+					
+					mobility.model <- nlsLM(
+						log(length) ~ log(-gamma * log((1/distance - 1/mu_L) / (1/mu_s - 1/mu_L))), # rearrange the formula to minimize residuals of log(length), in order to balance % error across the range of lengths
+						peaks.ladder,
+						start = list( # hardcoded values from a quick test run
+							mu_L = 0.02,
+							mu_s = 0.9,
+							gamma = 9000
+						),
+						control = nls.lm.control(maxiter = 200)
+					)
+					coefs <- as.list(coefficients(mobility.model))
+					for (coef in names(coefs)) cat("\t", coef, " = ", coefs[[coef]], "\n", sep = "") # test
+					
+					standard.curve.function <- function(relative.distance) -coefs$gamma * log((
+						1/(relative.distance * (d_lower - d_upper) + d_upper) - 1/coefs$mu_L
+					) / ( 
+						1/coefs$mu_s - 1/coefs$mu_L
+					))
+					standard.curve.inverse <- function(length) (
+						1/(1/coefs$mu_L - (1/coefs$mu_L - 1/coefs$mu_s) * exp(- length / coefs$gamma)) - d_lower
+					) / (
+						d_upper - d_lower
+					)
+					
+				} else stop("Bioanalyzer/ProSize version not implemented yet")
 				
 			} else { # if it's not one of those then it must be one of the splinefun methods
 				standard.curve.function <- splinefun(peaks.ladder$x, peaks.ladder$length, method = method)
