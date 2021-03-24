@@ -854,7 +854,7 @@ You can see instructions for all the other command-line arguments with `bioanaly
 
 Some of these features would not be difficult to implement but haven't been because I don't need them. Please contact me if they would be useful to you and you are willing to help test them.
 
-* Protein assays, the Bioanalyzer Small RNA assay, and the entire Oligo Pro II system are unsupported.
+* Protein assays, the Bioanalyzer Small RNA assay, single-stranded DNA, and the entire Oligo Pro II system are unsupported.
 * It might be possible to read Bioanalyzer `.xad` files directly rather than require exporting them to XML. The original files are also XML but store their main data in a compressed base64 block and I have not attempted to decode it.
 * It would definitely be possible to read TapeStation data files directly, because they are simply ZIP archives containing XML files, but they are encrypted (except the demo data provided with the TapeStation Analysis software). I have asked Agilent about this and they stated that they do not want the raw data to be accessible to users.
 * It would also be possible to read ProSize data files directly, but they are in binary formats and Agilent refuses to divulge the specifications so they would have to be reverse-engineered.
