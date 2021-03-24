@@ -1,6 +1,6 @@
 Package: bioanalyzeR
 Title: Analysis of Agilent electrophoresis data
-Version: 0.6.3
+Version: 0.7.0
 Authors@R: 
     person(given = "Joseph",
            family = "Foley",
@@ -11,7 +11,7 @@ Description: This package reads raw data and metadata from Agilent automated ele
 License: LGPL-3
 Encoding: UTF-8
 LazyData: true
-Imports: XML, base64enc, png, ggplot2
+Imports: XML, base64enc, png, plyr, ggplot2
 Suggests: 
     argparse,
     knitr,
