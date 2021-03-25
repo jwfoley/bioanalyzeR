@@ -81,6 +81,7 @@ calculate.length <- function(electrophoresis, method = union(c("hyman", "interpo
 				} else if (x.name == "aligned.time") {
 					# if x-variable is time, we must correct for the fact that faster-moving molecules spend less time in front of the detector
 					mobility.model <- lm(1/aligned.time ~ log(length), data = peaks.ladder)
+					coefs <- coefficients(mobility.model)
 					standard.curve.function <- function(aligned.time) exp((1 / aligned.time - coefs[1]) / coefs[2])
 					standard.curve.inverse <- function(length) 1/(coefs[1] + log(length) * coefs[2])
 				}
