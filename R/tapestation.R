@@ -7,10 +7,9 @@ RGB.HIGHLIGHT <-  c(209, 228, 250)  # highlight around selected lane is light bl
 RGB.GOOD <-       c(138, 208, 160)  # label for high RIN is green
 RGB.MEDIUM <-     c(255, 237, 101)  # label for medium RIN is yellow
 RGB.BAD <-        c(255, 106,  71)  # label for low RIN is red
+RGB.EMPTY <-      c(255, 255, 255)  # image gets pasted into all-white background, probably
 
 # hardcoded margin widths, in pixels
-LEFT.MARGIN <- 8
-RIGHT.MARGIN <- 15
 WARNING.PAD <- 10 # extra pixels to discard on both sides of a warning label in a gel lane
 
 
@@ -67,11 +66,16 @@ read.tapestation.gel.image <- function(gel.image.file, n.lanes) {
 	)
 	lane.center <- ((if (1 %in% highlight.border.offsets) highlight.border.offsets[length(highlight.border.offsets)] else 0) +(highlighted.lane.width - length(highlight.border.offsets)) / 2) / highlighted.lane.width # approximate x-position of the center of the lane, from the left, as a proportion of the total width
 	
+	# identify empty left and right margins
+	margin.columns <- colSums((! find.matching.pixels.mat(gel.image.rgb, RGB.EMPTY))) == 0
+	left.margin <- if (head(margin.columns, 1)) head(which(diff(margin.columns) == -1), 1) else 0
+	right.margin <- if (tail(margin.columns, 1)) ncol(gel.image.rgb) - tail(which(diff(margin.columns) == 1), 1) else 0
+	
 	# extract fluorescence values by lane
-	average.lane.width <- (ncol(gel.image.rgb) - LEFT.MARGIN - RIGHT.MARGIN) / n.lanes
+	average.lane.width <- (ncol(gel.image.rgb) - left.margin - right.margin) / n.lanes
 	lane.pixels <- gel.image.rgb[
 		(start.of.bottom.highlight - 1):(end.of.top.highlight + 1), # reverse rows to put fastest migration first like Bioanalyzer
-		LEFT.MARGIN + 1 + round(average.lane.width * (seq(n.lanes) - 1 + lane.center)),
+		left.margin + 1 + round(average.lane.width * (seq(n.lanes) - 1 + lane.center)),
 	]
 	n.readings <- nrow(lane.pixels)
 	bad.pixels <- ! (lane.pixels[,,1] == lane.pixels[,,2] & lane.pixels[,,1] == lane.pixels[,,3]) # find non-grayscale pixels, indicating annotations that block the data
