@@ -49,10 +49,10 @@ integrate.custom <- function(
 	upper.bound = Inf,
 	bound.variable = "length",
 	sum.variable = "concentration"
-) {
-	in.this.region <- in.custom.region(electrophoresis$data, lower.bound, upper.bound, bound.variable)
-	as.vector(by(electrophoresis$data[in.this.region,], electrophoresis$data$sample.index[in.this.region], function(data.subset) sum(data.subset[[sum.variable]])))
-}
+) as.vector(by(electrophoresis$data, electrophoresis$data$sample.index, function(data.subset) {
+	in.this.region <- in.custom.region(data.subset, lower.bound, upper.bound, bound.variable)
+	if (sum(in.this.region) == 0) NA else sum(data.subset[[sum.variable]][in.this.region])
+}))
 
 
 #' Compare sums within regions
