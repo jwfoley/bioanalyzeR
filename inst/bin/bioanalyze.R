@@ -32,7 +32,7 @@ files$add_argument("--dimensions", "-d",
 files$add_argument("--method",
 	help = "mobility standard curve method",
 	default = "hyman",
-	choices = c("interpolation", "regression", "fmm", "periodic", "natural", "monoH.FC", "hyman")
+	choices = eval(formals(calculate.length)$method)
 )
 files$add_argument("--mc_cores",
 	help = "maximum CPU cores",
