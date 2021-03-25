@@ -30,7 +30,7 @@ library(scales)
 
 # Introduction
 
-This package imports data from Agilent automated electrophoresis systems (Bioanalyzer, TapeStation, Fragment Analyzer, ZAG DNA Analyzer, Femto Pulse) and includes functions to graph and analyze the data.
+This package imports data from Agilent automated electrophoresis systems (Bioanalyzer, TapeStation, Fragment Analyzer, ZAG DNA Analyzer, Femto Pulse) and includes functions to graph and analyze the data. To download or contribute to the package, please see [its page on GitHub](https://github.com/jwfoley/bioanalyzeR).
 
 ## Features
 
