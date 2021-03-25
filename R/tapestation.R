@@ -1,7 +1,3 @@
-# names given to marker peaks
-LOWER.MARKER.NAMES <- c("Lower Marker", "edited Lower Marker")
-UPPER.MARKER.NAMES <- c("Upper Marker", "edited Upper Marker")
-
 # hardcoded colors
 RGB.HIGHLIGHT <-  c(209, 228, 250)  # highlight around selected lane is light blue
 RGB.GOOD <-       c(138, 208, 160)  # label for high RIN is green

@@ -1,6 +1,11 @@
+# file type identifiers
 BIOANALYZER.FIRST.CHAR <- "<" # XML opening bracket that distinguishes Bioanalyzer XML exports
 TAPESTATION.FIRST.CHAR <- rawToChar(as.raw(239)) # first byte of the byte order mark that distinguishes TapeStation XML exports
 GZIP.FIRST.CHAR <- rawToChar(as.raw(31)) # first byte of the gzip magic number
+
+# marker peak identifiers
+LOWER.MARKER.NAMES <- c("Lower Marker", "edited Lower Marker")
+UPPER.MARKER.NAMES <- c("Upper Marker", "edited Upper Marker")
 
 
 #' Combine multiple electrophoresis objects
@@ -253,11 +258,15 @@ NULL
 #' @export
 in.peak <- function(electrophoresis, which.peak) {
 	x.names <- get.x.name(electrophoresis, allow.multiple = T)
-	peak.x.name <- x.names[which(! is.na(electrophoresis$peaks[2,x.names]))]
-	stopifnot("bad peak x-value" = length(peak.x.name) == 1)
-	electrophoresis$data$sample.index == electrophoresis$peaks$sample.index[which.peak] &
-		electrophoresis$data[[peak.x.name]] >= electrophoresis$peaks[[paste0("lower.", peak.x.name)]][which.peak] &
-		electrophoresis$data[[peak.x.name]] <= electrophoresis$peaks[[paste0("upper.", peak.x.name)]][which.peak]
+	peak.x.name <- x.names[which(! is.na(electrophoresis$peaks[which.peak, x.names]))]
+	if (length(peak.x.name) == 0) { # no non-NA peak x-value found so nothing is in it
+		rep(NA, nrow(electrophoresis$data))
+	} else {
+		stopifnot("multiple peak x-values" = length(peak.x.name) == 1)
+		electrophoresis$data$sample.index == electrophoresis$peaks$sample.index[which.peak] &
+			electrophoresis$data[[peak.x.name]] >= electrophoresis$peaks[[paste0("lower.", peak.x.name)]][which.peak] &
+			electrophoresis$data[[peak.x.name]] <= electrophoresis$peaks[[paste0("upper.", peak.x.name)]][which.peak]
+	}
 }
 
 
