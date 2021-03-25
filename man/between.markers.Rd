@@ -4,7 +4,7 @@
 \alias{between.markers}
 \title{Check whether data points are between markers}
 \usage{
-between.markers(electrophoresis, lower.marker.spread = 5)
+between.markers(electrophoresis, lower.marker.spread = 10)
 }
 \arguments{
 \item{electrophoresis}{An \code{electrophoresis} object.}

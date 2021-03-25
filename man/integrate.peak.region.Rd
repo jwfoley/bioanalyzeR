@@ -6,9 +6,17 @@
 \alias{integrate.region}
 \title{Integrate a variable in peaks or regions}
 \usage{
-integrate.peak(electrophoresis, index, sum.variable = "concentration")
+integrate.peak(
+  electrophoresis,
+  index = seq(nrow(electrophoresis$peaks)),
+  sum.variable = "concentration"
+)
 
-integrate.region(electrophoresis, index, sum.variable = "concentration")
+integrate.region(
+  electrophoresis,
+  index = seq(nrow(electrophoresis$regions)),
+  sum.variable = "concentration"
+)
 }
 \arguments{
 \item{electrophoresis}{An \code{electrophoresis} object.}

@@ -4,12 +4,14 @@
 \alias{get.x.name}
 \title{Get the original x-variable}
 \usage{
-get.x.name(electrophoresis, raw = FALSE)
+get.x.name(electrophoresis, raw = FALSE, allow.multiple = FALSE)
 }
 \arguments{
 \item{electrophoresis}{An \code{electrophoresis} object.}
 
 \item{raw}{Whether to return the name of the raw variable instead of the aligned variable.}
+
+\item{allow.multiple}{Whether to allow multiple raw variables (data combined from multiple platforms).}
 }
 \value{
 A character giving the name of the x-variable.

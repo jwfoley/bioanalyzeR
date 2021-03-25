@@ -17,7 +17,7 @@ qplot.electrophoresis(
   geom = "line",
   include.ladder = FALSE,
   include.markers = FALSE,
-  lower.marker.spread = 5,
+  lower.marker.spread = 10,
   xlim = c(NA, NA),
   ylim = c(NA, NA),
   show.peaks = TRUE,

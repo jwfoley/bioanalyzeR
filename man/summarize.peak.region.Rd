@@ -6,9 +6,9 @@
 \alias{summarize.region}
 \title{Summarize lengths in peaks or regions}
 \usage{
-summarize.peak(electrophoresis, index)
+summarize.peak(electrophoresis, index = seq(nrow(electrophoresis$peaks)))
 
-summarize.region(electrophoresis, index)
+summarize.region(electrophoresis, index = seq(nrow(electrophoresis$regions)))
 }
 \arguments{
 \item{electrophoresis}{An \code{electrophoresis} object.}
