@@ -8,8 +8,35 @@ LOWER.MARKER.NAMES <- c("Lower Marker", "edited Lower Marker")
 UPPER.MARKER.NAMES <- c("Upper Marker", "edited Upper Marker")
 
 #' Electrophoresis class
+#'
+#' This S3 class is a generic container for electrophoresis data and metadata. The constructor simply assembles the provided members into a class structure without checking them: if they are formatted incorrectly there will be no warnings at this stage.
+#'
+#' @param data A tall data frame of the run data, specifically:
+#' * `time` (Bioanalyzer, ProSize) - time when this data point was measured
+#' * `aligned.time` (Bioanalyzer, ProSize) - measurement time aligned between the expected times of the marker peaks
+#' * `distance` (TapeStation) - migration distance of the measurement from the top of the gel area
+#' * `relative.distance` (TapeStation) - migration distance normalized relative to the marker peaks
+#' * `fluorescence` - fluorescence reading at this point
+#' * `length` - estimated molecule length at this point
+#' * `concentration` - estimated concentration of the area under the curve between this point and the previous one
+#' * `molarity` - estimated molarity of the area under the curve between this point and the previous one
+#' @param assay.info A list of metadata about each batch and the assay kit used.
+#' @param samples A data frame of metadata for each sample (also annotated to `data`, `peaks`, and `regions` with the same factor levels), specifically:
+#' * `batch` - the batch (instrument run) of the sample, from the file name
+#' * `well.number` - the well number in which the sample was loaded
+#' * `sample.name` - the name of the sample
+#' * `sample.observations` - notes about this sample supplied by the user or the Agilent software
+#' * `sample.comment` - notes about this sample supplied by the user
+#' * `reagent.id` (TapeStation) - the name of the ScreenTape used for this sample
+#' * `ladder.well` - which well contains the ladder that calibrates this sample
+#' * `RIN`, `DIN`, `RQN`, `28S/18S`, etc. - sample quality metrics reported by the Agilent software
+#' @param peaks A data frame of peaks reported by the Agilent software, annotated with their lower and upper boundaries in various scales.
+#' @param regions A data frame of regions of interest reported by the Agilent software, annotated with their lower and upper boundaries in varous scales.
+#' @param mobility.functions A list of model functions, one per ladder used for calibration, to convert migration speed measurements (aligned time or relative distance) into estimated molecule lengths.
+#'
 #' @export electrophoresis
 #' @exportClass electrophoresis
+#' @md
 electrophoresis <- function(
 	data = NULL,
 	assay.info = NULL,
