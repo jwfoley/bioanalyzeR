@@ -4,10 +4,10 @@
 \alias{between.markers}
 \title{Check whether data points are between markers}
 \usage{
-between.markers(electrophoresis, lower.marker.spread = 5)
+between.markers(electrophoresis, lower.marker.spread = 10)
 }
 \arguments{
-\item{electrophoresis}{An \code{electrophoresis} object.}
+\item{electrophoresis}{An \code{\link{electrophoresis}} object.}
 
 \item{lower.marker.spread}{Proportion to scale the width of the lower marker peak, along the computed length scale, to compensate for underreporting in the Agilent software. Set to 1 to use the reported peak boundary, which works poorly.}
 }

@@ -11,7 +11,7 @@ dv200(
 )
 }
 \arguments{
-\item{electrophoresis}{An \code{electrophoresis} object.}
+\item{electrophoresis}{An \code{\link{electrophoresis}} object.}
 
 \item{prop.variable}{Which variable to use for the proportion.}
 

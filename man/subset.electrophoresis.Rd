@@ -7,13 +7,13 @@
 \method{subset}{electrophoresis}(electrophoresis, ...)
 }
 \arguments{
-\item{electrophoresis}{An \code{electrophoresis} object.}
+\item{electrophoresis}{An \code{\link{electrophoresis}} object.}
 
 \item{...}{A logical expression indicating samples to keep, and any other arguments passed to \code{\link{subset}}.}
 }
 \value{
-A new \code{electrophoresis} object containing only the data from the subset of samples that match the given expression, with sample indices renumbered and factors releveled.
+A new \code{\link{electrophoresis}} object containing only the data from the subset of samples that match the given expression, with sample indices renumbered and factors releveled.
 }
 \description{
-This function takes a subset of the samples in an \code{electrophoresis} object.
+This function takes a subset of the samples in an \code{\link{electrophoresis}} object.
 }

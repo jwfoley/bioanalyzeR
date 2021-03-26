@@ -7,21 +7,25 @@
 \alias{calculate.molarity}
 \title{Electrophoresis calibrations}
 \usage{
-calculate.length(electrophoresis, method = "hyman")
+calculate.length(
+  electrophoresis,
+  method = union(c("hyman", "interpolation", "loglinear"),
+    eval(formals(splinefun)$method))
+)
 
 calculate.concentration(electrophoresis, ladder.concentrations = NULL)
 
 calculate.molarity(electrophoresis)
 }
 \arguments{
-\item{electrophoresis}{An \code{electrophoresis} object.}
+\item{electrophoresis}{An \code{\link{electrophoresis}} object.}
 
-\item{method}{The method used to fit the mobility model of molecule length vs. migration distance, either \code{"interpolation"} (linear interpolation via \code{\link{approxfun}}), \code{"regression"} (log-linear regression via \code{\link{lm}} with the model \code{relative.distance ~ log(length)}), or one of the methods of \code{\link{splinefun}} (monotone methods recommended).}
+\item{method}{The method used to fit the mobility model of molecule length vs. migration distance, either \code{"interpolation"} (linear interpolation via \code{\link{approxfun}}), \code{"loglinear"} (log-linear regression via \code{\link{lm}} with the model \code{relative.distance ~ log(length)}), or one of the methods of \code{\link{splinefun}} (monotone methods recommended). Can be abbreviated.}
 
 \item{ladder.concentrations}{The true concentrations of the ladder peaks. If provided (from the Bioanalyzer), the concentration coefficient is fit according to the non-marker ladder peaks and then adjusted for each sample according to the relative fluorescence area of its markers compared with the ladder. If \code{NULL} (TapeStation), concentrations are fit according to only the upper marker if present or the lower marker otherwise; these marker concentrations are assumed to be correct.}
 }
 \value{
-The same \code{electrophoresis} object with the new estimated variable added to its \code{$data} member. \code{calculate.length} also adds estimated length boundaries to the \code{$peaks} member and aligned-time or relative-distance boundaries to \code{$regions}.
+The same \code{\link{electrophoresis}} object with the new estimated variable added to its \code{$data} member. \code{calculate.length} also adds estimated length boundaries to the \code{$peaks} member and aligned-time or relative-distance boundaries to \code{$regions}.
 }
 \description{
 Estimate the derived values from raw electrophoresis data.

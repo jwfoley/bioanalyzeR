@@ -7,7 +7,7 @@
 variable.label(electrophoresis, variable, variable2 = NULL)
 }
 \arguments{
-\item{electrophoresis}{An \code{electrophoresis} object.}
+\item{electrophoresis}{An \code{\link{electrophoresis}} object.}
 
 \item{variable}{The name of the variable to convert into a label. One of \code{"time"}, \code{"aligned.time"}, \code{"distance"}, \code{"relative.distance"}, \code{"fluorescence"}, \code{"length"}, \code{"concentration"}, \code{"molarity"}.}
 
@@ -17,8 +17,8 @@ variable.label(electrophoresis, variable, variable2 = NULL)
 A \code{"character"} object containing a descriptive, human-readable label including the correct units (e.g. ng/µl, nM) specified in the original metadata.
 }
 \description{
-This function generates a customized descriptive label for a variable in an \code{electrophoresis} object.
+This function generates a customized descriptive label for a variable in an \code{\link{electrophoresis}} object.
 }
 \details{
-If your \code{electrophoresis} object contains multiple batches with different units for some reason, this function gives a warning and does not include a unit in the label.
+If your \code{\link{electrophoresis}} object contains multiple batches with different units for some reason, this function gives a warning and does not include a unit in the label.
 }

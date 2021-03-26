@@ -5,6 +5,10 @@ library(argparse)
 library(bioanalyzeR)
 
 parser <- ArgumentParser(description = "Simple automation of bioanalyzeR functions.")
+parser$add_argument("--version", "-v",
+	action = "version",
+	version = as.character(packageVersion("bioanalyzeR"))
+)
 
 files <- parser$add_argument_group("files", "Filenames and settings for input/output.")
 files$add_argument("xml_files",
@@ -28,7 +32,7 @@ files$add_argument("--dimensions", "-d",
 files$add_argument("--method",
 	help = "mobility standard curve method",
 	default = "hyman",
-	choices = c("interpolation", "regression", "fmm", "periodic", "natural", "monoH.FC", "hyman")
+	choices = eval(formals(calculate.length)$method)
 )
 files$add_argument("--mc_cores",
 	help = "maximum CPU cores",

@@ -7,7 +7,7 @@
 summarize.custom(electrophoresis, lower.bound = -Inf, upper.bound = Inf)
 }
 \arguments{
-\item{electrophoresis}{An \code{electrophoresis} object.}
+\item{electrophoresis}{An \code{\link{electrophoresis}} object.}
 
 \item{lower.bound}{Lower boundary of the region to summarize.}
 

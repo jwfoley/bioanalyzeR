@@ -1,8 +1,8 @@
 #' Integrate a variable in peaks or regions
 #'
-#' Compute the sum of some electrophoresis variable between the boundaries of reported peaks or regions in an \code{electrophoresis} object.
+#' Compute the sum of some electrophoresis variable between the boundaries of reported peaks or regions in an \code{\link{electrophoresis}} object.
 #'
-#' @param electrophoresis An \code{electrophoresis} object.
+#' @param electrophoresis An \code{\link{electrophoresis}} object.
 #' @param index The index, or a vector of indexes, of the peaks or regions to integrate (row numbers in \code{electrophoresis$peaks} or \code{electrophoresis$regions}).
 #' @param sum.variable Which variable to sum in each peak.
 #'
@@ -16,7 +16,7 @@ NULL
 #' @export
 integrate.peak <- function(
 	electrophoresis,
-	index,
+	index = seq(nrow(electrophoresis$peaks)),
 	sum.variable = "concentration"
 ) sapply(index, function(i) sum(electrophoresis$data[[sum.variable]][in.peak(electrophoresis, i)]))
 
@@ -25,16 +25,16 @@ integrate.peak <- function(
 #' @export
 integrate.region <- function(
 	electrophoresis,
-	index,
+	index = seq(nrow(electrophoresis$regions)),
 	sum.variable = "concentration"
 ) sapply(index, function(i) sum(electrophoresis$data[[sum.variable]][in.region(electrophoresis, i)]))
 
 
 #' Integrate a variable in a custom region
 #'
-#' Compute the sum of some electrophoresis variable in an \code{electrophoresis} object between specified boundaries. The variable is summed individually for each sample.
+#' Compute the sum of some electrophoresis variable in an \code{\link{electrophoresis}} object between specified boundaries. The variable is summed individually for each sample.
 #'
-#' @param electrophoresis An \code{electrophoresis} object.
+#' @param electrophoresis An \code{\link{electrophoresis}} object.
 #' @param lower.bound Lower boundary of the region to integrate.
 #' @param upper.bound Upper boundary of the region to integrate.
 #' @param bound.variable Which variable the boundaries refer to.
@@ -49,17 +49,17 @@ integrate.custom <- function(
 	upper.bound = Inf,
 	bound.variable = "length",
 	sum.variable = "concentration"
-) {
-	in.this.region <- in.custom.region(electrophoresis$data, lower.bound, upper.bound, bound.variable)
-	as.vector(by(electrophoresis$data[in.this.region,], electrophoresis$data$sample.index[in.this.region], function(data.subset) sum(data.subset[[sum.variable]])))
-}
+) as.vector(by(electrophoresis$data, electrophoresis$data$sample.index, function(data.subset) {
+	in.this.region <- in.custom.region(data.subset, lower.bound, upper.bound, bound.variable)
+	if (sum(in.this.region) == 0) NA else sum(data.subset[[sum.variable]][in.this.region])
+}))
 
 
 #' Compare sums within regions
 #'
 #' Given two or more regions (pairs of lower and upper bounds), calculate the ratio of the integrated sum of each additional region relative to the integrated sum of the first region.  The ratio is computed individually for each sample.
 #'
-#' @param electrophoresis An \code{electrophoresis} object.
+#' @param electrophoresis An \code{\link{electrophoresis}} object.
 #' @param ... Two or more pairs (vectors) of boundaries, e.g. \code{c(100, 200), c(200, 500), c(500, 700)}.
 #' @param bound.variable Which variable the boundaries refer to.
 #' @param sum.variable Which variable to sum in each region.
@@ -76,7 +76,7 @@ region.ratio <- function(
 	sum.variable = "concentration"
 ) {
 	bounds <- list(...)
-	stopifnot(length(bounds) > 1)
+	stopifnot("need more than one bound" = length(bounds) > 1)
 	sum.matrix <- sapply(bounds, function(bound.pair) integrate.custom(electrophoresis, lower.bound = bound.pair[1], upper.bound = bound.pair[2], bound.variable = bound.variable, sum.variable = sum.variable))
 	matrix(sum.matrix[,-1] / sum.matrix[,1], nrow = nrow(sum.matrix), dimnames = list(NULL, sapply(bounds[-1], function(bound.pair) paste0(sum.variable, " ratio in ", bound.variable, " ", bound.pair[1], "-", bound.pair[2], "/", bounds[[1]][1], "-", bounds[[1]][2]))))
 }
@@ -90,7 +90,7 @@ region.ratio <- function(
 #'
 #' By default \code{lower.marker.spread = 1} (see \code{\link{between.markers}}) for consistency with the Agilent software.
 #'
-#' @param electrophoresis An \code{electrophoresis} object.
+#' @param electrophoresis An \code{\link{electrophoresis}} object.
 #' @param prop.variable Which variable to use for the proportion.
 #' @param lower.marker.spread Amount to scale the width of the lower marker peak.
 #'
@@ -107,7 +107,7 @@ dv200 <- function(electrophoresis, prop.variable = "concentration", lower.marker
 #'
 #' For Illumina sequencing libraries, compute the molar ratio of molecules with desirably long inserts to undesirable adapter dimers in each sample.
 #'
-#' @param electrophoresis An \code{electrophoresis} object.
+#' @param electrophoresis An \code{\link{electrophoresis}} object.
 #' @param min.sequenceable The shortest length of molecules that are likely to produce data on the sequencer (ignore shorter molecules that are probably just unclusterable free primers or adapters).
 #' @param min.good.insert The shortest length of a desirable molecule (adapter length plus insert length).
 #' @param max.sequenceable The longest length of molecules that are likely to produce data on the sequencer (ignore molecules that are too long for clustering).
@@ -125,11 +125,11 @@ illumina.library.ratio <- function(
 
 #' Normalize data to proportions
 #'
-#' For a given variable, normalize the data values in an \code{electrophoresis} object to proportions of the total. After normalization the sum of the variable for each sample is 1.
+#' For a given variable, normalize the data values in an \code{\link{electrophoresis}} object to proportions of the total. After normalization the sum of the variable for each sample is 1.
 #'
 #' Only data points between the markers are considered in the total. If there is no upper marker, all data points above the lower marker are considered.
 #'
-#' @param electrophoresis An \code{electrophoresis} object.
+#' @param electrophoresis An \code{\link{electrophoresis}} object.
 #' @param variable The name of a variable in \code{electrophoresis$data}.
 #' @param lower.marker.spread Proportion to scale the width of the lower marker peak (passed to \code{\link{between.markers}}).
 #'

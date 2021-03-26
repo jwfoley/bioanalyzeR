@@ -30,7 +30,7 @@ library(scales)
 
 # Introduction
 
-This package imports data from Agilent automated electrophoresis systems (Bioanalyzer, TapeStation, Fragment Analyzer, ZAG DNA Analyzer, Femto Pulse) and includes functions to graph and analyze the data.
+This package imports data from Agilent automated electrophoresis systems (Bioanalyzer, TapeStation, Fragment Analyzer, ZAG DNA Analyzer, Femto Pulse) and includes functions to graph and analyze the data. To download or contribute to the package, please see [its page on GitHub](https://github.com/jwfoley/bioanalyzeR).
 
 ## Features
 
@@ -203,29 +203,6 @@ head(dna1000$regions)
 ```
 
 Each `electrophoresis` object contains the main data in its `$data` member and has several other members with metadata like the sample names and software-reported peaks and regions of interest (though this particular example had no regions in it).
-
-* `data` - a tall data frame of the run data, specifically:
-	* `time` (Bioanalyzer, ProSize) - time when this data point was measured
-	* `aligned.time` (Bioanalyzer, ProSize) - measurement time aligned between the expected times of the marker peaks
-	* `distance` (TapeStation) - migration distance of the measurement from the top of the gel area
-	* `relative.distance` (TapeStation) - migration distance normalized relative to the marker peaks
-	* `fluorescence` - fluorescence reading at this point
-	* `length` - estimated molecule length at this point
-	* `concentration` - estimated concentration of the area under the curve between this point and the previous one
-	* `molarity` - estimated molarity of the area under the curve between this point and the previous one
-* `assay.info` - a list of metadata about each batch and the assay kit used
-* `samples` - a data frame of metadata for each sample (also annotated to `data`, `peaks`, and `regions` with the same factor levels), specifically:
-	* `batch` - the batch (instrument run) of the sample, from the file name
-	* `well.number` - the well number in which the sample was loaded
-	* `sample.name` - the name of the sample
-	* `sample.observations` - notes about this sample supplied by the user or the Agilent software
-	* `sample.comment` - notes about this sample supplied by the user
-	* `reagent.id` (TapeStation) - the name of the ScreenTape used for this sample
-	* `ladder.well` - which well contains the ladder that calibrates this sample
-	* `RIN`, `DIN`, `RQN`, `28S/18S`, etc. - sample quality metrics reported by the Agilent software
-* `peaks` - a data frame of peaks reported by the Agilent software, annotated with their lower and upper boundaries in various scales
-* `regions` - a data frame of regions of interest reported by the Agilent software, annotated with their lower and upper boundaries in varous scales
-* `mobility functions` - a list of model functions, one per ladder used for calibration, to convert migration speed measurements (aligned time or relative distance) into estimated molecule lengths
 
 You'll notice that many of the values at the beginning of `dna1000$data` are `NA`. This is because the mobility model (the standard curve relating migration speed to molecule length) does not extrapolate to observations below the lower marker or above the upper marker, and the estimates of concentration and molarity depend on the length. We can see some better examples if we look farther down:
 
@@ -439,9 +416,14 @@ d5000 <- read.electrophoresis(system.file(
 	"D5000-Tubes-16.xml.gz",
 	package = "bioanalyzeR"
 ))
-qplot.electrophoresis(d5000, title = "TapeStation D5000")
 qplot.electrophoresis(
-	d5000,
+	subset(d5000, startsWith(as.character(sample.name), "Size Selected Smear")),
+	facets = NULL,
+	title = "TapeStation D5000"
+)
+qplot.electrophoresis(
+	subset(d5000, startsWith(as.character(sample.name), "Size Selected Smear")),
+	facets = NULL,
 	normalize = T,
 	title = "TapeStation D5000 normalized"
 )
@@ -712,7 +694,7 @@ dna1000 <- read.electrophoresis(system.file(
 stdcrv.mobility(dna1000) + ggtitle("Bioanalyzer DNA 1000 standard curve")
 ```
 
-You can see how the spline function bends to accommodate the ladder peaks, which don't fit perfectly with logarithmic regression:
+You can see how the spline function bends to accommodate the ladder peaks, which don't fit perfectly with log-linear regression:
 
 ```{r}
 dna1000.regression <- read.electrophoresis(system.file(
@@ -720,8 +702,8 @@ dna1000.regression <- read.electrophoresis(system.file(
 	"bioanalyzer",
 	"Demo DNA 1000 Series II.xml.gz",
 	package = "bioanalyzeR"
-), method = "regression")
-stdcrv.mobility(dna1000.regression) + ggtitle("Bioanalyzer DNA 1000 standard curve from logarithmic regression")
+), method = "loglinear")
+stdcrv.mobility(dna1000.regression) + ggtitle("Bioanalyzer DNA 1000 standard curve from log-linear regression")
 ```
 
 ## `qc.electrophoresis`
@@ -749,7 +731,7 @@ compare.estimates <- function(title, sample.names, ...) {
 	) == length(which.ladder.peaks))] # exclude reruns with wrong number of peaks
 	which.reruns <- which.reruns[seq(min(length(which.reruns), 5))] # don't use more than 5 replicates
 	ladder.comparison <- data.frame(
-		replicate =  factor(rep(paste("replicate", 1:length(which.reruns)), each = length(which.ladder.peaks))),
+		replicate =  factor(rep(paste("replicate", seq_along(which.reruns)), each = length(which.ladder.peaks))),
 		source =     factor(rep(c("Agilent software", "bioanalyzeR"), each = length(which.reruns) * length(which.ladder.peaks))),
 		length =     data$peaks$length[which.ladder.peaks],
 		what =       factor(rep(c("length", "concentration", "molarity"), each = 2 * length(which.reruns) * length(which.ladder.peaks)), levels = c("length", "concentration", "molarity"))
@@ -778,7 +760,7 @@ compare.estimates <- function(title, sample.names, ...) {
 		geom_point() +
 		facet_grid(what ~ source) +
 		scale_x_log10() +
-		scale_y_continuous(label = percent) +
+		scale_y_continuous(label = label_percent(accuracy = 1)) +
 		xlab("length (bp)") +
 		ggtitle(paste(title, "accuracy comparison"))
 }
@@ -854,7 +836,7 @@ You can see instructions for all the other command-line arguments with `bioanaly
 
 Some of these features would not be difficult to implement but haven't been because I don't need them. Please contact me if they would be useful to you and you are willing to help test them.
 
-* Protein assays, the Bioanalyzer Small RNA assay, and the entire Oligo Pro II system are unsupported.
+* Protein assays, the Bioanalyzer Small RNA assay, single-stranded DNA, and the entire Oligo Pro II system are unsupported.
 * It might be possible to read Bioanalyzer `.xad` files directly rather than require exporting them to XML. The original files are also XML but store their main data in a compressed base64 block and I have not attempted to decode it.
 * It would definitely be possible to read TapeStation data files directly, because they are simply ZIP archives containing XML files, but they are encrypted (except the demo data provided with the TapeStation Analysis software). I have asked Agilent about this and they stated that they do not want the raw data to be accessible to users.
 * It would also be possible to read ProSize data files directly, but they are in binary formats and Agilent refuses to divulge the specifications so they would have to be reverse-engineered.

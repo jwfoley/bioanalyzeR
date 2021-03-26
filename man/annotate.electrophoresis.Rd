@@ -15,17 +15,17 @@ annotate.electrophoresis(
 )
 }
 \arguments{
-\item{electrophoresis}{An \code{electrophoresis} object.}
+\item{electrophoresis}{An \code{\link{electrophoresis}} object.}
 
 \item{...}{Additional arguments passed to \code{\link{read.table}}.}
 
 \item{annotation}{Either a data frame or the path of a file that can be read by \code{\link{read.table}}.}
 }
 \value{
-A new \code{electrophoresis} object with additional columns added to its \code{$samples} element.
+A new \code{\link{electrophoresis}} object with additional columns added to its \code{$samples} element.
 }
 \description{
-This function adds columns of annotations to the \code{$samples} table of an \code{electrophoresis} object. These new annotations can be used for subsetting, plot faceting, etc.
+This function adds columns of annotations to the \code{$samples} table of an \code{\link{electrophoresis}} object. These new annotations can be used for subsetting, plot faceting, etc.
 }
 \details{
 The input annotations can be a data frame or either a \code{\link{connection}} or a \code{\link{character}} containing the path of a file, which is then read into a data frame by \code{\link{read.table}}. Therefore a file will probably need to be in CSV format or similar.

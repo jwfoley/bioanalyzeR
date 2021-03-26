@@ -7,8 +7,8 @@
 labeller.electrophoresis(electrophoresis)
 }
 \arguments{
-\item{electrophoresis}{An \code{electrophoresis} object whose \code{samples} member contains all the samples in your plot.}
+\item{electrophoresis}{An \code{\link{electrophoresis}} object whose \code{samples} member contains all the samples in your plot.}
 }
 \description{
-This is a labeller function compatible with \code{\link{facet_wrap}} and \code{\link{facet_grid}}. It allows you to facet the data from an \code{electrophoresis} object on \code{sample.index}, to keep the samples in the observed order, but replaces the facet labels with the annotated sample names.
+This is a labeller function compatible with \code{\link{facet_wrap}} and \code{\link{facet_grid}}. It allows you to facet the data from an \code{\link{electrophoresis}} object on \code{sample.index}, to keep the samples in the observed order, but replaces the facet labels with the annotated sample names.
 }

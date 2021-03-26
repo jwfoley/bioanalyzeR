@@ -1,16 +1,11 @@
-# names given to marker peaks
-LOWER.MARKER.NAMES <- c("Lower Marker", "edited Lower Marker")
-UPPER.MARKER.NAMES <- c("Upper Marker", "edited Upper Marker")
-
 # hardcoded colors
 RGB.HIGHLIGHT <-  c(209, 228, 250)  # highlight around selected lane is light blue
 RGB.GOOD <-       c(138, 208, 160)  # label for high RIN is green
 RGB.MEDIUM <-     c(255, 237, 101)  # label for medium RIN is yellow
 RGB.BAD <-        c(255, 106,  71)  # label for low RIN is red
+RGB.EMPTY <-      c(255, 255, 255)  # image gets pasted into all-white background, probably
 
 # hardcoded margin widths, in pixels
-LEFT.MARGIN <- 8
-RIGHT.MARGIN <- 15
 WARNING.PAD <- 10 # extra pixels to discard on both sides of a warning label in a gel lane
 
 
@@ -52,7 +47,7 @@ read.tapestation.gel.image <- function(gel.image.file, n.lanes) {
 	
 	# find gel boundaries
 	highlight.cols <- which(find.matching.pixels.vec(gel.image.rgb[1,,], RGB.HIGHLIGHT)) # use only the first pixel row to find the highlight
-	stopifnot(all(diff(highlight.cols) == 1)) # assume the highlight is continuous in the first pixel row
+	stopifnot("highlight is not continuous in first pixel row" = all(diff(highlight.cols) == 1))
 	highlighted.lane.width <- length(highlight.cols)
 	highlighted.subset <- gel.image.rgb[,highlight.cols,]
 	highlight.rows <- which(rowSums(find.matching.pixels.mat(highlighted.subset, RGB.HIGHLIGHT)) == highlighted.lane.width) # find all pixel rows with full highlight (will miss ones with annotation text over them)
@@ -61,15 +56,22 @@ read.tapestation.gel.image <- function(gel.image.file, n.lanes) {
 	subposition.is.quality.label <- find.matching.pixels.mat(highlighted.subset, RGB.GOOD) | find.matching.pixels.mat(highlighted.subset, RGB.MEDIUM) | find.matching.pixels.mat(highlighted.subset, RGB.BAD)
 	start.of.bottom.highlight <- if (any(subposition.is.quality.label)) which(rowSums(subposition.is.quality.label) > 0)[1] else highlight.rows[length(top.highlight.rows) + 1] # quality label supersedes any blue highlight
 	highlight.border.offsets <- which(find.matching.pixels.vec(highlighted.subset[end.of.top.highlight + 1,,], RGB.HIGHLIGHT)) # sometimes will be empty if there's only one pixel of border and the color is off because of antialiasing, but we can live with that much error
-	stopifnot(length(highlight.border.offsets < 2) || all(diff(highlight.border.offsets) == 1)) # assume the border is contiguous
-	stopifnot(length(highlight.border.offsets) == 0 || (highlight.border.offsets[1] %in% 0:1 || highlight.border.offsets[length(highlight.border.offsets)] %in% (highlighted.lane.width - 1:0))) # assume the border is on one edge or the other, allowing one pixel column of error due to antialiasing
+	stopifnot(
+		"border is not contiguous" = length(highlight.border.offsets < 2) || all(diff(highlight.border.offsets) == 1),
+		"border is not on edge" = length(highlight.border.offsets) == 0 || (highlight.border.offsets[1] %in% 0:1 || highlight.border.offsets[length(highlight.border.offsets)] %in% (highlighted.lane.width - 1:0)) # assume the border is on one edge or the other, allowing one pixel column of error due to antialiasing
+	)
 	lane.center <- ((if (1 %in% highlight.border.offsets) highlight.border.offsets[length(highlight.border.offsets)] else 0) +(highlighted.lane.width - length(highlight.border.offsets)) / 2) / highlighted.lane.width # approximate x-position of the center of the lane, from the left, as a proportion of the total width
 	
+	# identify empty left and right margins
+	margin.columns <- colSums((! find.matching.pixels.mat(gel.image.rgb, RGB.EMPTY))) == 0
+	left.margin <- if (head(margin.columns, 1)) head(which(diff(margin.columns) == -1), 1) else 0
+	right.margin <- if (tail(margin.columns, 1)) ncol(gel.image.rgb) - tail(which(diff(margin.columns) == 1), 1) else 0
+	
 	# extract fluorescence values by lane
-	average.lane.width <- (ncol(gel.image.rgb) - LEFT.MARGIN - RIGHT.MARGIN) / n.lanes
+	average.lane.width <- (ncol(gel.image.rgb) - left.margin - right.margin) / n.lanes
 	lane.pixels <- gel.image.rgb[
 		(start.of.bottom.highlight - 1):(end.of.top.highlight + 1), # reverse rows to put fastest migration first like Bioanalyzer
-		LEFT.MARGIN + 1 + round(average.lane.width * (1:n.lanes - 1 + lane.center)),
+		left.margin + 1 + round(average.lane.width * (seq(n.lanes) - 1 + lane.center)),
 	]
 	n.readings <- nrow(lane.pixels)
 	bad.pixels <- ! (lane.pixels[,,1] == lane.pixels[,,2] & lane.pixels[,,1] == lane.pixels[,,3]) # find non-grayscale pixels, indicating annotations that block the data
@@ -79,7 +81,7 @@ read.tapestation.gel.image <- function(gel.image.file, n.lanes) {
 	}
 	
 	data.frame(
-		sample.index =  rep(1:n.lanes, each = n.readings),
+		sample.index =  rep(seq(n.lanes), each = n.readings),
 		distance =      n.readings:1 / n.readings,
 		fluorescence =  as.vector(1 - lane.pixels[,,1]) # subtract from 1 because it's a negative; use only red channel
 	)
@@ -94,7 +96,7 @@ read.tapestation.gel.image <- function(gel.image.file, n.lanes) {
 #'
 #' @param xml.file The filename of an XML file exported from the TapeStation software. The file may be compressed with \code{gzip} and the filename is expected to end in \code{.xml} or \code{.xml.gz}; the name before that extension is used as the name of the batch. The filename can be a remote URL.
 #'
-#' @return A list of some of the components of an \code{electrophoresis} object
+#' @return A list of some of the components of an \code{\link{electrophoresis}} object
 #' 
 #' @seealso \code{\link{read.tapestation}}, \code{\link{read.tapestation.gel.image}}
 #'
@@ -176,7 +178,7 @@ read.tapestation.xml <- function(xml.file) {
 			}
 		)
 		
-		list(
+		electrophoresis(
 			samples = data.frame(batch, well.number, well.row, well.col, sample.name, sample.observations, reagent.id, RINe, DIN, is.ladder, stringsAsFactors = F),
 			peaks = peaks,
 			regions = regions
@@ -184,10 +186,10 @@ read.tapestation.xml <- function(xml.file) {
 	})
 	has.peaks <- ! all(sapply(result.list, function(x) is.null(x$peaks)))
 	has.regions <- ! all(sapply(result.list, function(x) is.null(x$regions)))
-	result <- list(
+	result <- electrophoresis(
 		samples = do.call(rbind, c(lapply(result.list, function(x) x$samples), make.row.names = F)),
-		peaks = if (! has.peaks) NULL else do.call(rbind, c(lapply(1:length(result.list), function(i) if (is.null(result.list[[i]]$peaks)) NULL else cbind(sample.index = i, result.list[[i]]$peaks)), make.row.names = F)),
-		regions = if (! has.regions) NULL else do.call(rbind, c(lapply(1:length(result.list), function(i) if (is.null(result.list[[i]]$regions)) NULL else cbind(sample.index = i, result.list[[i]]$regions)), make.row.names = F)),
+		peaks = if (! has.peaks) NULL else do.call(rbind, c(lapply(seq_along(result.list), function(i) if (is.null(result.list[[i]]$peaks)) NULL else cbind(sample.index = i, result.list[[i]]$peaks)), make.row.names = F)),
+		regions = if (! has.regions) NULL else do.call(rbind, c(lapply(seq_along(result.list), function(i) if (is.null(result.list[[i]]$regions)) NULL else cbind(sample.index = i, result.list[[i]]$regions)), make.row.names = F)),
 		assay.info = assay.info
 	)
 	if (all(is.na(result$samples$RINe))) result$samples$RINe <- NULL
@@ -236,18 +238,15 @@ read.tapestation <- function(xml.file, gel.image.file = NULL, method = "hyman") 
 	if (is.null(gel.image.file)) gel.image.file <- sub("\\.xml(\\.gz)?$", ".png", xml.file)
 	
 	parsed.data <- read.tapestation.xml(xml.file)
-	stopifnot(length(unique(parsed.data$samples$batch)) == 1)
+	stopifnot("multiple batches provided" = length(unique(parsed.data$samples$batch)) == 1)
 	batch <- parsed.data$samples$batch[1]
-	result <- structure(list(
+	result <- electrophoresis(
 		data = read.tapestation.gel.image(gel.image.file, nrow(parsed.data$samples)),
-		assay.info = list(parsed.data$assay.info),
+		assay.info = setNames(list(parsed.data$assay.info), batch),
 		samples = parsed.data$samples,
 		peaks = parsed.data$peaks,
-		regions = parsed.data$regions,
-		mobility.functions = NULL,
-		mass.coefficients = NULL
-	), class = "electrophoresis")
-	names(result$assay.info) <- batch
+		regions = parsed.data$regions
+	)
 	
 	# remove duplicate ladders
 	if (sum(result$samples$is.ladder) > 1 && length(unique(result$samples$ladder.well)) == 1) {
@@ -256,7 +255,7 @@ read.tapestation <- function(xml.file, gel.image.file = NULL, method = "hyman") 
 	
 	# calculate relative distances
 	is.lower.marker <- result$peaks$peak.observations %in% LOWER.MARKER.NAMES
-	marker.distances <- data.frame(lower = sapply(1:nrow(result$samples), function(i) {
+	marker.distances <- data.frame(lower = sapply(seq(nrow(result$samples)), function(i) {
 		distance <- result$peaks$distance[is.lower.marker & result$peaks$sample.index == i]
 		if (length(distance) == 0) {
 			return(NA)
@@ -270,7 +269,7 @@ read.tapestation <- function(xml.file, gel.image.file = NULL, method = "hyman") 
 	if (sum(is.upper.marker) == 0) { # kit lacks upper marker
 		marker.distances$upper <- 0 # effectively normalizes only to lower marker
 	} else {
-		marker.distances$upper <- sapply(1:nrow(result$samples), function(i) {
+		marker.distances$upper <- sapply(seq(nrow(result$samples)), function(i) {
 			distance <- result$peaks$distance[is.upper.marker & result$peaks$sample.index == i]
 			if (length(distance) == 0) {
 				return(NA)

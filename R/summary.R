@@ -1,8 +1,8 @@
 #' Summarize lengths in a subset of data
 #'
-#' Compute summary statistics of the molecule length distribution in a subset of an \code{electrophoresis} object. This helper function is called by other functions that split the object into subsets.
+#' Compute summary statistics of the molecule length distribution in a subset of an \code{\link{electrophoresis}} object. This helper function is called by other functions that split the object into subsets.
 #'
-#' @param sample.frame A subset of an \code{electrophoresis} object containing only contiguous data from one sample.
+#' @param sample.frame A subset of an \code{\link{electrophoresis}} object containing only contiguous data from one sample.
 #'
 #' @seealso \code{\link{summarize.peak.region}}, \code{\link{summarize.custom}}
 #'
@@ -28,9 +28,9 @@ summarize.subset <- function(sample.frame) {
 
 #' Summarize lengths in peaks or regions
 #'
-#' Compute summary statistics of the molecule length distribution in the reported peaks or regions in an \code{electrophoresis} object.
+#' Compute summary statistics of the molecule length distribution in the reported peaks or regions in an \code{\link{electrophoresis}} object.
 #'
-#' @param electrophoresis An \code{electrophoresis} object.
+#' @param electrophoresis An \code{\link{electrophoresis}} object.
 #' @param index The index, or a vector of indexes, of the peaks or regions to summarize (row numbers in \code{electrophoresis$peaks} or \code{electrophoresis$regions}).
 #'
 #' @seealso \code{\link{summarize.custom}}
@@ -43,7 +43,7 @@ NULL
 #' @export
 summarize.peak <- function(
 	electrophoresis,
-	index
+	index = seq(nrow(electrophoresis$peaks))
 ) as.data.frame(t(sapply(index, function(i) summarize.subset(electrophoresis$data[in.peak(electrophoresis, i),]))))
 
 
@@ -51,7 +51,7 @@ summarize.peak <- function(
 #' @export
 summarize.region <- function(
 	electrophoresis,
-	index
+	index = seq(nrow(electrophoresis$regions))
 ) as.data.frame(t(sapply(index, function(i) summarize.subset(electrophoresis$data[in.region(electrophoresis, i),]))))
 
 
@@ -59,7 +59,7 @@ summarize.region <- function(
 #'
 #' Compute summary statistics of the molecule length distribution between specified boundaries. The summary is computed individually for each sample.
 #'
-#' @param electrophoresis An \code{electrophoresis} object.
+#' @param electrophoresis An \code{\link{electrophoresis}} object.
 #' @param lower.bound Lower boundary of the region to summarize.
 #' @param upper.bound Upper boundary of the region to summarize.
 #'
@@ -71,7 +71,7 @@ summarize.custom <- function(
 	lower.bound = -Inf,
 	upper.bound = Inf
 ) {
-	stopifnot(upper.bound > lower.bound)
+	stopifnot("upper bound must be greater than lower bound" = upper.bound > lower.bound)
 	in.this.region <- in.custom.region(electrophoresis$data, lower.bound, upper.bound, "length")
 	result <- as.data.frame(t(simplify2array(by(electrophoresis$data[in.this.region,], electrophoresis$data$sample.index[in.this.region], summarize.subset))))
 	

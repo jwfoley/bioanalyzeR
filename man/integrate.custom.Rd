@@ -13,7 +13,7 @@ integrate.custom(
 )
 }
 \arguments{
-\item{electrophoresis}{An \code{electrophoresis} object.}
+\item{electrophoresis}{An \code{\link{electrophoresis}} object.}
 
 \item{lower.bound}{Lower boundary of the region to integrate.}
 
@@ -24,7 +24,7 @@ integrate.custom(
 \item{sum.variable}{Which variable to sum in each region.}
 }
 \description{
-Compute the sum of some electrophoresis variable in an \code{electrophoresis} object between specified boundaries. The variable is summed individually for each sample.
+Compute the sum of some electrophoresis variable in an \code{\link{electrophoresis}} object between specified boundaries. The variable is summed individually for each sample.
 }
 \seealso{
 \code{\link{integrate.peak}}, \code{\link{integrate.region}}, \code{\link{region.ratio}}

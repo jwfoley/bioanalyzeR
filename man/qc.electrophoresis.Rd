@@ -7,7 +7,7 @@
 qc.electrophoresis(electrophoresis, variable, log = TRUE)
 }
 \arguments{
-\item{electrophoresis}{An \code{electrophoresis} object.}
+\item{electrophoresis}{An \code{\link{electrophoresis}} object.}
 
 \item{variable}{Which variable to compare. One of \code{"length"}, \code{"concentration"}, \code{"molarity"}.}
 

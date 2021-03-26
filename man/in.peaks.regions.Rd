@@ -11,7 +11,7 @@ in.peaks(electrophoresis)
 in.regions(electrophoresis)
 }
 \arguments{
-\item{electrophoresis}{An \code{electrophoresis} object.}
+\item{electrophoresis}{An \code{\link{electrophoresis}} object.}
 }
 \value{
 A vector of integers with length \code{nrow(data)}. Each element is either the integer index of the peak in \code{electrophoresis$peaks} or region in \code{electrophoresis$regions} that the data point belongs to, or NA if it is not in any of the annotated peaks or regions.

@@ -6,19 +6,27 @@
 \alias{integrate.region}
 \title{Integrate a variable in peaks or regions}
 \usage{
-integrate.peak(electrophoresis, index, sum.variable = "concentration")
+integrate.peak(
+  electrophoresis,
+  index = seq(nrow(electrophoresis$peaks)),
+  sum.variable = "concentration"
+)
 
-integrate.region(electrophoresis, index, sum.variable = "concentration")
+integrate.region(
+  electrophoresis,
+  index = seq(nrow(electrophoresis$regions)),
+  sum.variable = "concentration"
+)
 }
 \arguments{
-\item{electrophoresis}{An \code{electrophoresis} object.}
+\item{electrophoresis}{An \code{\link{electrophoresis}} object.}
 
 \item{index}{The index, or a vector of indexes, of the peaks or regions to integrate (row numbers in \code{electrophoresis$peaks} or \code{electrophoresis$regions}).}
 
 \item{sum.variable}{Which variable to sum in each peak.}
 }
 \description{
-Compute the sum of some electrophoresis variable between the boundaries of reported peaks or regions in an \code{electrophoresis} object.
+Compute the sum of some electrophoresis variable between the boundaries of reported peaks or regions in an \code{\link{electrophoresis}} object.
 }
 \seealso{
 \code{\link{integrate.custom}}

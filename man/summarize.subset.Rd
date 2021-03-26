@@ -7,10 +7,10 @@
 summarize.subset(sample.frame)
 }
 \arguments{
-\item{sample.frame}{A subset of an \code{electrophoresis} object containing only contiguous data from one sample.}
+\item{sample.frame}{A subset of an \code{\link{electrophoresis}} object containing only contiguous data from one sample.}
 }
 \description{
-Compute summary statistics of the molecule length distribution in a subset of an \code{electrophoresis} object. This helper function is called by other functions that split the object into subsets.
+Compute summary statistics of the molecule length distribution in a subset of an \code{\link{electrophoresis}} object. This helper function is called by other functions that split the object into subsets.
 }
 \seealso{
 \code{\link{summarize.peak.region}}, \code{\link{summarize.custom}}
