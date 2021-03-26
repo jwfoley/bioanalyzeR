@@ -4,15 +4,15 @@ Simple R functions for importing and analyzing electrophoresis data from Agilent
 
 Install required dependencies:
 
-    > install.packages(c("XML", "base64enc", "png", "ggplot2"))
+    > install.packages(c("XML", "base64enc", "png", "plyr", "ggplot2"))
 
 Install the newest release (includes 35 MB of demo data):
 
-    > install.packages("https://github.com/jwfoley/bioanalyzeR/releases/download/v0.6.3/bioanalyzeR_0.6.3.tar.gz", repos = NULL)
+    > install.packages("https://github.com/jwfoley/bioanalyzeR/releases/download/v0.7.0/bioanalyzeR_0.7.0.tar.gz", repos = NULL)
 
 or, install the newest release without the demo data:
 
-    > install.packages("https://github.com/jwfoley/bioanalyzeR/releases/download/v0.6.3/bioanalyzeR_0.6.3-no_data.tar.gz", repos = NULL)
+    > install.packages("https://github.com/jwfoley/bioanalyzeR/releases/download/v0.7.0/bioanalyzeR_0.7.0-no_data.tar.gz", repos = NULL)
 
 
 # Documentation
