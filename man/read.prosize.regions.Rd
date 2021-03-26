@@ -10,7 +10,7 @@ read.prosize.regions(smear.csv)
 \item{smear.csv}{A smear analysis CSV exported by ProSize.}
 }
 \value{
-A list containing a list of assay metadata and a data frame of regions (a partial \code{electrophoresis} object).
+A list containing a list of assay metadata and a data frame of regions (a partial \code{\link{electrophoresis}} object).
 }
 \description{
 This function reads smear analysis table from the ProSize software saved in CSV format. The smear analysis must have been exported in the "alternate" format.

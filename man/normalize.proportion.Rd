@@ -7,7 +7,7 @@
 normalize.proportion(electrophoresis, variable, lower.marker.spread = 5)
 }
 \arguments{
-\item{electrophoresis}{An \code{electrophoresis} object.}
+\item{electrophoresis}{An \code{\link{electrophoresis}} object.}
 
 \item{variable}{The name of a variable in \code{electrophoresis$data}.}
 
@@ -17,7 +17,7 @@ normalize.proportion(electrophoresis, variable, lower.marker.spread = 5)
 A vector whose length equals \code{nrow(electrophoresis$data)}, in which each value is an observation of the given variable normalized by the total for that sample, or NA if the observation is not between the markers.
 }
 \description{
-For a given variable, normalize the data values in an \code{electrophoresis} object to proportions of the total. After normalization the sum of the variable for each sample is 1.
+For a given variable, normalize the data values in an \code{\link{electrophoresis}} object to proportions of the total. After normalization the sum of the variable for each sample is 1.
 }
 \details{
 Only data points between the markers are considered in the total. If there is no upper marker, all data points above the lower marker are considered.

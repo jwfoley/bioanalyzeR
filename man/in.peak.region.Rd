@@ -11,7 +11,7 @@ in.peak(electrophoresis, which.peak)
 in.region(electrophoresis, which.region)
 }
 \arguments{
-\item{electrophoresis}{An \code{electrophoresis} object.}
+\item{electrophoresis}{An \code{\link{electrophoresis}} object.}
 
 \item{which.peak}{The integer index of a peak in \code{electrophoresis$peaks}.}
 

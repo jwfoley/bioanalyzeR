@@ -29,7 +29,7 @@ qplot.electrophoresis(
 )
 }
 \arguments{
-\item{electrophoresis}{An \code{electrophoresis} object.}
+\item{electrophoresis}{An \code{\link{electrophoresis}} object.}
 
 \item{x}{The name of the variable to use as the x-value of each point in the graph as a character vector. Usually one of \code{"time"}, \code{"aligned.time"}, \code{"distance"}, \code{"relative.distance"}, or \code{"length"}.}
 
@@ -69,7 +69,7 @@ qplot.electrophoresis(
 A ggplot object containing several layers. You can draw it directly or customize it like any other ggplot object by adding more layers.
 }
 \description{
-This function is a shortcut to plot the data from an \code{electrophoresis} object, wrapping \code{\link{ggplot}} similarly to \code{\link{qplot}}. The result is analogous to electropherograms produced by the Agilent software.
+This function is a shortcut to plot the data from an \code{\link{electrophoresis}} object, wrapping \code{\link{ggplot}} similarly to \code{\link{qplot}}. The result is analogous to electropherograms produced by the Agilent software.
 }
 \section{Variable transformation}{
 

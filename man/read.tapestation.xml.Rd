@@ -10,7 +10,7 @@ read.tapestation.xml(xml.file)
 \item{xml.file}{The filename of an XML file exported from the TapeStation software. The file may be compressed with \code{gzip} and the filename is expected to end in \code{.xml} or \code{.xml.gz}; the name before that extension is used as the name of the batch. The filename can be a remote URL.}
 }
 \value{
-A list of some of the components of an \code{electrophoresis} object
+A list of some of the components of an \code{\link{electrophoresis}} object
 }
 \description{
 This function reads an XML file exported from the TapeStation software.

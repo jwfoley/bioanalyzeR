@@ -10,7 +10,7 @@ read.prosize.peaks(peaks.csv)
 \item{peaks.csv}{A peak table CSV exported by ProSize.}
 }
 \value{
-A list containing a list of assay metadata and a data frame of peaks (a partial \code{electrophoresis} object).
+A list containing a list of assay metadata and a data frame of peaks (a partial \code{\link{electrophoresis}} object).
 }
 \description{
 This function reads a peak table from the ProSize software saved in CSV format. The peak table must have been exported in the "alternate" format and it must include the "From" and "To" columns.

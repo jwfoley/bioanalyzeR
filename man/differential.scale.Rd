@@ -7,7 +7,7 @@
 differential.scale(electrophoresis, x, y)
 }
 \arguments{
-\item{electrophoresis}{An \code{electrophoresis} object.}
+\item{electrophoresis}{An \code{\link{electrophoresis}} object.}
 
 \item{x}{The name of the x-variable in \code{electrophoresis$data}.}
 

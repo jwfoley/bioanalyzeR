@@ -12,7 +12,7 @@ region.ratio(
 )
 }
 \arguments{
-\item{electrophoresis}{An \code{electrophoresis} object.}
+\item{electrophoresis}{An \code{\link{electrophoresis}} object.}
 
 \item{...}{Two or more pairs (vectors) of boundaries, e.g. \code{c(100, 200), c(200, 500), c(500, 700)}.}
 

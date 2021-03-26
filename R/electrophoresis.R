@@ -29,13 +29,13 @@ electrophoresis <- function(
 
 #' Combine multiple electrophoresis objects
 #'
-#' This function combines multiple \code{electrophoresis} objects into one so you can analyze and graph multiple batches together.
+#' This function combines multiple \code{\link{electrophoresis}} objects into one so you can analyze and graph multiple batches together.
 #'
 #' All data frames are combined by \code{\link{rbind}} and lists are combined by \code{\link{c}}. Factor levels are expanded to the union of all inputs.
 #'
-#' @param ... Two or more objects of class \code{electrophoresis}.
+#' @param ... Two or more objects of class \code{\link{electrophoresis}}.
 #'
-#' @return A new \code{electrophoresis} object containing all the data from the previous ones in the provided order.
+#' @return A new \code{\link{electrophoresis}} object containing all the data from the previous ones in the provided order.
 #'
 #' @export
 #' @importFrom plyr rbind.fill
@@ -63,7 +63,7 @@ rbind.electrophoresis <- function(...) {
 
 #' Read files into an electrophoresis object
 #'
-#' These functions read one or more XML, CSV, or ZIP files exported from the Agilent software (and accompanying PNG files if from a TapeStation) and calls the appropriate function to read them into an \code{electrophoresis} object, which is filled out with estimates of molecule length, concentration, and molarity. \code{read.electrophoresis} is the easiest to use as it automatically infers the correct file type.
+#' These functions read one or more XML, CSV, or ZIP files exported from the Agilent software (and accompanying PNG files if from a TapeStation) and calls the appropriate function to read them into an \code{\link{electrophoresis}} object, which is filled out with estimates of molecule length, concentration, and molarity. \code{read.electrophoresis} is the easiest to use as it automatically infers the correct file type.
 #'
 #' Spline fitting seems to perform reasonably well on all data. Agilent appears to use linear interpolation with DNA data and log-linear regression on RNA data, so you could choose those options if you want to reproduce the results of the software more precisely. However, linear interpolation creates sudden spikes in the derivative that make the concentration and molarity estimates unstable; spline fitting is basically a smoother version of that. Log-linear regression is the standard theoretical approach but does not actually fit the data very well; more sophisticated parametric models may be added in the future.
 #'
@@ -106,7 +106,7 @@ read.electrophoresis <- function(
 
 #' Add annotations to an electrophoresis object
 #'
-#' This function adds columns of annotations to the \code{$samples} table of an \code{electrophoresis} object. These new annotations can be used for subsetting, plot faceting, etc.
+#' This function adds columns of annotations to the \code{$samples} table of an \code{\link{electrophoresis}} object. These new annotations can be used for subsetting, plot faceting, etc.
 #'
 #' The input annotations can be a data frame or either a \code{\link{connection}} or a \code{\link{character}} containing the path of a file, which is then read into a data frame by \code{\link{read.table}}. Therefore a file will probably need to be in CSV format or similar.
 #'
@@ -116,11 +116,11 @@ read.electrophoresis <- function(
 #'
 #' If \code{stringsAsFactors} is true then variables parsed as strings will be cast as factors, but the factor levels will be kept in the order they appear in the table, unlike the behavior of \code{\link{read.table}}, which alphabetizes them. Thus the order in the annotation file determines the order of factor levels.
 #'
-#' @param electrophoresis An \code{electrophoresis} object.
+#' @param electrophoresis An \code{\link{electrophoresis}} object.
 #' @param annotation Either a data frame or the path of a file that can be read by \code{\link{read.table}}.
 #' @param ... Additional arguments passed to \code{\link{read.table}}.
 #'
-#' @return A new \code{electrophoresis} object with additional columns added to its \code{$samples} element.
+#' @return A new \code{\link{electrophoresis}} object with additional columns added to its \code{$samples} element.
 #'
 #' @export
 annotate.electrophoresis <- function(
@@ -160,12 +160,12 @@ annotate.electrophoresis <- function(
 
 #' Subset samples an electrophoresis object
 #'
-#' This function takes a subset of the samples in an \code{electrophoresis} object.
+#' This function takes a subset of the samples in an \code{\link{electrophoresis}} object.
 #'
-#' @param electrophoresis An \code{electrophoresis} object.
+#' @param electrophoresis An \code{\link{electrophoresis}} object.
 #' @param ... A logical expression indicating samples to keep, and any other arguments passed to \code{\link{subset}}.
 #'
-#' @return A new \code{electrophoresis} object containing only the data from the subset of samples that match the given expression, with sample indices renumbered and factors releveled.
+#' @return A new \code{\link{electrophoresis}} object containing only the data from the subset of samples that match the given expression, with sample indices renumbered and factors releveled.
 #'
 #' @export
 subset.electrophoresis <- function(electrophoresis, ...) {
@@ -211,11 +211,11 @@ subset.electrophoresis <- function(electrophoresis, ...) {
 
 #' Get the original x-variable
 #'
-#' This function takes an \code{electrophoresis} object and returns the name of the x-variable that was used to fit the mobility model.
+#' This function takes an \code{\link{electrophoresis}} object and returns the name of the x-variable that was used to fit the mobility model.
 #'
 #' If `raw == FALSE` the result should only be either \code{"aligned time"} for Bioanalyzer data or \code{"relative.distance"} for TapeStation data. If `raw == TRUE` the result should be \code{"time"} or \code{"distance"}.
 #'
-#' @param electrophoresis An \code{electrophoresis} object.
+#' @param electrophoresis An \code{\link{electrophoresis}} object.
 #' @param raw Whether to return the name of the raw variable instead of the aligned variable.
 #' @param allow.multiple Whether to allow multiple raw variables (data combined from multiple platforms).
 #'
@@ -235,9 +235,9 @@ get.x.name <- function(electrophoresis, raw = FALSE, allow.multiple = FALSE) {
 
 #' Check whether data points are within a custom region
 #'
-#' This function takes the \code{$data} element of an \code{electrophoresis} object and the boundaries of a region, for a desired variable, and checks whether each data point is within that region.
+#' This function takes the \code{$data} element of an \code{\link{electrophoresis}} object and the boundaries of a region, for a desired variable, and checks whether each data point is within that region.
 #'
-#' @param data A data frame of electrophoresis data, from the \code{$data} member of an \code{electrophoresis} object (not the whole object itself).
+#' @param data A data frame of electrophoresis data, from the \code{$data} member of an \code{\link{electrophoresis}} object (not the whole object itself).
 #' @param lower.bound Lower boundary of the region.
 #' @param upper.bound Upper boundary of the region.
 #' @param bound.variable Which variable the boundaries refer to.
@@ -261,7 +261,7 @@ in.custom.region <- function(
 #'
 #' Data points are considered to be within the boundaries of a peak if their original x-value (`aligned.time` for Bioanalyzer, `relative.distance` for TapeStation) is within the boundaries reported by the Agilent software, but for regions the length boundaries are used.
 #'
-#' @param electrophoresis An \code{electrophoresis} object.
+#' @param electrophoresis An \code{\link{electrophoresis}} object.
 #' @param which.peak The integer index of a peak in \code{electrophoresis$peaks}.
 #' @param which.region The integer index of a region in \code{electrophoresis$regions}.
 #' 
@@ -307,7 +307,7 @@ in.region <- function(electrophoresis, which.region) {
 #'
 #' Warning: If peaks or regions in the reported table overlap, any data point in more than one peak or region will only be matched to the last peak or region it belongs to.
 #'
-#' @param electrophoresis An \code{electrophoresis} object.
+#' @param electrophoresis An \code{\link{electrophoresis}} object.
 #'
 #' @return A vector of integers with length \code{nrow(data)}. Each element is either the integer index of the peak in \code{electrophoresis$peaks} or region in \code{electrophoresis$regions} that the data point belongs to, or NA if it is not in any of the annotated peaks or regions.
 #'
@@ -345,7 +345,7 @@ in.regions <- function(electrophoresis) {
 #'
 #' Note: Data exported from the ProSize software are missing the peak boundaries, so in that situation only the precise lengths of the marker peaks are set as the boundaries. The inner half of each marker peak will still be included in the result.
 #'
-#' @param electrophoresis An \code{electrophoresis} object.
+#' @param electrophoresis An \code{\link{electrophoresis}} object.
 #' @param lower.marker.spread Proportion to scale the width of the lower marker peak, along the computed length scale, to compensate for underreporting in the Agilent software. Set to 1 to use the reported peak boundary, which works poorly.
 #'
 #' @return A vector of logicals with length \code{nrow{electrophoresis$data}}.
@@ -379,7 +379,7 @@ between.markers <- function(electrophoresis, lower.marker.spread = 10) {
 #'
 #' Given an x-variable and a y-variable, this function scales the y-values from the observed data points by the differentials of the x-values. The resulting values of y/dx can then be used to make visually accurate graphs.
 #'
-#' @param electrophoresis An \code{electrophoresis} object.
+#' @param electrophoresis An \code{\link{electrophoresis}} object.
 #' @param x The name of the x-variable in \code{electrophoresis$data}.
 #' @param y The name of the y-variable in \code{electrophoresis$data}.
 #'

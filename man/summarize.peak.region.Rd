@@ -11,12 +11,12 @@ summarize.peak(electrophoresis, index = seq(nrow(electrophoresis$peaks)))
 summarize.region(electrophoresis, index = seq(nrow(electrophoresis$regions)))
 }
 \arguments{
-\item{electrophoresis}{An \code{electrophoresis} object.}
+\item{electrophoresis}{An \code{\link{electrophoresis}} object.}
 
 \item{index}{The index, or a vector of indexes, of the peaks or regions to summarize (row numbers in \code{electrophoresis$peaks} or \code{electrophoresis$regions}).}
 }
 \description{
-Compute summary statistics of the molecule length distribution in the reported peaks or regions in an \code{electrophoresis} object.
+Compute summary statistics of the molecule length distribution in the reported peaks or regions in an \code{\link{electrophoresis}} object.
 }
 \seealso{
 \code{\link{summarize.custom}}

@@ -1,10 +1,10 @@
 #' Variable labels for electrophoresis data
 #'
-#' This function generates a customized descriptive label for a variable in an \code{electrophoresis} object.
+#' This function generates a customized descriptive label for a variable in an \code{\link{electrophoresis}} object.
 #'
-#' If your \code{electrophoresis} object contains multiple batches with different units for some reason, this function gives a warning and does not include a unit in the label.
+#' If your \code{\link{electrophoresis}} object contains multiple batches with different units for some reason, this function gives a warning and does not include a unit in the label.
 #'
-#' @param electrophoresis An \code{electrophoresis} object.
+#' @param electrophoresis An \code{\link{electrophoresis}} object.
 #' @param variable The name of the variable to convert into a label. One of \code{"time"}, \code{"aligned.time"}, \code{"distance"}, \code{"relative.distance"}, \code{"fluorescence"}, \code{"length"}, \code{"concentration"}, \code{"molarity"}.
 #'
 #' @param variable2 Optionally, the name of a second variable that is the denominator of the first (e.g. molarity per length).
@@ -45,9 +45,9 @@ variable.label <- function(electrophoresis, variable, variable2 = NULL) if (is.n
 
 #' Labeller for electrophoresis samples
 #'
-#' This is a labeller function compatible with \code{\link{facet_wrap}} and \code{\link{facet_grid}}. It allows you to facet the data from an \code{electrophoresis} object on \code{sample.index}, to keep the samples in the observed order, but replaces the facet labels with the annotated sample names.
+#' This is a labeller function compatible with \code{\link{facet_wrap}} and \code{\link{facet_grid}}. It allows you to facet the data from an \code{\link{electrophoresis}} object on \code{sample.index}, to keep the samples in the observed order, but replaces the facet labels with the annotated sample names.
 #'
-#' @param electrophoresis An \code{electrophoresis} object whose \code{samples} member contains all the samples in your plot.
+#' @param electrophoresis An \code{\link{electrophoresis}} object whose \code{samples} member contains all the samples in your plot.
 #'
 #' @export
 labeller.electrophoresis <- function(electrophoresis) function(factor.frame) {
@@ -61,7 +61,7 @@ labeller.electrophoresis <- function(electrophoresis) function(factor.frame) {
 
 #' Plot electrophoresis data
 #'
-#' This function is a shortcut to plot the data from an \code{electrophoresis} object, wrapping \code{\link{ggplot}} similarly to \code{\link{qplot}}. The result is analogous to electropherograms produced by the Agilent software.
+#' This function is a shortcut to plot the data from an \code{\link{electrophoresis}} object, wrapping \code{\link{ggplot}} similarly to \code{\link{qplot}}. The result is analogous to electropherograms produced by the Agilent software.
 #'
 #' @section Variable transformation:
 #' Before plotting, unless the y-variable is fluorescence, it is scaled by the differentials in the x-value. Thus the units of the y-axis are divided by the units of the x-axis, e.g. molarity per length. This ensures that the area under the curve (width times height) represents the desired variable in the correct units. For example, if the x-variable is length in bp, the graph will be equivalent to a histogram with one bar for each possible molecule length in base pairs.
@@ -75,7 +75,7 @@ labeller.electrophoresis <- function(electrophoresis) function(factor.frame) {
 #'
 #' If \code{region.alpha} is not NA and \code{facets} is not null and \code{electrophoresis$regions} is not null, then the plot gets a \code{\link[ggplot2]{geom_rect}} with \code{ymin = -Inf, ymax = Inf} and \code{xmin} and \code{xmax} set to the lower and upper boundaries of the regions, while \code{alpha = region.alpha}.
 #'
-#' @param electrophoresis An \code{electrophoresis} object.
+#' @param electrophoresis An \code{\link{electrophoresis}} object.
 #' @param x The name of the variable to use as the x-value of each point in the graph as a character vector. Usually one of \code{"time"}, \code{"aligned.time"}, \code{"distance"}, \code{"relative.distance"}, or \code{"length"}.
 #' @param y The name of the variable to use as the y-value of each point in the graph, as a character vector. Usually one of \code{"fluorescence"}, \code{"concentration"}, or \code{"molarity"}.
 #' @param ... Additional aesthetics passed to the geom for the main data (not the peaks or regions).
@@ -251,11 +251,11 @@ sparkline.electrophoresis <- function(
 
 #' Plot mobility standard curves
 #'
-#' This function is a shortcut to plot the standard curve(s) of molecule length vs. migration speed from an \code{electrophoresis} object, wrapping \code{\link{ggplot}}. This allows you to check the quality of the model.
+#' This function is a shortcut to plot the standard curve(s) of molecule length vs. migration speed from an \code{\link{electrophoresis}} object, wrapping \code{\link{ggplot}}. This allows you to check the quality of the model.
 #'
 #' The positions of the ladder peaks reported by the Agilent software are shown in the selected color, and the fluorescence intensites within the peak boundaries are also plotted. If there are multiple ladders, each is shown as a separate facet.
 #'
-#' @param electrophoresis An \code{electrophoresis} object.
+#' @param electrophoresis An \code{\link{electrophoresis}} object.
 #' @param n.simulate Number of data points to simulate for drawing the standard curve.
 #' @param line.color Color of the standard curve and data points.
 #'
@@ -301,7 +301,7 @@ stdcrv.mobility <- function(electrophoresis, n.simulate = 100, line.color = "red
 #'
 #' If \code{variable = "length"}, apply the mobility model(s) fit by \code{\link{read.bioanalyzer}} or \code{\link{read.tapestation}} to the peak centers' aligned times or relative distance and compare those estimated molecule lengths with the lengths reported by the Agilent software. If \code{variable = "concentration"} or \code{variable = "molarity"}, integrate the appropriate variable between the boundaries of each peak and compare that sum with the figure reported by the Agilent software. For the ladder Agilent's reported values are hardcoded to the known, correct properties of the ladder molecules.
 #'
-#' @param electrophoresis An \code{electrophoresis} object.
+#' @param electrophoresis An \code{\link{electrophoresis}} object.
 #' @param variable Which variable to compare. One of \code{"length"}, \code{"concentration"}, \code{"molarity"}.
 #' @param log Whether to log-scale both axes. Typically the data are more evenly spaced in log scale.
 #'

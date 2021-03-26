@@ -12,7 +12,7 @@ in.custom.region(
 )
 }
 \arguments{
-\item{data}{A data frame of electrophoresis data, from the \code{$data} member of an \code{electrophoresis} object (not the whole object itself).}
+\item{data}{A data frame of electrophoresis data, from the \code{$data} member of an \code{\link{electrophoresis}} object (not the whole object itself).}
 
 \item{lower.bound}{Lower boundary of the region.}
 
@@ -24,7 +24,7 @@ in.custom.region(
 A vector of logicals with length \code{nrow(data)}.
 }
 \description{
-This function takes the \code{$data} element of an \code{electrophoresis} object and the boundaries of a region, for a desired variable, and checks whether each data point is within that region.
+This function takes the \code{$data} element of an \code{\link{electrophoresis}} object and the boundaries of a region, for a desired variable, and checks whether each data point is within that region.
 }
 \seealso{
 \code{\link{in.region}}, \code{\link{in.peak}}

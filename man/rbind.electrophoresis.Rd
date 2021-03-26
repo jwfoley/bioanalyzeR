@@ -7,13 +7,13 @@
 \method{rbind}{electrophoresis}(...)
 }
 \arguments{
-\item{...}{Two or more objects of class \code{electrophoresis}.}
+\item{...}{Two or more objects of class \code{\link{electrophoresis}}.}
 }
 \value{
-A new \code{electrophoresis} object containing all the data from the previous ones in the provided order.
+A new \code{\link{electrophoresis}} object containing all the data from the previous ones in the provided order.
 }
 \description{
-This function combines multiple \code{electrophoresis} objects into one so you can analyze and graph multiple batches together.
+This function combines multiple \code{\link{electrophoresis}} objects into one so you can analyze and graph multiple batches together.
 }
 \details{
 All data frames are combined by \code{\link{rbind}} and lists are combined by \code{\link{c}}. Factor levels are expanded to the union of all inputs.

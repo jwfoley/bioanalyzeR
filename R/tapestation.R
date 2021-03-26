@@ -96,7 +96,7 @@ read.tapestation.gel.image <- function(gel.image.file, n.lanes) {
 #'
 #' @param xml.file The filename of an XML file exported from the TapeStation software. The file may be compressed with \code{gzip} and the filename is expected to end in \code{.xml} or \code{.xml.gz}; the name before that extension is used as the name of the batch. The filename can be a remote URL.
 #'
-#' @return A list of some of the components of an \code{electrophoresis} object
+#' @return A list of some of the components of an \code{\link{electrophoresis}} object
 #' 
 #' @seealso \code{\link{read.tapestation}}, \code{\link{read.tapestation.gel.image}}
 #'
@@ -178,7 +178,7 @@ read.tapestation.xml <- function(xml.file) {
 			}
 		)
 		
-		list(
+		electrophoresis(
 			samples = data.frame(batch, well.number, well.row, well.col, sample.name, sample.observations, reagent.id, RINe, DIN, is.ladder, stringsAsFactors = F),
 			peaks = peaks,
 			regions = regions
@@ -186,7 +186,7 @@ read.tapestation.xml <- function(xml.file) {
 	})
 	has.peaks <- ! all(sapply(result.list, function(x) is.null(x$peaks)))
 	has.regions <- ! all(sapply(result.list, function(x) is.null(x$regions)))
-	result <- list(
+	result <- electrophoresis(
 		samples = do.call(rbind, c(lapply(result.list, function(x) x$samples), make.row.names = F)),
 		peaks = if (! has.peaks) NULL else do.call(rbind, c(lapply(seq_along(result.list), function(i) if (is.null(result.list[[i]]$peaks)) NULL else cbind(sample.index = i, result.list[[i]]$peaks)), make.row.names = F)),
 		regions = if (! has.regions) NULL else do.call(rbind, c(lapply(seq_along(result.list), function(i) if (is.null(result.list[[i]]$regions)) NULL else cbind(sample.index = i, result.list[[i]]$regions)), make.row.names = F)),

@@ -10,7 +10,7 @@ read.prosize.electropherogram(electropherogram.csv)
 \item{electropherogram.csv}{An electropherogram CSV exported by ProSize.}
 }
 \value{
-A list containing a data frame of the raw fluorescence data and a data frame of the sample metadata (a partial \code{electrophoresis} object).
+A list containing a data frame of the raw fluorescence data and a data frame of the sample metadata (a partial \code{\link{electrophoresis}} object).
 }
 \description{
 This function reads an electropherogram (fluorescence vs. migration table) from the ProSize software saved in CSV format. The electropherogram must have been exported with migration times, not estimated sizes.

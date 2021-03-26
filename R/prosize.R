@@ -40,7 +40,7 @@ QUALITY.METRICS <- c(
 #'
 #' @param electropherogram.csv An electropherogram CSV exported by ProSize.
 #'
-#' @return A list containing a data frame of the raw fluorescence data and a data frame of the sample metadata (a partial \code{electrophoresis} object).
+#' @return A list containing a data frame of the raw fluorescence data and a data frame of the sample metadata (a partial \code{\link{electrophoresis}} object).
 #'
 #' @seealso \code{\link{read.prosize}}, \code{\link{read.prosize.peaks}}, \code{\link{read.prosize.regions}}
 #'
@@ -54,7 +54,7 @@ read.prosize.electropherogram <- function(electropherogram.csv) {
 	well.numbers <- sub(":.*", "", sample.long.names)
 	sample.names <- sub("^[^:]+: *", "", sample.long.names)
 	
-	list(
+	electrophoresis(
 		data = data.frame(
 			sample.index = rep(seq(n.samples), each = nrow(data.raw)),
 			aligned.time = data.raw[,1],
@@ -76,7 +76,7 @@ read.prosize.electropherogram <- function(electropherogram.csv) {
 #'
 #' @param peaks.csv A peak table CSV exported by ProSize.
 #'
-#' @return A list containing a list of assay metadata and a data frame of peaks (a partial \code{electrophoresis} object).
+#' @return A list containing a list of assay metadata and a data frame of peaks (a partial \code{\link{electrophoresis}} object).
 #'
 #' @seealso \code{\link{read.prosize}}, \code{\link{read.prosize.electropherogram}}, \code{\link{read.prosize.regions}}
 #'
@@ -123,7 +123,7 @@ read.prosize.peaks <- function(peaks.csv) {
 		peak.observations[is.marker & peaks.raw$length == marker.lengths[2]] <- "Upper Marker"
 	}
 	
-	list(
+	electrophoresis(
 		assay.info = list(
 			assay.type = ASSAY.TYPE[[length.unit]],
 			length.unit = length.unit,
@@ -149,7 +149,7 @@ read.prosize.peaks <- function(peaks.csv) {
 #'
 #' @param smear.csv A smear analysis CSV exported by ProSize.
 #'
-#' @return A list containing a list of assay metadata and a data frame of regions (a partial \code{electrophoresis} object).
+#' @return A list containing a list of assay metadata and a data frame of regions (a partial \code{\link{electrophoresis}} object).
 #'
 #' @seealso \code{\link{read.prosize}}, \code{\link{read.prosize.electropherogram}}, \code{\link{read.prosize.peaks}}
 #'
@@ -172,7 +172,7 @@ read.prosize.regions <- function(smear.csv) {
 	length.unit <- unique(sub(".* ", "", regions.raw$Range))
 	stopifnot("conflicting units detected" = length(length.unit) == 1)
 	
-	list(
+	electrophoresis(
 		assay.info = list(
 			assay.type = ASSAY.TYPE[[length.unit]],
 			length.unit = length.unit,
