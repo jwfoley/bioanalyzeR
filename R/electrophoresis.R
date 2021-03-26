@@ -7,6 +7,25 @@ GZIP.FIRST.CHAR <- rawToChar(as.raw(31)) # first byte of the gzip magic number
 LOWER.MARKER.NAMES <- c("Lower Marker", "edited Lower Marker")
 UPPER.MARKER.NAMES <- c("Upper Marker", "edited Upper Marker")
 
+#' Electrophoresis class
+#' @export electrophoresis
+#' @exportClass electrophoresis
+electrophoresis <- function(
+	data = NULL,
+	assay.info = NULL,
+	samples = NULL,
+	peaks = NULL,
+	regions = NULL,
+	mobility.functions = NULL
+) structure(list(
+	data = data,
+	assay.info = assay.info,
+	samples = samples,
+	peaks = peaks,
+	regions = regions,
+	mobility.functions = mobility.functions
+), class = "electrophoresis") 
+
 
 #' Combine multiple electrophoresis objects
 #'
@@ -31,14 +50,14 @@ rbind.electrophoresis <- function(...) {
 		if (! is.null(arg.list[[j]]$regions)) arg.list[[j]]$regions$sample.index <- arg.list[[j]]$regions$sample.index + nrow(arg.list[[i]]$samples)
 	}
 	
-	structure(list(
+	electrophoresis(
 		data = do.call(rbind.fill, lapply(arg.list, function(x) x$data)),
 		assay.info = do.call(c, lapply(arg.list, function(x) x$assay.info)),
 		samples = do.call(rbind.fill, lapply(arg.list, function(x) x$samples)),
 		peaks = do.call(rbind.fill, lapply(arg.list, function(x) x$peaks)),
 		regions = do.call(rbind.fill, lapply(arg.list, function(x) x$regions)),
 		mobility.functions = do.call(c, lapply(arg.list, function(x) x$mobility.functions))
-	), class = "electrophoresis")
+	)
 }
 
 

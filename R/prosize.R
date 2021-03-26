@@ -245,13 +245,13 @@ read.prosize <- function(
 	} else NULL
 	
 	# build the electrophoresis object	
-	result <- structure(list(
+	result <- electrophoresis(
 		data = data.import$data,
 		assay.info = setNames(list(peaks.import$assay.info), batch),
 		samples = cbind(batch, data.import$samples),
 		peaks = peaks,
 		regions = regions
-	), class = "electrophoresis")
+	)
 	
 	# add quality safely
 	if (! is.null(quality.csv)) {

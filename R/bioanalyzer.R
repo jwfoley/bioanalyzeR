@@ -86,14 +86,12 @@ read.bioanalyzer <- function(xml.file, method = "hyman") {
 		}
 	})
 	for (i in length(result.list):1) if (is.null(result.list[[i]])) result.list[[i]] <- NULL # delete empty elements; go in reverse because indexes will change as elements are deleted
-	result <- structure(list(
+	result <- electrophoresis(
 		data = do.call(rbind, c(lapply(seq_along(result.list), function(i) cbind(sample.index = i, result.list[[i]]$data)), make.row.names = F)),
 		assay.info = setNames(list(assay.info), batch),
 		samples = do.call(rbind, c(lapply(result.list, function(x) x$samples), make.row.names = F)),
-		peaks = do.call(rbind, c(lapply(seq_along(result.list), function(i) if (is.null(result.list[[i]]$peaks)) NULL else cbind(sample.index = i, result.list[[i]]$peaks)), make.row.names = F)),
-		regions = NULL,
-		mobility.functions = NULL
-	), class = "electrophoresis")
+		peaks = do.call(rbind, c(lapply(seq_along(result.list), function(i) if (is.null(result.list[[i]]$peaks)) NULL else cbind(sample.index = i, result.list[[i]]$peaks)), make.row.names = F))
+	)
 	if (all(is.na(result$samples$RIN))) result$samples$RIN <- NULL
 	alignment.values <- lapply(result.list, function(x) x$alignment.values)
 	
