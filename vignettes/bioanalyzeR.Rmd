@@ -439,9 +439,14 @@ d5000 <- read.electrophoresis(system.file(
 	"D5000-Tubes-16.xml.gz",
 	package = "bioanalyzeR"
 ))
-qplot.electrophoresis(d5000, title = "TapeStation D5000")
 qplot.electrophoresis(
-	d5000,
+	subset(d5000, startsWith(as.character(sample.name), "Size Selected Smear")),
+	facets = NULL,
+	title = "TapeStation D5000"
+)
+qplot.electrophoresis(
+	subset(d5000, startsWith(as.character(sample.name), "Size Selected Smear")),
+	facets = NULL,
 	normalize = T,
 	title = "TapeStation D5000 normalized"
 )
