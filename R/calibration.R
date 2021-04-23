@@ -142,17 +142,16 @@ calculate.concentration <- function(electrophoresis, ladder.concentrations = NUL
 	which.markers <- lapply(seq(nrow(electrophoresis$samples)), function(sample.index) which(
 		electrophoresis$peaks$sample.index == sample.index & (
 			(electrophoresis$peaks$peak.observations %in% LOWER.MARKER.NAMES & (
-				is.null(ladder.concentrations) ||
-				electrophoresis$peaks$concentration == ladder.concentrations[1] # verify this is the right peak (sometimes Bioanalyzer annotates more than one as the marker but it only assigns the hardcoded concentration to one)
+				if (is.null(ladder.concentrations)) TRUE else electrophoresis$peaks$concentration == ladder.concentrations[1] # verify this is the right peak (sometimes Bioanalyzer annotates more than one as the marker but it only assigns the hardcoded concentration to one)
 				)
 			) | (
 				electrophoresis$peaks$peak.observations %in% UPPER.MARKER.NAMES & (
-					is.null(ladder.concentrations) || 
-					electrophoresis$peaks$concentration == ladder.concentrations[length(ladder.concentrations)]
+					if (is.null(ladder.concentrations)) TRUE else electrophoresis$peaks$concentration == ladder.concentrations[length(ladder.concentrations)]
 				)
 			)
 		)
 	))
+	for (i in seq(nrow(electrophoresis$samples))) if (length(which.markers[[i]]) == 0) warning(paste("no markers detected in sample", i))
 	integrable <- ! any(is.na(electrophoresis$peaks[unlist(which.markers), c("lower.length", "upper.length")])) # peak boundaries aren't given so don't rely on integration
 	
 	mass.coefficients <- rep(NA, nrow(electrophoresis$samples))
@@ -166,7 +165,7 @@ calculate.concentration <- function(electrophoresis, ladder.concentrations = NUL
 			non.marker.concentrations <- this.ladder.concentrations[-c(1, if (has.upper.marker) length(this.ladder.concentrations) else NULL)]
 			ladder.peaks <- which(
 				electrophoresis$peaks$sample.index == ladder.index &
-				(is.null(ladder.concentrations) | electrophoresis$peaks$concentration %in% ladder.concentrations)
+				(if (is.null(ladder.concentrations)) TRUE else electrophoresis$peaks$concentration %in% ladder.concentrations)
 			)
 			stopifnot("no ladder peaks recognized" = length(ladder.peaks) > 0)
 			non.marker.peaks <- setdiff(ladder.peaks, which.markers[[ladder.index]])
