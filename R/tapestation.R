@@ -262,6 +262,7 @@ read.tapestation.xml <- function(xml.file) {
 read.tapestation <- function(xml.file, csv.file = NULL, gel.image.file = NULL, method = "hyman") {
 	# find the raw data file
 	if (is.null(csv.file) && is.null(gel.image.file)) { # none provided
+		# note the use of file.exists breaks the promise of using remote URLs; removing PNG support may resolve this
 		candidate.files <- sapply(c(
 			gel.image = ".png",
 			csv1 = "_Electropherogram.csv",
