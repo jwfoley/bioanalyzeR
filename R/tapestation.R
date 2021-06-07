@@ -24,7 +24,9 @@ find.matching.pixels.vec <- function(rgb.vec, rgb.values) {
 
 #' Read a TapeStation gel image
 #'
-#' This function reads a gel image exported from the TapeStation software and saved in PNG format. The gel image must include a blue highlight around one lane in order for the function to identify the boundaries of the gel area.
+#' (DEPRECATED) This function reads a gel image exported from the TapeStation software and saved in PNG format. The gel image must include a blue highlight around one lane in order for the function to identify the boundaries of the gel area.
+#'
+#' DEPRECATED: Reading raw data from gel images is deprecated and produces noisy results. Please reopen your data in version 4.1 or higher of the TapeStation Analysis software and export a CSV instead: \url{https://explore.agilent.com/Software-Download-TapeStation-Systems}
 #'
 #' Because the gel image alone contains little metadata, this function returns only a simple data frame containing the fluorescence intensity vs. migration distance at every point in every lane of the gel (numbered from left to right). It is less useful by itself than when it is called inside \code{\link{read.tapestation}}.
 #'
@@ -40,6 +42,8 @@ find.matching.pixels.vec <- function(rgb.vec, rgb.values) {
 #' @export
 #' @importFrom png readPNG
 read.tapestation.gel.image <- function(gel.image.file, n.lanes) {
+	warning("Reading gel images is deprecated; export CSV instead")
+	
 	gel.image.con <- file(gel.image.file, "rb", raw = T) # workaround to allow URLs 
 	gel.image.rgb <- readPNG(readBin(gel.image.con, what = "raw", n = 25E6)) # safe overestimate of the maximum size (slightly above 4K resolution @ 24 bits uncompressed)
 	close(gel.image.con) # if not explicitly closed, R gives a warning

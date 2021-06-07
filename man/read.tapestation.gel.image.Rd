@@ -15,9 +15,11 @@ read.tapestation.gel.image(gel.image.file, n.lanes)
 A data frame with one row for each vertical pixel of each gel lane.
 }
 \description{
-This function reads a gel image exported from the TapeStation software and saved in PNG format. The gel image must include a blue highlight around one lane in order for the function to identify the boundaries of the gel area.
+(DEPRECATED) This function reads a gel image exported from the TapeStation software and saved in PNG format. The gel image must include a blue highlight around one lane in order for the function to identify the boundaries of the gel area.
 }
 \details{
+DEPRECATED: Reading raw data from gel images is deprecated and produces noisy results. Please reopen your data in version 4.1 or higher of the TapeStation Analysis software and export a CSV instead: \url{https://explore.agilent.com/Software-Download-TapeStation-Systems}
+
 Because the gel image alone contains little metadata, this function returns only a simple data frame containing the fluorescence intensity vs. migration distance at every point in every lane of the gel (numbered from left to right). It is less useful by itself than when it is called inside \code{\link{read.tapestation}}.
 
 Note: Fluorescence is reported only for one column of pixels down the center of each lane. If there are annotations on the gel image, such as the yellow warning symbol, those pixels are reported as NA, but usually they are at the top of the image outside the reportable range anyway.
