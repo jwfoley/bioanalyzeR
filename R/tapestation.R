@@ -35,7 +35,7 @@ find.matching.pixels.vec <- function(rgb.vec, rgb.values) {
 #'
 #' @return A data frame with one row for each vertical pixel of each gel lane.
 #' 
-#' @seealso \code{\link{read.tapestation}}, \code{\link{read.tapestation.xml}}
+#' @seealso \code{\link{read.tapestation}}, \code{\link{read.tapestation.xml}}, \code{\link{read.tapestation.csv}}
 #'
 #' @export
 #' @importFrom png readPNG
@@ -84,6 +84,30 @@ read.tapestation.gel.image <- function(gel.image.file, n.lanes) {
 		sample.index =  rep(seq(n.lanes), each = n.readings),
 		distance =      n.readings:1 / n.readings,
 		fluorescence =  as.vector(1 - lane.pixels[,,1]) # subtract from 1 because it's a negative; use only red channel
+	)
+}
+
+
+#' Read a TapeStation CSV file
+#'
+#' This function reads a CSV file of electrophoresis data exported from the TapeStation software.
+#'
+#' Because the CSV file contains only the raw fluorescence data and not the metadata, this function is less useful by itself than when it is called inside \code{\link{read.tapestation}}.
+#'
+#' @param csv.file The filename of a CSV file exported from the TapeStation software. The file may be compressed with \code{gzip} and the filename is expected to end in \code{_Electropherogram.csv} or \code{_Electropherogram.csv.gz}. The filename can be a remote URL.
+#'
+#' @return A data frame with one row for each reading of each gel lane.
+#'
+#' @seealso \code{\link{read.tapestation}}, \code{\link{read.tapestation.xml}}, \code{\link{read.tapestation.gel.image}}
+#'
+#' @export
+read.tapestation.csv <- function(csv.file) {
+	raw.data <- read.csv(csv.file, encoding = "latin1")
+	data.frame(
+		sample.index = rep(seq(ncol(raw.data)), each = nrow(raw.data)),
+		distance = rep(rev(seq(nrow(raw.data))), ncol(raw.data)) / nrow(raw.data),
+		fluorescence = unlist(raw.data),
+		row.names = seq(prod(dim(raw.data)))
 	)
 }
 
@@ -230,18 +254,31 @@ read.tapestation.xml <- function(xml.file) {
 #' @describeIn read.electrophoresis Read a TapeStation XML and PNG file pair
 #'
 #' @inheritParams read.tapestation.xml
+#' @inheritParams read.tapestation.csv
 #' @inheritParams read.tapestation.gel.image
 #' @inheritParams calibrate.electrophoresis
 #'
 #' @export
-read.tapestation <- function(xml.file, gel.image.file = NULL, method = "hyman") {
-	if (is.null(gel.image.file)) gel.image.file <- sub("\\.xml(\\.gz)?$", ".png", xml.file)
+read.tapestation <- function(xml.file, csv.file = NULL, gel.image.file = NULL, method = "hyman") {
+	# find the raw data file
+	if (is.null(csv.file) && is.null(gel.image.file)) { # none provided
+		candidate.files <- sapply(c(
+			gel.image = ".png",
+			csv1 = "_Electropherogram.csv",
+			csv2 = "_Electropherogram.csv.gz"
+		), function(suffix) sub("\\.xml(\\.gz)?$", suffix, xml.file))
+		found.files <- sapply(candidate.files, file.exists)
+		stopifnot("found conflicting CSV or PNG files" = sum(found.files) <= 1)
+		stopifnot("couldn't find CSV or PNG file" = sum(found.files) > 0)
+		if (found.files[1]) gel.image.file <- candidate.files[1] else csv.file <- candidate.files[found.files]
+	} 
+	stopifnot("conflicting CSV and PNG files provided" = is.null(csv.file) || is.null(gel.image.file))
 	
 	parsed.data <- read.tapestation.xml(xml.file)
 	stopifnot("multiple batches provided" = length(unique(parsed.data$samples$batch)) == 1)
 	batch <- parsed.data$samples$batch[1]
 	result <- electrophoresis(
-		data = read.tapestation.gel.image(gel.image.file, nrow(parsed.data$samples)),
+		data = if (is.null(gel.image.file)) read.tapestation.csv(csv.file) else read.tapestation.gel.image(gel.image.file, nrow(parsed.data$samples)),
 		assay.info = setNames(list(parsed.data$assay.info), batch),
 		samples = parsed.data$samples,
 		peaks = parsed.data$peaks,

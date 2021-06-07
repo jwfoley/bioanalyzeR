@@ -29,7 +29,12 @@ read.prosize(
 
 read.prosize.zip(prosize.zip, method = "hyman")
 
-read.tapestation(xml.file, gel.image.file = NULL, method = "hyman")
+read.tapestation(
+  xml.file,
+  csv.file = NULL,
+  gel.image.file = NULL,
+  method = "hyman"
+)
 }
 \arguments{
 \item{xml.file}{The filename of an XML file exported from the Bioanalyzer or TapeStation software. The XML file may be compressed with `gzip` and the filename can be a remote URL. The filename is expected to end in \code{.xml} or \code{.xml.gz} and the name before that extension is used as the name of the batch. TapeStation XML files must have corresponding PNG files with matching names.}
@@ -53,6 +58,8 @@ read.tapestation(xml.file, gel.image.file = NULL, method = "hyman")
 \item{batch}{Name of the batch.}
 
 \item{prosize.zip}{Path of a ZIP file containing the required CSVs exported by ProSize.}
+
+\item{csv.file}{The filename of a CSV file exported from the TapeStation software. The file may be compressed with \code{gzip} and the filename is expected to end in \code{_Electropherogram.csv} or \code{_Electropherogram.csv.gz}. The filename can be a remote URL.}
 
 \item{gel.image.file}{The filename of a TapeStation gel image with blue highlight, in PNG format. The filename can be a URL.}
 }

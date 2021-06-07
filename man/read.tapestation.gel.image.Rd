@@ -23,5 +23,5 @@ Because the gel image alone contains little metadata, this function returns only
 Note: Fluorescence is reported only for one column of pixels down the center of each lane. If there are annotations on the gel image, such as the yellow warning symbol, those pixels are reported as NA, but usually they are at the top of the image outside the reportable range anyway.
 }
 \seealso{
-\code{\link{read.tapestation}}, \code{\link{read.tapestation.xml}}
+\code{\link{read.tapestation}}, \code{\link{read.tapestation.xml}}, \code{\link{read.tapestation.csv}}
 }
