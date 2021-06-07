@@ -152,7 +152,6 @@ calculate.concentration <- function(electrophoresis, ladder.concentrations = NUL
 		)
 	))
 	for (i in seq(nrow(electrophoresis$samples))) if (length(which.markers[[i]]) == 0) warning(paste("no markers detected in sample", i))
-	integrable <- ! any(is.na(electrophoresis$peaks[unlist(which.markers), c("lower.length", "upper.length")])) # peak boundaries aren't given so don't rely on integration
 	
 	mass.coefficients <- rep(NA, nrow(electrophoresis$samples))
 	for (batch in unique(electrophoresis$samples$batch)) {
@@ -169,13 +168,7 @@ calculate.concentration <- function(electrophoresis, ladder.concentrations = NUL
 			)
 			stopifnot("no ladder peaks recognized" = length(ladder.peaks) > 0)
 			non.marker.peaks <- setdiff(ladder.peaks, which.markers[[ladder.index]])
-			ladder.areas <- if (integrable) {
-				integrate.peak(electrophoresis, ladder.peaks, "area")
-			} else {
-				# we can't directly integrate peaks because we don't have the boundaries, so use the entire ladder electropherogram to relate the reported peak areas to the actual area we can integrate (assuming all of the ladder area is in peaks), then infer the areas of the marker peaks from that relationship
-				reported.area.ratio <- integrate.custom(subset(electrophoresis, well.number == ladder.well), sum.variable = "area") / sum(electrophoresis$peaks$area[ladder.peaks])
-				electrophoresis$peaks$area[ladder.peaks] * reported.area.ratio
-			}
+			ladder.areas <- integrate.peak(electrophoresis, ladder.peaks, "area")
 			non.marker.areas <- ladder.areas[! ladder.peaks %in% which.markers[[ladder.index]]]
 			ladder.marker.areas <- ladder.areas[ladder.peaks %in% which.markers[[ladder.index]]]
 			
@@ -183,11 +176,7 @@ calculate.concentration <- function(electrophoresis, ladder.concentrations = NUL
 			
 			# then modify the mass coefficient for each sample according to the ratio of its marker area(s) to the ladder's (compensate for differential fluorescence/detection/loading)
 			for (sample.index in which.samples) {
-				sample.marker.areas <- if (integrable) {
-					integrate.peak(electrophoresis, which.markers[[sample.index]], "area")
-				} else {
-					electrophoresis$peaks$area[which.markers[[sample.index]]] * reported.area.ratio
-				}
+				sample.marker.areas <- integrate.peak(electrophoresis, which.markers[[sample.index]], "area")
 				mass.coefficients[sample.index] <- if (length(sample.marker.areas) == 0) NA else ladder.mass.coefficient * mean(ladder.marker.areas / sample.marker.areas, na.rm = T)
 			}
 		}
