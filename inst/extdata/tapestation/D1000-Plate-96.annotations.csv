@@ -1,0 +1,25 @@
+sample.name	sample.type2	dilution2
+frag. lambda DNA 1:1	frag. lambda DNA	1
+frag. lambda DNA 1:2	frag. lambda DNA	2
+frag. lambda DNA 1:4	frag. lambda DNA	4
+frag. lambda DNA 1:8	frag. lambda DNA	8
+frag. lambda DNA 1:16	frag. lambda DNA	16
+frag. lambda DNA 1:32	frag. lambda DNA	32
+100bp fragment 1:1	100bp fragment	1
+100bp fragment 1:2	100bp fragment	2
+100bp fragment 1:4	100bp fragment	4
+100bp fragment 1:8	100bp fragment	8
+100bp fragment 1:16	100bp fragment	16
+100bp fragment 1:32	100bp fragment	32
+750bp fragment 1:1	750bp fragment	1
+750bp fragment 1:2	750bp fragment	2
+750bp fragment 1:4	750bp fragment	4
+750bp fragment 1:8	750bp fragment	8
+750bp fragment 1:16	750bp fragment	16
+750bp fragment 1:32	750bp fragment	32
+DNA library 1:1	DNA library	1
+DNA library 1:2	DNA library	2
+DNA library 1:4	DNA library	4
+DNA library 1:8	DNA library	8
+DNA library 1:16	DNA library	16
+DNA library 1:32	DNA library	32
