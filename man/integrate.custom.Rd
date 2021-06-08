@@ -9,7 +9,7 @@ integrate.custom(
   lower.bound = -Inf,
   upper.bound = Inf,
   bound.variable = "length",
-  sum.variable = "concentration"
+  sum.variable = "molarity"
 )
 }
 \arguments{

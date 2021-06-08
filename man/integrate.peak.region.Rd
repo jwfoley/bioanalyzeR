@@ -9,13 +9,13 @@
 integrate.peak(
   electrophoresis,
   index = seq(nrow(electrophoresis$peaks)),
-  sum.variable = "concentration"
+  sum.variable = "molarity"
 )
 
 integrate.region(
   electrophoresis,
   index = seq(nrow(electrophoresis$regions)),
-  sum.variable = "concentration"
+  sum.variable = "molarity"
 )
 }
 \arguments{

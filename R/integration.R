@@ -17,7 +17,7 @@ NULL
 integrate.peak <- function(
 	electrophoresis,
 	index = seq(nrow(electrophoresis$peaks)),
-	sum.variable = "concentration"
+	sum.variable = "molarity"
 ) sapply(index, function(i) sum(electrophoresis$data[[sum.variable]][in.peak(electrophoresis, i)]))
 
 
@@ -26,7 +26,7 @@ integrate.peak <- function(
 integrate.region <- function(
 	electrophoresis,
 	index = seq(nrow(electrophoresis$regions)),
-	sum.variable = "concentration"
+	sum.variable = "molarity"
 ) sapply(index, function(i) sum(electrophoresis$data[[sum.variable]][in.region(electrophoresis, i)]))
 
 
@@ -48,7 +48,7 @@ integrate.custom <- function(
 	lower.bound = -Inf,
 	upper.bound = Inf,
 	bound.variable = "length",
-	sum.variable = "concentration"
+	sum.variable = "molarity"
 ) as.vector(by(electrophoresis$data, electrophoresis$data$sample.index, function(data.subset) {
 	in.this.region <- in.custom.region(data.subset, lower.bound, upper.bound, bound.variable)
 	if (sum(in.this.region) == 0) NA else sum(data.subset[[sum.variable]][in.this.region])
@@ -73,7 +73,7 @@ region.ratio <- function(
 	electrophoresis,
 	...,
 	bound.variable = "length",
-	sum.variable = "concentration"
+	sum.variable = "molarity"
 ) {
 	bounds <- list(...)
 	stopifnot("need more than one bound" = length(bounds) > 1)
