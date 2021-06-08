@@ -96,7 +96,7 @@ labeller.electrophoresis <- function(electrophoresis) function(factor.frame) {
 #'
 #' @return A ggplot object containing several layers. You can draw it directly or customize it like any other ggplot object by adding more layers.
 #'
-#' @seealso \code{\link{sparkline.electrophoresis}}
+#' @seealso \code{\link{sparkline.electrophoresis}}, \code{link{violin.electrophoresis}}
 #'
 #' @export
 #' @import ggplot2
@@ -247,6 +247,91 @@ sparkline.electrophoresis <- function(
 	strip.background = element_blank(),
 	strip.text.y = element_text(angle = 0, hjust = 0)
 )
+
+
+#' Violin plots of electrophoresis data
+#'
+#' This function creates a violin plot from a \code{\link{electrophoresis}} object using \code{\link[ggplot2]{geom_violin}}.
+#'
+#' @param electrophoresis An \code{\link{electrophoresis}} object.
+#' @param x The name of the variable to use as the x-position of each violin as a character vector. Replicates with the same value of \code{x} will be grouped together with a single label. Probably \code{"sample.name"} unless you have added another sample annotation.
+#' @param y The name of the variable to use as the y-axis of the violins, as a character vector. Usually one of \code{"time"}, \code{"aligned.time"}, \code{"distance"}, \code{"relative.distance"}, or \code{"length"}.
+#' @param weight The name of the variable to use for the width of a violin at any given point on the y-axis, as a character vector. Usually one of \code{"fluorescence"}, \code{"concentration"}, or \code{"molarity"}.
+#' @param ... Additional aesthetics passed to \code{\link[ggplot2]{geom_violin}}, e.g. \code{fill}.
+#' @param normalize Normalize the violins to the same area (within the y-limits), i.e. \code{scale = "area"} in \code{\link[ggplot2]{geom_violin}}. If false, their total areas will be proportional to their total non-negative weight values within the y-limits (\code{scale = "count"}). Alternatively, set to \code{NULL} and each violin (or group of violins with the same x-value) will have the same maximum width as the others (\code{scale = "width"}).
+#' @param include.ladder If \code{FALSE}, graph only the actual samples and not the ladder well(s).
+#' @param include.markers If \code{FALSE}, graph only data between the marker peaks.
+#' @param lower.marker.spread If normalizing the totals or excluding marker peaks, extend the lower marker peak by this amount (via \code{\link{between.markers}}).
+#' @param ylim Limits of y-axis.
+#' @param adjust Bandwidth adjustment for the kernel smoothing in \code{\link[ggplot2]{geom_violin}}. Higher values will eliminate spikey noise but may also wipe out narrow peaks of interest, so this may require manual tuning depending on your data.
+#' @param title,xlab,ylab Plot title, x-axis label, and y-axis label.
+#'
+#' @return A ggplot object containing several layers. You can draw it directly or customize it like any other ggplot object by adding more layers.
+#'
+#' @seealso \code{\link{ggplot.electrophoresis}}
+#'
+#' @export
+#' @import ggplot2
+violin.electrophoresis <- function(
+	electrophoresis,
+	x = "sample.name",
+	y = "length",
+	weight = "molarity",
+	...,
+	normalize = T,
+	include.ladder = FALSE,
+	include.markers = FALSE,
+	lower.marker.spread = 10,
+	ylim = c(NA, NA),
+	adjust = 0.05,
+	title = NULL,
+	xlab = NULL,
+	ylab = NULL
+) {
+	# parse normalize
+	if (is.null(normalize))
+		scale = "width"
+	else scale = if (normalize) "area" else "count"
+	
+	# remove ladders
+	if (! include.ladder) electrophoresis <- subset(electrophoresis, well.number != ladder.well)
+	
+	# remove data outside the space between markers
+	if (! include.markers) electrophoresis$data <- electrophoresis$data[which(between.markers(electrophoresis, lower.marker.spread)),]
+	
+	# remove data outside y-limits
+	electrophoresis$data <- electrophoresis$data[which(
+		(! is.na(electrophoresis$data[,y])) &
+		(is.na(ylim[1]) | electrophoresis$data[,y] >= ylim[1]) &
+		(is.na(ylim[2]) | electrophoresis$data[,y] <= ylim[2])
+	),]
+	
+	# remove data without positive weight values
+	electrophoresis$data <- electrophoresis$data[electrophoresis$data[,weight] > 0,]
+	
+	# annotate data with metadata
+	electrophoresis$data <- cbind(electrophoresis$data, electrophoresis$samples[electrophoresis$data$sample.index,])
+	
+	ggplot(electrophoresis$data) +
+	aes_(
+		x = as.name(x),
+		y = as.name(y),
+		weight = as.name(weight),
+		group = as.name("sample.index"),
+		...
+	) + geom_violin(
+		scale = scale,
+		adjust = adjust
+	) + labs(
+		x = xlab,
+		y = if (! is.null(ylab)) ylab else variable.label(electrophoresis, y)
+	) + theme(
+		panel.grid.major.x = element_blank(),
+		axis.ticks.x = element_blank(),
+		axis.title.x = element_blank()
+	)
+}
+
 
 
 #' Plot mobility standard curves
