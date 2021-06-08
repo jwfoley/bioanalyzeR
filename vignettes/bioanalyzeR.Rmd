@@ -319,11 +319,13 @@ eukrna <- read.electrophoresis(system.file(
 ))
 qplot.electrophoresis(
 	eukrna,
+	y = "concentration",
 	xlim = c(100, NA),
 	title = "TapeStation Eukaryotic RNA with geom_line"
 )
 qplot.electrophoresis(
 	eukrna,
+	y = "concentration",
 	xlim = c(100, NA),
 	geom = "area",
 	title = "TapeStation Eukaryotic RNA with geom_area"
@@ -337,6 +339,7 @@ You can easily zoom in on an interesting feature by setting the `xlim` or `ylim`
 ```{r}
 qplot.electrophoresis(
 	eukrna,
+	y = "concentration",
 	xlim = c(100, 2000),
 	ylim = c(NA, 0.08),
 	title = "TapeStation Eukaryotic RNA zoomed in"
@@ -348,6 +351,7 @@ Or you can use the `scales` argument, which is passed to `ggplot2::facet_wrap` o
 ```{r}
 qplot.electrophoresis(
   eukrna,
+	y = "concentration",
 	xlim = c(100, 2000),
 	scales = "free_y",
 	title = "TapeStation Eukaryotic RNA with free y-scales"
@@ -359,12 +363,14 @@ Another difference from the electropherograms in the software is that, by defaul
 ```{r}
 qplot.electrophoresis(
 	eukrna,
+	y = "concentration",
 	xlim = c(100, 2000),
 	log = "x",
 	title = "TapeStation Eukaryotic RNA with log x-scale"
 )
 qplot.electrophoresis(
 	eukrna,
+	y = "concentration",
 	xlim = c(100, 2000),
 	log = "xy",
 	title = "TapeStation Eukaryotic RNA with log x- and y-scales"
@@ -375,15 +381,16 @@ Of course, log-scaling the y-axis gives weird results when the values are fracti
 
 ## Changing the axis variables
 
-By now you have probably noticed that the y-axis displays concentration rather than fluorescence. In fact it displays concentration per length (the concentration estimate for each point is scaled with the `differential.scale` function) so that the area under a curve, between any two x-values, is directly proportional to the concentration of molecules in that range.
+By now you have probably noticed that the y-axis displays molarity or concentration rather than fluorescence. In fact it displays molarity per length (the molarity estimate for each point is scaled with the `differential.scale` function) so that the area under a curve, between any two x-values, is directly proportional to the molarity of molecules in that range.
 
 If you change the y-variable to `y = "fluorescence"` you can see something closer to the electropherograms from the Agilent software:
 
 ```{r}
+ladder1 <- subset(d1000, sample.name == "ladder")
 qplot.electrophoresis(
-	eukrna,
+	ladder1,
 	y = "fluorescence",
-	title = "TapeStation Eukaryotic RNA fluorescence"
+	title = "TapeStation D1000 ladder fluorescence"
 )
 ```
 
@@ -391,23 +398,30 @@ This is still not quite the same as the electropherograms from the Agilent softw
 
 ```{r}
 qplot.electrophoresis(
-	eukrna,
+	ladder1,
 	x = "relative.distance",
 	y = "fluorescence",
-	title = "TapeStation Eukaryotic RNA fluorescence vs. distance"
+	title = "TapeStation D1000 ladder fluorescence vs. distance"
 )
 ```
 
 Note that the x-axis is automatically reversed when the x-variable is distance, to keep the plots in the same orientation.
 
-Even though differential-scaled concentration is more directly informative than raw fluorescence, for many experiments the real variable of interest is molarity. Rather than the total mass of molecules, we want to know the number of molecules. The problem is that the mass concentration, and therefore the fluorescence, depends on the length of the molecule: a 2 kb fragment has approximately twice the mass and twice the fluorescence of a 1 kb fragment, even if the copy number is the same. So, compare concentration and molarity for one sample:
+Compare fluorescence with concentration:
 
 ```{r}
-ladder1 <- subset(d1000, sample.name == "ladder")
-qplot.electrophoresis(ladder1, title = "TapeStation D1000 ladder concentration")
 qplot.electrophoresis(
 	ladder1,
-	y = "molarity",
+	y = "concentration",
+	title = "TapeStation D1000 ladder concentration"
+)
+```
+
+Even though differential-scaled concentration is more directly informative than raw fluorescence, for many experiments the real variable of interest is molarity. Rather than the total mass of molecules, we want to know the number of molecules. The problem is that the mass concentration, and therefore the fluorescence, depends on the length of the molecule: a 2 kb fragment has approximately twice the mass and twice the fluorescence of a 1 kb fragment, even if the copy number is the same. So that is the default y-value:
+
+```{r}
+qplot.electrophoresis(
+	ladder1,
 	title = "TapeStation D1000 ladder molarity"
 )
 ```
@@ -451,6 +465,7 @@ d5000 <- read.electrophoresis(system.file(
 ))
 qplot.electrophoresis(
 	d5000,
+	xlim = c(NA, 2000),
 	facets = NULL,
 	title = "TapeStation D5000 with no faceting"
 )
@@ -461,6 +476,7 @@ Or if you are using `geom = "area"`, they are color-coded and also semitranspare
 ```{r}
 qplot.electrophoresis(
 	d5000,
+	xlim = c(NA, 2000),
 	facets = NULL,
 	geom = "area",
 	title = "TapeStation D5000 with geom_area and no faceting"
