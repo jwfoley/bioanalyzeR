@@ -55,13 +55,20 @@ In the 2100 Expert software, open your data file (`.xad`) in the "Data" context.
 
 ## TapeStation
 
-In the TapeStation Analysis Software, open your data file (`.D1000`, `.HSD1000`, `.RNA`., `.gDNA`, etc.). You need to export both the metadata (in XML format) and gel image (PNG).
+In the TapeStation Analysis Software, open your data file (`.D1000`, `.HSD1000`, `.RNA`., `.gDNA`, etc.). You need to export both the metadata (in XML format) and electropherogram data (CSV), or if you are using an old version of the TapeStation Analysis software (deprecated), the XML and a specially captured screenshot of the gel image.
 
 ### Metadata XML
 Select "File->Export Data->Export to XML". You do not need to export the gel image or individual EPG images at this point. Select your destination and then click "Export" to save the file.
 
-### Gel image PNG
-It is important to follow these unusual directions carefully!
+### Electropherogram CSV
+Select "File->Export Data->Export to CSV". Unselect all files except "Electropherogram Data", and unselect "Aligned". The other settings do not matter but the filename must match the XML file. The software will append `_Electropherogram.csv` to the name you enter.
+
+![](export_csv_screenshot.png)
+
+Exporting to CSV requires version 4.1 or higher of the [TapeStation Analysis software](https://explore.agilent.com/Software-Download-TapeStation-Systems).
+
+### Gel image PNG (deprecated)
+These instructions are required only for old versions of the TapeStation Analysis software. The data will be noisier, and it is important to follow these unusual directions carefully!
 
 ![](settings_screenshot.png)
 
@@ -111,7 +118,7 @@ The data must be exported with a specific configuration. Unfortunately this prec
 1. Fill the circle to export the "Size Calibration Data".
 1. It is not necessary to export the quality table or gel, or set the image format.
 1. Set the desired "Export File Path".
-1. When all the settings are correct, click "Export". ![](export_screenshot.png)
+1. When all the settings are correct, click "Export". ![](export_prosize_screenshot.png)
 1. (Optional) When the "Export Complete" window pops up, click "Open Folder Now" to verify all of these files are present:
 	* electropherogram (`... Electropherogram.csv`)
 	* peak table (`... Peak Table.csv`)
@@ -266,7 +273,7 @@ The members of an `electrophoresis` object that contain graphable data are data 
 d1000 <- read.electrophoresis(system.file(
 	"extdata",
 	"tapestation",
-	"D1000-Tubes-16.xml.gz",
+	"D1000-Tubes-16-D1000.xml.gz",
 	package = "bioanalyzeR"
 ))
 qplot.electrophoresis(d1000, title = "TapeStation D1000")
@@ -307,16 +314,18 @@ Finally, the readings from the samples themselves are plotted by default as a co
 eukrna <- read.electrophoresis(system.file(
 	"extdata",
 	"tapestation",
-	"Eukaryotic RNA-Tubes-16.xml.gz",
+	"Eukaryotic RNA-Tubes-16-RNA.xml.gz",
 	package = "bioanalyzeR"
 ))
 qplot.electrophoresis(
 	eukrna,
+	y = "concentration",
 	xlim = c(100, NA),
 	title = "TapeStation Eukaryotic RNA with geom_line"
 )
 qplot.electrophoresis(
 	eukrna,
+	y = "concentration",
 	xlim = c(100, NA),
 	geom = "area",
 	title = "TapeStation Eukaryotic RNA with geom_area"
@@ -330,6 +339,7 @@ You can easily zoom in on an interesting feature by setting the `xlim` or `ylim`
 ```{r}
 qplot.electrophoresis(
 	eukrna,
+	y = "concentration",
 	xlim = c(100, 2000),
 	ylim = c(NA, 0.08),
 	title = "TapeStation Eukaryotic RNA zoomed in"
@@ -341,6 +351,7 @@ Or you can use the `scales` argument, which is passed to `ggplot2::facet_wrap` o
 ```{r}
 qplot.electrophoresis(
   eukrna,
+	y = "concentration",
 	xlim = c(100, 2000),
 	scales = "free_y",
 	title = "TapeStation Eukaryotic RNA with free y-scales"
@@ -352,12 +363,14 @@ Another difference from the electropherograms in the software is that, by defaul
 ```{r}
 qplot.electrophoresis(
 	eukrna,
+	y = "concentration",
 	xlim = c(100, 2000),
 	log = "x",
 	title = "TapeStation Eukaryotic RNA with log x-scale"
 )
 qplot.electrophoresis(
 	eukrna,
+	y = "concentration",
 	xlim = c(100, 2000),
 	log = "xy",
 	title = "TapeStation Eukaryotic RNA with log x- and y-scales"
@@ -368,15 +381,16 @@ Of course, log-scaling the y-axis gives weird results when the values are fracti
 
 ## Changing the axis variables
 
-By now you have probably noticed that the y-axis displays concentration rather than fluorescence. In fact it displays concentration per length (the concentration estimate for each point is scaled with the `differential.scale` function) so that the area under a curve, between any two x-values, is directly proportional to the concentration of molecules in that range.
+By now you have probably noticed that the y-axis displays molarity or concentration rather than fluorescence. In fact it displays molarity per length (the molarity estimate for each point is scaled with the `differential.scale` function) so that the area under a curve, between any two x-values, is directly proportional to the molarity of molecules in that range.
 
 If you change the y-variable to `y = "fluorescence"` you can see something closer to the electropherograms from the Agilent software:
 
 ```{r}
+ladder1 <- subset(d1000, sample.name == "ladder")
 qplot.electrophoresis(
-	eukrna,
+	ladder1,
 	y = "fluorescence",
-	title = "TapeStation Eukaryotic RNA fluorescence"
+	title = "TapeStation D1000 ladder fluorescence"
 )
 ```
 
@@ -384,48 +398,57 @@ This is still not quite the same as the electropherograms from the Agilent softw
 
 ```{r}
 qplot.electrophoresis(
-	eukrna,
+	ladder1,
 	x = "relative.distance",
 	y = "fluorescence",
-	title = "TapeStation Eukaryotic RNA fluorescence vs. distance"
+	title = "TapeStation D1000 ladder fluorescence vs. distance"
 )
 ```
 
 Note that the x-axis is automatically reversed when the x-variable is distance, to keep the plots in the same orientation.
 
-Even though differential-scaled concentration is more directly informative than raw fluorescence, for many experiments the real variable of interest is molarity. Rather than the total mass of molecules, we want to know the number of molecules. The problem is that the mass concentration, and therefore the fluorescence, depends on the length of the molecule: a 2 kb fragment has approximately twice the mass and twice the fluorescence of a 1 kb fragment, even if the copy number is the same. So, compare concentration and molarity for one sample:
+Compare fluorescence with concentration:
 
 ```{r}
-ladder1 <- subset(d1000, sample.name == "Ladder 1")
-qplot.electrophoresis(ladder1, title = "TapeStation D1000 ladder concentration")
 qplot.electrophoresis(
 	ladder1,
-	y = "molarity",
+	y = "concentration",
+	title = "TapeStation D1000 ladder concentration"
+)
+```
+
+Even though differential-scaled concentration is more directly informative than raw fluorescence, for many experiments the real variable of interest is molarity. Rather than the total mass of molecules, we want to know the number of molecules. The problem is that the mass concentration, and therefore the fluorescence, depends on the length of the molecule: a 2 kb fragment has approximately twice the mass and twice the fluorescence of a 1 kb fragment, even if the copy number is the same. So that is the default y-value:
+
+```{r}
+qplot.electrophoresis(
+	ladder1,
 	title = "TapeStation D1000 ladder molarity"
 )
 ```
 
 If our variable of interest was molarity, the concentration graph would have been very misleading! And the original fluorescence vs. distance graph even moreso.
 
-Or sometimes the absolute variable is irrelevant and what we really want to know is the size distribution within each sample. For that you can set `normalize = TRUE`, which uses the `normalize.proportion` function to scale the variable of interest to a proportion of the sample's total, i.e. the total area under every curve (between the markers) is 1. Notice how the different dilutions of the same sample become roughly equal after normalization:
+Or sometimes the absolute variable is irrelevant and what we really want to know is the size distribution within each sample. For that you can set `normalize = TRUE`, which uses the `normalize.proportion` function to scale the variable of interest to a proportion of the sample's total, i.e. the total area under every curve (between the markers) is 1. Notice how the different dilutions of the same sample become roughly equal after normalization, until very low dilutions:
 
 ```{r}
-d5000 <- read.electrophoresis(system.file(
+d1000.96 <- read.electrophoresis(system.file(
 	"extdata",
 	"tapestation",
-	"D5000-Tubes-16.xml.gz",
+	"D1000-Plate-96-D1000.xml.gz",
 	package = "bioanalyzeR"
 ))
 qplot.electrophoresis(
-	subset(d5000, startsWith(as.character(sample.name), "Size Selected Smear")),
+	subset(d1000.96, startsWith(as.character(sample.name), "frag. lambda DNA")),
 	facets = NULL,
-	title = "TapeStation D5000"
+	xlim = c(100, 800),
+	title = "TapeStation D1000"
 )
 qplot.electrophoresis(
-	subset(d5000, startsWith(as.character(sample.name), "Size Selected Smear")),
+	subset(d1000.96, startsWith(as.character(sample.name), "frag. lambda DNA")),
 	facets = NULL,
+	xlim = c(100, 800),
 	normalize = T,
-	title = "TapeStation D5000 normalized"
+	title = "TapeStation D1000 normalized"
 )
 ```
 
@@ -434,8 +457,15 @@ qplot.electrophoresis(
 Sometimes it is more interesting to overlay samples in the same plot rather than side-by-side in small multiples. The `facets` argument, as in `ggplot2::qplot`, automatically infers the appropriate faceting function and `facets = NULL` skips faceting and plots all data in one area. In that case, the samples are automatically color-coded by name:
 
 ```{r}
+d5000 <- read.electrophoresis(system.file(
+	"extdata",
+	"tapestation",
+	"D5000-Tubes-16-D5000.xml.gz",
+	package = "bioanalyzeR"
+))
 qplot.electrophoresis(
 	d5000,
+	xlim = c(NA, 2000),
 	facets = NULL,
 	title = "TapeStation D5000 with no faceting"
 )
@@ -446,6 +476,7 @@ Or if you are using `geom = "area"`, they are color-coded and also semitranspare
 ```{r}
 qplot.electrophoresis(
 	d5000,
+	xlim = c(NA, 2000),
 	facets = NULL,
 	geom = "area",
 	title = "TapeStation D5000 with geom_area and no faceting"
@@ -457,12 +488,6 @@ qplot.electrophoresis(
 There may be some pattern among your samples that you want to explore. You can add new graphable variables to an `electrophoresis` object by adding columns to the `$samples` data frame. Let's consider a larger batch:
 
 ```{r}
-d1000.96 <- read.electrophoresis(system.file(
-	"extdata",
-	"tapestation",
-	"D1000-Plate-96.xml.gz",
-	package = "bioanalyzeR"
-))
 levels(d1000.96$samples$sample.name)
 ```
 
@@ -518,7 +543,7 @@ qplot.electrophoresis(
 Notice that replicates of the same combination of conditions are still plotted separately (the function automatically adds the aesthetic `group = sample.index`).
 
 
-## Sparklines
+## Electric sparklines
 
 Because the output of `qplot.electrophoresis` is a `ggplot` object, you can add additonal layers or themes to customize it. One additional configuration is already provided: sparklines, a minimalist line graph. The `sparkline.electrophoresis` function simply hardcodes some appropriate settings and additions to the defaults of `qplot.electrophoresis` and passes the rest of the arguments to it, so usage is the same.
 
@@ -541,6 +566,80 @@ sparkline.electrophoresis(
 ```
 
 
+## Electric violin plots
+
+Previously we saw how `qplot.electrophoresis` makes a detailed electropherogram for individual samples in facets or several samples overlaid. Alternatively, we can use `violin.electrophoresis` to draw a violin plot showing several samples' length distributions side-by-side:
+
+```{r}
+rnadeg <- read.electrophoresis(system.file(
+	"extdata",
+	"fragmentanalyzer",
+	"DNF-472 HS RNA kit 15nt",
+	"RNA Degradation Study 12-03-13.zip",
+	package = "bioanalyzeR"
+))
+rnadeg$samples
+rnadeg$samples$degradation <- sub(" Universal.*", "", as.character(rnadeg$samples$sample.name)) # shorten the names for graphing
+rnadeg$samples$degradation <- factor(rnadeg$samples$degradation, levels = paste(0:10 * 2, "min at 70C")) # manually set order of levels since the samples are loaded out of order
+violin.electrophoresis(rnadeg, x = "degradation", title = "Violin plot of RNA degradation") + theme(axis.text.x = element_text(angle = 45, hjust = 1)) # rotate axis labels since they're still a little long
+```
+
+This shows us nicely how the RNA degrades with heat treatment; in particular the 28S ribosome (4.7 kb) degrades faster than the 18S (1.9 kb), presumably since it is larger and has more places to break.
+
+Maybe it would be more intuitive to plot it horizontally?
+
+```{r}
+violin.electrophoresis(rnadeg, x = "degradation", flip = T, title = "Horizontal violin plot of RNA degradation")
+```
+
+To accentuate the relationship of the samples we can add a fill color, though a legend would be redundant with the existing sample labels:
+
+```{r}
+violin.electrophoresis(rnadeg, x = "degradation", flip = T, fill = degradation, title = "Colored horizontal violin plot of RNA degradation") + theme(legend.position = "none")
+```
+
+But in this case our samples compare a quantitative variable, not a categorical one, so we can convert our factor to integers:
+
+```{r}
+violin.electrophoresis(rnadeg, x = "degradation", flip = T, fill = as.integer(degradation), title = "Quantitatively colored horizontal violin plot of RNA degradation") + theme(legend.position = "none")
+```
+
+What if we have replicates of the same condition? Then `violin.electrophoresis` groups them together:
+
+```{r}
+libqc <- read.electrophoresis(system.file(
+	"extdata",
+	"fragmentanalyzer",
+	"DNF-473 NGS Fragment kit (1-6000)",
+	"NGS Libraries SS NGS kit 19-10-40.zip",
+	package = "bioanalyzeR"
+))
+libqc$samples
+libqc <- subset(libqc, startsWith(as.character(sample.name), "NGS")) # remove extraneous samples
+violin.electrophoresis(libqc, title = "Violin plot of sequencing library QC")
+```
+
+Let's add colors to accentuate the pairs of replicates, and zoom in:
+
+```{r}
+violin.electrophoresis(libqc, fill = sample.name, ylim = c(100, 1200), title = "Colored violin plot of sequencing library QC") + theme(legend.position = "none")
+```
+
+We can see that libraries 1 and 2 have an extra lump of short molecules, perhaps unwanted byproduct that was not removed by size selection, while libraries 3 and 4 have smoother distributions of longer molecules.
+
+Perhaps we'd like to know the median molecule size of each library? We can use the `summarize.custom` function (described later) to get the medians and plot those as a separate `geom_point`.
+
+```{r}
+median.frame <- data.frame(
+	sample.index = seq(nrow(libqc$samples)),
+	sample.name = libqc$samples$sample.name,
+	median = summarize.custom(libqc, 100, 1200)[,1]
+)
+violin.electrophoresis(libqc, fill = sample.name, ylim = c(100, 1200), title = "Annotated violin plot of sequencing library QC") +
+	theme(legend.position = "none") +
+	geom_point(aes(sample.name, median, group = sample.index), median.frame, position = position_dodge(0.9)) # include group and position_dodge to match the geom_violin
+```
+
 # Analyzing data
 
 ## Sums within peaks and regions
@@ -551,7 +650,7 @@ Since we have estimates of concentration and molarity for every observed data po
 eukrna <- read.electrophoresis(system.file(
 	"extdata",
 	"tapestation",
-	"Eukaryotic RNA-Tubes-16.xml.gz",
+	"Eukaryotic RNA-Tubes-16-RNA.xml.gz",
 	package = "bioanalyzeR"
 ))
 eukrna.concentration.200.5000 <- integrate.custom(
@@ -617,7 +716,7 @@ illumina.library.ratio
 haloplex <- read.electrophoresis(system.file(
 	"extdata",
 	"tapestation",
-	"HSD1000-HaloplexHS-4.xml.gz",
+	"HSD1000-HaloplexHS-4-HSD1000.xml.gz",
 	package = "bioanalyzeR"
 ))
 data.frame(
@@ -639,16 +738,10 @@ qplot.electrophoresis(
 Since we have molarity estimates at the fine resolution of the input data, we can do detailed analysis on the molar distribution of molecule lengths. This may tell us what to expect from downstream processing of the samples, e.g. sequencing. The `summarize.peak` function computes several summary statistics of peaks reported by the Agilent software:
 
 ```{r}
-d1000 <- read.electrophoresis(system.file(
-    "extdata",
-    "tapestation",
-    "D1000-Tubes-16.xml.gz",
-    package = "bioanalyzeR"
-))
 subset(d1000$peaks, sample.index == 1)
 peak.summaries <- summarize.peak(d1000, 2:9)
 peak.summaries
-qplot.electrophoresis(subset(d1000, sample.name == "D1000 Ladder"), include.ladder = T) + geom_vline(xintercept = peak.summaries$Median)
+qplot.electrophoresis(subset(d1000, well.number == "A1"), include.ladder = T) + geom_vline(xintercept = peak.summaries$Median)
 ```
 
 We can see how the ladder peaks' median molecule lengths stay close to the expected values while the spread increases from short to long molecules. (Note that the graph above shows concentration rather than molarity because the molarities of the ladder peaks are too different to graph together.)
@@ -656,24 +749,24 @@ We can see how the ladder peaks' median molecule lengths stay close to the expec
 Likewise `summarize.region` computes those statistics for regions reported by the Agilent software:
 
 ```{r}
-smear.dilutions <- subset(d1000, startsWith(as.character(sample.name), "Smear sample"))
-qplot.electrophoresis(smear.dilutions, facets = NULL)
+smear.dilutions <- subset(d1000, startsWith(as.character(sample.name), "270 bp smear"))
+qplot.electrophoresis(smear.dilutions, facets = NULL, normalize = T, xlim = c(50, 1000))
 smear.dilutions$regions
-summarize.region(smear.dilutions, 1:4)
+summarize.region(smear.dilutions)
 ```
 
-Here we see that when the same sample is diluted several times, the summary statistics of its length distribution change very little.
+Here we see that when the same sample is diluted several times, the summary statistics of its length distribution change only slightly. The mean fragment lengths reported by bioanalyzeR are different from the `average.length` reported by the Agilent software because bioanalyzeR computes the mean by molarity rather than by concentration.
 
 Alternatively, the `summarize.custom` function allows us to set a custom region and compare it across all samples:
 
 ```{r}
-fragment.dilutions <- subset(d1000, grepl("fragment", as.character(sample.name)))
-qplot.electrophoresis(fragment.dilutions)
-integrate.custom(fragment.dilutions, 80, 500)
-summarize.custom(fragment.dilutions, 80, 500)
+fragment.dilutions <- subset(d1000, startsWith(as.character(sample.name), "300bp fragment"))
+qplot.electrophoresis(fragment.dilutions, facets = NULL, normalize = T, xlim = c(100, 500))
+fragment.dilutions$samples$sample.name
+integrate.custom(fragment.dilutions, 100, 500, sum.variable = "concentration")
+summarize.custom(fragment.dilutions, 100, 500)
 ```
 
-Now we can see that the length distribution's statistics do become less reliable as the sample becomes too faint to detect clearly, viz. the 1/70 dilution that is measured as 1.6 nM.
 
 
 # Checking the accuracy of the results
@@ -766,7 +859,12 @@ compare.estimates <- function(title, sample.names, ...) {
 }
 compare.estimates("Bioanalyzer DNA 1000", "DNA 1000 ladder", "bioanalyzer", "Demo DNA 1000 Series II.xml.gz")
 compare.estimates("Bioanalyzer DNA 7500", "ladder DNA 7500", "bioanalyzer", "Demo DNA 7500 Series II.xml.gz")
-compare.estimates("TapeStation D5000", "D5000 Ladder", "tapestation", "D5000-Plate-96.xml.gz")
+compare.estimates("TapeStation DNA 1000", "ladder", "tapestation", "D1000-Tubes-16-D1000.xml.gz")
+compare.estimates("TapeStation DNA 5000", "D5000 Ladder", "tapestation", "D5000-Plate-96-D5000.xml.gz")
+compare.estimates("TapeStation DNA 5000", "Ladder", "tapestation", "D5000-Tubes-16-D5000.xml.gz")
+compare.estimates("TapeStation Genomic DNA", "Ladder", "tapestation", "gDNA-Tubes-16-gDNA.xml.gz")
+compare.estimates("TapeStation High Sensitivity D1000", "Ladder", "tapestation", "High Sensitivity D1000-Tubes-16-HSD1000.xml.gz")
+compare.estimates("TapeStation High Sensitivity D5000", "Ladder", "tapestation", "High Sensitivity D5000-Tubes-16-HSD5000.xml.gz")
 compare.estimates("Fragment Analyzer NGS", "Ladder", "fragmentanalyzer", "DNF-473 NGS Fragment kit (1-6000)", "NGS Libraries SS NGS kit 19-10-40.zip")
 compare.estimates("Fragment Analyzer HS Large Fragment", "DNF-365 Ladder", "fragmentanalyzer", "DNF-464 HS Large Fragment", "Long read library final QC 18-12-47.zip")
 compare.estimates("Fragment Analyzer Genomic DNA kb", "Ladder", "fragmentanalyzer", "DNF-467 Genomic 50 kb", "21-54-28.zip")

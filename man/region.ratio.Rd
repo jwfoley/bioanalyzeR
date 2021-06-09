@@ -8,7 +8,7 @@ region.ratio(
   electrophoresis,
   ...,
   bound.variable = "length",
-  sum.variable = "concentration"
+  sum.variable = "molarity"
 )
 }
 \arguments{

@@ -78,7 +78,7 @@ labeller.electrophoresis <- function(electrophoresis) function(factor.frame) {
 #' @param electrophoresis An \code{\link{electrophoresis}} object.
 #' @param x The name of the variable to use as the x-value of each point in the graph as a character vector. Usually one of \code{"time"}, \code{"aligned.time"}, \code{"distance"}, \code{"relative.distance"}, or \code{"length"}.
 #' @param y The name of the variable to use as the y-value of each point in the graph, as a character vector. Usually one of \code{"fluorescence"}, \code{"concentration"}, or \code{"molarity"}.
-#' @param ... Additional aesthetics passed to the geom for the main data (not the peaks or regions).
+#' @param ... Additional aesthetics passed to the geom for the main data (not the peaks or regions). Unlike the previous variables that are specified by character vectors, these use the normal aesthetic syntax, e.g. \code{color = sample.name}.
 #' @param log Which variables to log-transform (\code{"x"}, \code{"y"}, or \code{"xy"}).
 #' @param normalize Normalize the y-value in each sample with \code{\link{normalize.proportion}}.
 #' @param facets Faceting formula to use. Picks \code{\link[ggplot2]{facet_wrap}} or \code{\link[ggplot2]{facet_grid}} depending on whether the formula is one- or two-sided. If \code{NULL}, overlay all samples in one color-coded graph.
@@ -96,14 +96,14 @@ labeller.electrophoresis <- function(electrophoresis) function(factor.frame) {
 #'
 #' @return A ggplot object containing several layers. You can draw it directly or customize it like any other ggplot object by adding more layers.
 #'
-#' @seealso \code{\link{sparkline.electrophoresis}}
+#' @seealso \code{\link{sparkline.electrophoresis}}, \code{link{violin.electrophoresis}}
 #'
 #' @export
 #' @import ggplot2
 qplot.electrophoresis <- function(
 	electrophoresis,
 	x = "length",
-	y = "concentration",
+	y = "molarity",
 	...,
 	log = "",
 	normalize = FALSE,
@@ -247,6 +247,117 @@ sparkline.electrophoresis <- function(
 	strip.background = element_blank(),
 	strip.text.y = element_text(angle = 0, hjust = 0)
 )
+
+
+#' Violin plots of electrophoresis data
+#'
+#' This function creates a violin plot from a \code{\link{electrophoresis}} object using \code{\link[ggplot2]{geom_violin}}.
+#'
+#' Violin plots are essentially smoothened histograms, a box plot for the computer age. Here the symmetric "violins" are arrrayed along a common axis of molecule length, or raw migration time or distance, and the weight (width) of each violin at a given position represents the relative density of molecules there, which may be molarity, concentration, or raw fluorescence; the weight metric is not specified on the plot itself so you may want to mention it in a figure caption. This is a compact plot for comparing normalized samples side-by-side. Traditionally violin plots are vertical, like box plots, and like the (simulated) gel images provided by Agilent software; however, an option is provided to flip the coordinates to horizontal if that seems more intuitive (q.v. \code{\link{sparkline.electrophoresis}}).
+#'
+#' The main functional difference between this and \code{\link{qplot.electrophoresis}} is that the sample names (or some other annotation) are used directly as the x-variable for side-by-side plotting, rather than as a faceting variable. One consequence is that replicates with an identical x-value will have their violins plotted together in a set with a single x-axis label (by \code{\link[ggplot2]{position_dodge}}). However, the underlying \code{\link[ggplot]{geom_violin}} also allocates its area or width normalizations to these sets, not to the individual violins within a set, so if the numbers of samples per replicate set are imbalanced then the individual violins will also have imbalanced widths, keeping the set widths constant instead.
+#'
+#' @param electrophoresis An \code{\link{electrophoresis}} object.
+#' @param x The name of the variable to use as the x-position of each violin as a character vector. Replicates with the same value of \code{x} will be grouped together with a single label. Probably \code{"sample.name"} unless you have added another sample annotation.
+#' @param y The name of the variable to use as the y-axis of the violins, as a character vector. Usually one of \code{"time"}, \code{"aligned.time"}, \code{"distance"}, \code{"relative.distance"}, or \code{"length"}.
+#' @param weight The name of the variable to use for the width of a violin at any given point on the y-axis, as a character vector. Usually one of \code{"fluorescence"}, \code{"concentration"}, or \code{"molarity"}.
+#' @param ... Additional aesthetics passed to \code{\link[ggplot2]{geom_violin}}. Unlike the previous variables that are specified by character vectors, these use the normal aesthetic syntax, e.g. \code{fill = sample.name}.
+#' @param flip Flip the axes so the violins are horizontal.
+#' @param normalize Normalize the violins (or sets of violins) to the same area (within the y-limits), i.e. \code{scale = "area"} in \code{\link[ggplot2]{geom_violin}}. If false, each violin (or set) will have the same maximum width as the others (\code{scale = "width"}). Making the total area or width proportional to the total molarity/concentration/fluorescence of a sample is not really in the spirit of violin plots and not currently supported.
+#' @param include.ladder If \code{FALSE}, graph only the actual samples and not the ladder well(s).
+#' @param include.markers If \code{FALSE}, graph only data between the marker peaks.
+#' @param lower.marker.spread If normalizing the totals or excluding marker peaks, extend the lower marker peak by this amount (via \code{\link{between.markers}}).
+#' @param ylim Limits of y-axis.
+#' @param adjust Bandwidth adjustment for the kernel smoothing in \code{\link[ggplot2]{geom_violin}}. Higher values will eliminate spikey noise but may also wipe out narrow peaks of interest, so this may require manual tuning depending on your data.
+#' @param title,xlab,ylab Plot title, x-axis label, and y-axis label.
+#'
+#' @return A ggplot object containing several layers. You can draw it directly or customize it like any other ggplot object by adding more layers.
+#'
+#' @seealso \code{\link{ggplot.electrophoresis}}
+#'
+#' @export
+#' @import ggplot2
+violin.electrophoresis <- function(
+	electrophoresis,
+	x = "sample.name",
+	y = "length",
+	weight = "molarity",
+	...,
+	flip = F,
+	normalize = T,
+	include.ladder = FALSE,
+	include.markers = FALSE,
+	lower.marker.spread = 10,
+	ylim = c(NA, NA),
+	adjust = 0.05,
+	title = NULL,
+	xlab = NULL,
+	ylab = NULL
+) {
+	# parse normalize
+	scale <- if (normalize) "area" else "width"
+	
+	# remove ladders
+	if (! include.ladder) electrophoresis <- subset(electrophoresis, well.number != ladder.well)
+	
+	# create streamlined data frame with renamed variables
+	simplified.data <- data.frame(
+		sample.index = electrophoresis$data$sample.index,
+		y.value = electrophoresis$data[,y],
+		weight.value = electrophoresis$data[,weight]
+	)
+	
+	# remove extraneous data
+	simplified.data <- simplified.data[
+		(! is.na(simplified.data$y.value)) &
+		(simplified.data$weight.value > 0) & # can't use negative values in geom_violin
+		(if (is.na(ylim[1])) T else simplified.data$y.value >= ylim[1]) &
+		(if (is.na(ylim[2])) T else simplified.data$y.value <= ylim[2]) &
+		(if (include.markers) T else between.markers(electrophoresis, lower.marker.spread)) # remove data outside the space between markers
+	,]
+	
+	# annotate data with metadata
+	simplified.data <- cbind(simplified.data, electrophoresis$samples[simplified.data$sample.index,])
+	simplified.data$x.value <- simplified.data[,x]
+	
+	this.plot <- ggplot(simplified.data) +
+		geom_violin(
+			aes(
+				x = x.value,
+				y = y.value,
+				weight = weight.value,
+				group = sample.index,
+				...
+			),
+			scale = scale,
+			adjust = adjust
+		) +
+		labs(
+			x = xlab,
+			y = if (! is.null(ylab)) ylab else variable.label(electrophoresis, y),
+			title = title
+		)
+	
+	# reverse the y-axis if it's distance
+	if (y %in% c("distance", "relative.distance")) this.plot <- this.plot + scale_y_reverse()
+	
+	# flip, or don't, and this determines whether the themes are x or y
+	if (flip) this.plot +
+		theme(
+			panel.grid.major.y = element_blank(),
+			axis.ticks.y = element_blank(),
+			axis.title.y = element_blank()
+		) +
+		coord_flip() +
+		scale_x_discrete(limits = rev) # reverse x-axis (now y-) so it's top to bottom
+	else this.plot +
+		theme(
+			panel.grid.major.x = element_blank(),
+			axis.ticks.x = element_blank(),
+			axis.title.x = element_blank()
+		)
+}
+
 
 
 #' Plot mobility standard curves
