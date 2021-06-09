@@ -543,7 +543,7 @@ qplot.electrophoresis(
 Notice that replicates of the same combination of conditions are still plotted separately (the function automatically adds the aesthetic `group = sample.index`).
 
 
-## Sparklines
+## Electric sparklines
 
 Because the output of `qplot.electrophoresis` is a `ggplot` object, you can add additonal layers or themes to customize it. One additional configuration is already provided: sparklines, a minimalist line graph. The `sparkline.electrophoresis` function simply hardcodes some appropriate settings and additions to the defaults of `qplot.electrophoresis` and passes the rest of the arguments to it, so usage is the same.
 
@@ -565,6 +565,80 @@ sparkline.electrophoresis(
 )
 ```
 
+
+## Electric violin plots
+
+Previously we saw how `qplot.electrophoresis` makes a detailed electropherogram for individual samples in facets or several samples overlaid. Alternatively, we can use `violin.electrophoresis` to draw a violin plot showing several samples' length distributions side-by-side:
+
+```{r}
+rnadeg <- read.electrophoresis(system.file(
+	"extdata",
+	"fragmentanalyzer",
+	"DNF-472 HS RNA kit 15nt",
+	"RNA Degradation Study 12-03-13.zip",
+	package = "bioanalyzeR"
+))
+rnadeg$samples
+rnadeg$samples$degradation <- sub(" Universal.*", "", as.character(rnadeg$samples$sample.name)) # shorten the names for graphing
+rnadeg$samples$degradation <- factor(rnadeg$samples$degradation, levels = paste(0:10 * 2, "min at 70C")) # manually set order of levels since the samples are loaded out of order
+violin.electrophoresis(rnadeg, x = "degradation", title = "Violin plot of RNA degradation") + theme(axis.text.x = element_text(angle = 45, hjust = 1)) # rotate axis labels since they're still a little long
+```
+
+This shows us nicely how the RNA degrades with heat treatment; in particular the 28S ribosome (4.7 kb) degrades faster than the 18S (1.9 kb), presumably since it is larger and has more places to break.
+
+Maybe it would be more intuitive to plot it horizontally?
+
+```{r}
+violin.electrophoresis(rnadeg, x = "degradation", flip = T, title = "Horizontal violin plot of RNA degradation")
+```
+
+To accentuate the relationship of the samples we can add a fill color, though a legend would be redundant with the existing sample labels:
+
+```{r}
+violin.electrophoresis(rnadeg, x = "degradation", flip = T, fill = degradation, title = "Colored horizontal violin plot of RNA degradation") + theme(legend.position = "none")
+```
+
+But in this case our samples compare a quantitative variable, not a categorical one, so we can convert our factor to integers:
+
+```{r}
+violin.electrophoresis(rnadeg, x = "degradation", flip = T, fill = as.integer(degradation), title = "Quantitatively colored horizontal violin plot of RNA degradation") + theme(legend.position = "none")
+```
+
+What if we have replicates of the same condition? Then `violin.electrophoresis` groups them together:
+
+```{r}
+libqc <- read.electrophoresis(system.file(
+	"extdata",
+	"fragmentanalyzer",
+	"DNF-473 NGS Fragment kit (1-6000)",
+	"NGS Libraries SS NGS kit 19-10-40.zip",
+	package = "bioanalyzeR"
+))
+libqc$samples
+libqc <- subset(libqc, startsWith(as.character(sample.name), "NGS")) # remove extraneous samples
+violin.electrophoresis(libqc, title = "Violin plot of sequencing library QC")
+```
+
+Let's add colors to accentuate the pairs of replicates, and zoom in:
+
+```{r}
+violin.electrophoresis(libqc, fill = sample.name, ylim = c(100, 1200), title = "Colored violin plot of sequencing library QC") + theme(legend.position = "none")
+```
+
+We can see that libraries 1 and 2 have an extra lump of short molecules, perhaps unwanted byproduct that was not removed by size selection, while libraries 3 and 4 have smoother distributions of longer molecules.
+
+Perhaps we'd like to know the median molecule size of each library? We can use the `summarize.custom` function (described later) to get the medians and plot those as a separate `geom_point`.
+
+```{r}
+median.frame <- data.frame(
+	sample.index = seq(nrow(libqc$samples)),
+	sample.name = libqc$samples$sample.name,
+	median = summarize.custom(libqc, 100, 1200)[,1]
+)
+violin.electrophoresis(libqc, fill = sample.name, ylim = c(100, 1200), title = "Annotated violin plot of sequencing library QC") +
+	theme(legend.position = "none") +
+	geom_point(aes(sample.name, median, group = sample.index), median.frame, position = position_dodge(0.9)) # include group and position_dodge to match the geom_violin
+```
 
 # Analyzing data
 
