@@ -61,5 +61,5 @@ Violin plots are essentially smoothened histograms, a box plot for the computer 
 The main functional difference between this and \code{\link{qplot.electrophoresis}} is that the sample names (or some other annotation) are used directly as the x-variable for side-by-side plotting, rather than as a faceting variable. One consequence is that replicates with an identical x-value will have their violins plotted together in a set with a single x-axis label (by \code{\link[ggplot2]{position_dodge}}). However, the underlying \code{\link[ggplot]{geom_violin}} also allocates its area or width normalizations to these sets, not to the individual violins within a set, so if the numbers of samples per replicate set are imbalanced then the individual violins will also have imbalanced widths, keeping the set widths constant instead.
 }
 \seealso{
-\code{\link{ggplot.electrophoresis}}
+\code{\link{qplot.electrophoresis}}
 }

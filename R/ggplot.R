@@ -273,7 +273,7 @@ sparkline.electrophoresis <- function(
 #'
 #' @return A ggplot object containing several layers. You can draw it directly or customize it like any other ggplot object by adding more layers.
 #'
-#' @seealso \code{\link{ggplot.electrophoresis}}
+#' @seealso \code{\link{qplot.electrophoresis}}
 #'
 #' @export
 #' @import ggplot2
