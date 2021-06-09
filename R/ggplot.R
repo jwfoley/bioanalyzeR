@@ -96,7 +96,7 @@ labeller.electrophoresis <- function(electrophoresis) function(factor.frame) {
 #'
 #' @return A ggplot object containing several layers. You can draw it directly or customize it like any other ggplot object by adding more layers.
 #'
-#' @seealso \code{\link{sparkline.electrophoresis}}, \code{link{violin.electrophoresis}}
+#' @seealso \code{\link{sparkline.electrophoresis}}, \code{\link{violin.electrophoresis}}
 #'
 #' @export
 #' @import ggplot2

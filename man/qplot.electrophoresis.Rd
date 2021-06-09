@@ -88,5 +88,5 @@ If \code{region.alpha} is not NA and \code{facets} is not null and \code{electro
 }
 
 \seealso{
-\code{\link{sparkline.electrophoresis}}, \code{link{violin.electrophoresis}}
+\code{\link{sparkline.electrophoresis}}, \code{\link{violin.electrophoresis}}
 }
