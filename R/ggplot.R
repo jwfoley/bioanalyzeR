@@ -300,27 +300,35 @@ violin.electrophoresis <- function(
 	# remove ladders
 	if (! include.ladder) electrophoresis <- subset(electrophoresis, well.number != ladder.well)
 	
+	# create streamlined data frame with renamed variables
+	simplified.data <- data.frame(
+		sample.index = electrophoresis$data$sample.index,
+		y.value = electrophoresis$data[,y],
+		weight.value = electrophoresis$data[,weight]
+	)
+	
 	# remove extraneous data
-	electrophoresis$data <- electrophoresis$data[
-		(! is.na(electrophoresis$data[,y])) &
-		(electrophoresis$data[,weight] > 0) & # can't use negative values in geom_violin
-		(if (is.na(ylim[1])) T else electrophoresis$data[,y] >= ylim[1]) &
-		(if (is.na(ylim[2])) T else electrophoresis$data[,y] <= ylim[2]) &
+	simplified.data <- simplified.data[
+		(! is.na(simplified.data$y.value)) &
+		(simplified.data$weight.value > 0) & # can't use negative values in geom_violin
+		(if (is.na(ylim[1])) T else simplified.data$y.value >= ylim[1]) &
+		(if (is.na(ylim[2])) T else simplified.data$y.value <= ylim[2]) &
 		(if (include.markers) T else between.markers(electrophoresis, lower.marker.spread)) # remove data outside the space between markers
 	,]
 	
 	# annotate data with metadata
-	electrophoresis$data <- cbind(electrophoresis$data, electrophoresis$samples[electrophoresis$data$sample.index,])
+	simplified.data <- cbind(simplified.data, electrophoresis$samples[simplified.data$sample.index,])
+	simplified.data$x.value <- simplified.data[,x]
 	
-	this.plot <- ggplot(electrophoresis$data) +
-		aes_(
-			x = as.name(x),
-			y = as.name(y),
-			weight = as.name(weight),
-			group = as.name("sample.index")
-		) + 
-		aes(...) +
+	this.plot <- ggplot(simplified.data) +
 		geom_violin(
+			aes(
+				x = x.value,
+				y = y.value,
+				weight = weight.value,
+				group = sample.index,
+				...
+			),
 			scale = scale,
 			adjust = adjust
 		) +
