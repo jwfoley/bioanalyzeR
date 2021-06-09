@@ -6,7 +6,7 @@ Install required dependencies:
 
     > install.packages(c("XML", "base64enc", "png", "plyr", "ggplot2"))
 
-Install the newest release (includes 35 MB of demo data):
+Install the newest release (includes 22 MB of demo data):
 
     > install.packages("https://github.com/jwfoley/bioanalyzeR/releases/download/v0.8.0/bioanalyzeR_0.8.0.tar.gz", repos = NULL)
 
