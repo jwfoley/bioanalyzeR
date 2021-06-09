@@ -35,7 +35,7 @@ qplot.electrophoresis(
 
 \item{y}{The name of the variable to use as the y-value of each point in the graph, as a character vector. Usually one of \code{"fluorescence"}, \code{"concentration"}, or \code{"molarity"}.}
 
-\item{...}{Additional aesthetics passed to the geom for the main data (not the peaks or regions).}
+\item{...}{Additional aesthetics passed to the geom for the main data (not the peaks or regions). Unlike the previous variables that are specified by character vectors, these use the normal aesthetic syntax, e.g. \code{color = sample.name}.}
 
 \item{log}{Which variables to log-transform (\code{"x"}, \code{"y"}, or \code{"xy"}).}
 

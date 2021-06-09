@@ -10,6 +10,7 @@ violin.electrophoresis(
   y = "length",
   weight = "molarity",
   ...,
+  flip = F,
   normalize = T,
   include.ladder = FALSE,
   include.markers = FALSE,
@@ -30,9 +31,11 @@ violin.electrophoresis(
 
 \item{weight}{The name of the variable to use for the width of a violin at any given point on the y-axis, as a character vector. Usually one of \code{"fluorescence"}, \code{"concentration"}, or \code{"molarity"}.}
 
-\item{...}{Additional aesthetics passed to \code{\link[ggplot2]{geom_violin}}, e.g. \code{fill}.}
+\item{...}{Additional aesthetics passed to \code{\link[ggplot2]{geom_violin}}. Unlike the previous variables that are specified by character vectors, these use the normal aesthetic syntax, e.g. \code{fill = sample.name}.}
 
-\item{normalize}{Normalize the violins to the same area (within the y-limits), i.e. \code{scale = "area"} in \code{\link[ggplot2]{geom_violin}}. If false, their total areas will be proportional to their total non-negative weight values within the y-limits (\code{scale = "count"}). Alternatively, set to \code{NULL} and each violin (or group of violins with the same x-value) will have the same maximum width as the others (\code{scale = "width"}).}
+\item{flip}{Flip the axes so the violins are horizontal.}
+
+\item{normalize}{Normalize the violins (or sets of violins) to the same area (within the y-limits), i.e. \code{scale = "area"} in \code{\link[ggplot2]{geom_violin}}. If false, their total areas will be proportional to their total non-negative weight values within the y-limits (\code{scale = "count"}). Alternatively, set to \code{NULL} and each violin (or set) will have the same maximum width as the others (\code{scale = "width"}).}
 
 \item{include.ladder}{If \code{FALSE}, graph only the actual samples and not the ladder well(s).}
 
@@ -51,6 +54,11 @@ A ggplot object containing several layers. You can draw it directly or customize
 }
 \description{
 This function creates a violin plot from a \code{\link{electrophoresis}} object using \code{\link[ggplot2]{geom_violin}}.
+}
+\details{
+Violin plots are essentially smoothened histograms, a box-plot replacement for the computer age. The violins are arrrayed along a common axis of molecule length, or raw migration time or distance, and the symmetric weight (width) of each violin at a given position represents the density of molecules, which may be molarity, concentration, or raw fluorescence; the weight metric is not specified on the plot itself so you may want to mention it in a figure caption. This is a compact way to compare samples side-by-side. Traditionally violin plots are vertical, like box plots, and this also creates a replacement for the (simulated) gel images provided by Agilent software that is more readable by human perception; however, an option is provided to flip the coordinates to horizontal in case that seems more intuitive (q.v. \code{\link{sparkline.electrophoresis}}).
+
+The main functional difference between this and \code{\link{qplot.electrophoresis}} is that the sample names (or some other annotation) are used directly as the x-variable for side-by-side plotting, rather than as a faceting variable. One consequence is that replicates with an identical x-value will have their violins plotted together in a visible set with a single x-axis label. However, the underlying \code{\link[ggplot]{geom_violin}} also allocates its area or width normalizations to these sets, not to the individual violins within a set, so if the numbers of samples per replicate set are imbalanced then the individual violins will also have imbalanced widths, keeping the set widths constant instead.
 }
 \seealso{
 \code{\link{ggplot.electrophoresis}}
