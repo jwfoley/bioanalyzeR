@@ -161,15 +161,15 @@ qplot.electrophoresis <- function(
 	
 	# finally add the geom (after the regions so it's in front)
 	this.plot <- this.plot + switch(geom,
-		line = geom_line(if (! is.null(facets))
-			aes(x = x.value, y = y.scaled, group = sample.index, ...)
-		else 
+		line = geom_line(if (is.null(facets) && ! any(c("color", "colour") %in% names(eval(substitute(alist(...)))))) # color lines by sample name if no facets and no other color variable specified
 			aes(x = x.value, y = y.scaled, group = sample.index, color = sample.name, ...)
-		),
-		area = if (! is.null(facets))
-			geom_area(aes(x = x.value, y = y.scaled, group = sample.index, ...), alpha = area.alpha)
 		else
+			aes(x = x.value, y = y.scaled, group = sample.index, ...)
+		),
+		area = if (is.null(facets) && ! "fill" %in% names(eval(substitute(alist(...))))) # color area by sample name if no facets and no other fill-color variable specified
 			geom_area(aes(x = x.value, y = y.scaled, group = sample.index, fill = sample.name, ...), alpha = area.alpha)
+		else
+			geom_area(aes(x = x.value, y = y.scaled, group = sample.index, ...), alpha = area.alpha)
 	)
 	
 	# add peaks
