@@ -90,12 +90,12 @@ rbind.electrophoresis <- function(...) {
 
 #' Read files into an electrophoresis object
 #'
-#' These functions read one or more XML, CSV, or ZIP files exported from the Agilent software (and accompanying CSV or PNG files if from a TapeStation) and calls the appropriate function to read them into an \code{\link{electrophoresis}} object, which is filled out with estimates of molecule length, concentration, and molarity. \code{read.electrophoresis} is the easiest to use as it automatically infers the correct file type.
+#' These functions read one or more XML, CSV, or ZIP files exported from the Agilent software (and accompanying unaligned electropherogram CSV or PNG files if from a TapeStation) and calls the appropriate function to read them into an \code{\link{electrophoresis}} object, which is filled out with estimates of molecule length, concentration, and molarity. \code{read.electrophoresis} is the easiest to use as it automatically infers the correct file type.
 #'
 #' Spline fitting seems to perform reasonably well on all data. Agilent appears to use linear interpolation with DNA data and log-linear regression on RNA data, so you could choose those options if you want to reproduce the results of the software more precisely. However, linear interpolation creates sudden spikes in the derivative that make the concentration and molarity estimates unstable; spline fitting is basically a smoother version of that. Log-linear regression is the standard theoretical approach but does not actually fit the data very well; more sophisticated parametric models may be added in the future.
 #'
 #' @param xml.file The filename of an XML file exported from the Bioanalyzer or TapeStation software. The XML file may be compressed with `gzip` and the filename can be a remote URL. The filename is expected to end in \code{.xml} or \code{.xml.gz} and the name before that extension is used as the name of the batch. TapeStation XML files must have corresponding CSV or PNG files with matching names.
-#' @param ... One or more XML, unaligned electropherogram CSV, or ZIP files exported from the Bioanalyzer, TapeStation, or ProSize software.
+#' @param ... One or more XML, CSV, or ZIP files exported from the Bioanalyzer, TapeStation, or ProSize software.
 #' @param mc.cores Maximum number of CPU cores to use (passed to \code{\link[parallel]{mclapply}}). Only one core is used per input file.
 #'
 #' @inheritParams read.bioanalyzer
