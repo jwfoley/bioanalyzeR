@@ -8,6 +8,9 @@ RGB.EMPTY <-      c(255, 255, 255)  # image gets pasted into all-white backgroun
 # hardcoded margin widths, in pixels
 WARNING.PAD <- 10 # extra pixels to discard on both sides of a warning label in a gel lane
 
+# harcoded row number of aligned data CSVs
+NROW.ALIGNED <- 760
+
 
 # find all pixels in an RGB array from readPNG, with values in [0,1], that match a given RGB trio, with values in [0, 255]
 find.matching.pixels.mat <- function(rgb.mat, rgb.values) {
@@ -98,7 +101,7 @@ read.tapestation.gel.image <- function(gel.image.file, n.lanes) {
 #'
 #' Because the CSV file contains only the raw fluorescence data and not the metadata, this function is less useful by itself than when it is called inside \code{\link{read.tapestation}}.
 #'
-#' @param csv.file The filename of a CSV file exported from the TapeStation software. The file may be compressed with \code{gzip} and the filename is expected to end in \code{_Electropherogram.csv} or \code{_Electropherogram.csv.gz}. The filename can be a remote URL.
+#' @param csv.file The filename of an electropherogram CSV file exported from the TapeStation software. The file may be compressed with \code{gzip} and the filename is expected to end in \code{_Electropherogram.csv} or \code{_Electropherogram.csv.gz}. The filename can be a remote URL. The electropherogram is expected to be unaligned.
 #'
 #' @return A data frame with one row for each reading of each gel lane.
 #'
@@ -107,6 +110,7 @@ read.tapestation.gel.image <- function(gel.image.file, n.lanes) {
 #' @export
 read.tapestation.csv <- function(csv.file) {
 	raw.data <- read.csv(csv.file, encoding = "latin1")
+	if (nrow(raw.data) == NROW.ALIGNED) warning(paste("this looks like \"aligned\" data; did you export the unaligned data correctly?", csv.file))
 	data.frame(
 		sample.index = rep(seq(ncol(raw.data)), each = nrow(raw.data)),
 		distance = rep(rev(seq(nrow(raw.data))), ncol(raw.data)) / nrow(raw.data),
