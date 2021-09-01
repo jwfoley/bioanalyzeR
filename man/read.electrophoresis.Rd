@@ -41,7 +41,7 @@ read.tapestation(
 
 \item{method}{The method used to fit the mobility model of molecule length vs. migration distance, either \code{"interpolation"} (linear interpolation via \code{\link{approxfun}}), \code{"loglinear"} (log-linear regression via \code{\link{lm}} with the model \code{relative.distance ~ log(length)}), or one of the methods of \code{\link{splinefun}} (monotone methods recommended). Can be abbreviated.}
 
-\item{...}{One or more XML, electropherogram CSV, or ZIP files exported from the Bioanalyzer, TapeStation, or ProSize software.}
+\item{...}{One or more XML, unaligned electropherogram CSV, or ZIP files exported from the Bioanalyzer, TapeStation, or ProSize software.}
 
 \item{mc.cores}{Maximum number of CPU cores to use (passed to \code{\link[parallel]{mclapply}}). Only one core is used per input file.}
 
@@ -59,7 +59,7 @@ read.tapestation(
 
 \item{prosize.zip}{Path of a ZIP file containing the required CSVs exported by ProSize.}
 
-\item{csv.file}{The filename of a CSV file exported from the TapeStation software. The file may be compressed with \code{gzip} and the filename is expected to end in \code{_Electropherogram.csv} or \code{_Electropherogram.csv.gz}. The filename can be a remote URL.}
+\item{csv.file}{The filename of an electropherogram CSV file exported from the TapeStation software. The file may be compressed with \code{gzip} and the filename is expected to end in \code{_Electropherogram.csv} or \code{_Electropherogram.csv.gz}. The filename can be a remote URL. The electropherogram is expected to be unaligned.}
 
 \item{gel.image.file}{The filename of a TapeStation gel image with blue highlight, in PNG format. The filename can be a URL.}
 }

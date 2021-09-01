@@ -7,7 +7,7 @@
 read.tapestation.csv(csv.file)
 }
 \arguments{
-\item{csv.file}{The filename of a CSV file exported from the TapeStation software. The file may be compressed with \code{gzip} and the filename is expected to end in \code{_Electropherogram.csv} or \code{_Electropherogram.csv.gz}. The filename can be a remote URL.}
+\item{csv.file}{The filename of an electropherogram CSV file exported from the TapeStation software. The file may be compressed with \code{gzip} and the filename is expected to end in \code{_Electropherogram.csv} or \code{_Electropherogram.csv.gz}. The filename can be a remote URL. The electropherogram is expected to be unaligned.}
 }
 \value{
 A data frame with one row for each reading of each gel lane.
