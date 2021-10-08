@@ -105,12 +105,12 @@ qplot.electrophoresis <- function(
 	x = "length",
 	y = "molarity",
 	...,
-	log = "",
+	log = c("", "x", "y", "xy"),
 	normalize = FALSE,
 	facets = ~ sample.index,
 	margins = FALSE,
 	scales = "fixed",
-	geom = "line",
+	geom = c("line", "area"),
 	include.ladder = FALSE,
 	include.markers = FALSE,
 	lower.marker.spread = 10,
@@ -123,6 +123,8 @@ qplot.electrophoresis <- function(
 	xlab = NULL,
 	ylab = NULL
 ) {
+	log <- match.arg(log)
+	geom <- match.arg(geom)
 
 	# remove ladders
 	if (! include.ladder) electrophoresis <- subset(electrophoresis, well.number != ladder.well)
