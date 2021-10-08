@@ -428,7 +428,7 @@ qplot.electrophoresis(
 
 If our variable of interest was molarity, the concentration graph would have been very misleading! And the original fluorescence vs. distance graph even moreso.
 
-Or sometimes the absolute variable is irrelevant and what we really want to know is the size distribution within each sample. For that you can set `normalize = TRUE`, which uses the `normalize.proportion` function to scale the variable of interest to a proportion of the sample's total, i.e. the total area under every curve (between the markers) is 1. Notice how the different dilutions of the same sample become roughly equal after normalization, until very low dilutions:
+Or sometimes the absolute variable is irrelevant and what we really want to know is the size distribution within each sample. For that you can set `normalize = "total"`, which uses the `normalize.proportion` function to scale the variable of interest to a proportion of the sample's total, i.e. the total area under every curve (between the markers) is 1. Notice how the different dilutions of the same sample become roughly equal after normalization, until very low dilutions:
 
 ```{r}
 d1000.96 <- read.electrophoresis(system.file(
@@ -447,10 +447,63 @@ qplot.electrophoresis(
 	subset(d1000.96, startsWith(as.character(sample.name), "frag. lambda DNA")),
 	facets = NULL,
 	xlim = c(100, 800),
-	normalize = T,
+	normalize = "total",
 	title = "TapeStation D1000 normalized"
 )
 ```
+
+Normalized values are proportions of the total, so it may be intuitive to label them as percentages, using existing commands from the `ggplot2` and `scales` packages:
+
+```{r}
+qplot.electrophoresis(
+	subset(d1000.96, startsWith(as.character(sample.name), "frag. lambda DNA")),
+	facets = NULL,
+	xlim = c(100, 800),
+	normalize = "total",
+	title = "TapeStation D1000 normalized as percentages"
+) + scale_y_continuous(label = percent)
+```
+
+What if you care about only the distribution of molecules within a certain range? For example, you might have sequencing libraries with some shorter adapter dimers, but what you really care about is the distribution of sequenceable fragments. In that case you can set `normalize = "window"`, which calls `normalize.proportion` on only the data in the window between your plot's x-limits.
+
+```{r}
+libqc <- subset(read.electrophoresis(system.file(
+	"extdata",
+	"fragmentanalyzer",
+	"DNF-473 NGS Fragment kit (1-6000)",
+	"NGS Libraries SS NGS kit 19-10-40.zip",
+	package = "bioanalyzeR"
+)), startsWith(as.character(sample.name), "NGS"))
+qplot.electrophoresis(
+	libqc,
+	facets = NULL,
+	xlim = c(100, 1000),
+	title = "Original molarity"
+)
+qplot.electrophoresis(
+	libqc,
+	facets = NULL,
+	xlim = c(100, 1000),
+	normalize = "total",
+	title = "Molarity normalized by total"
+)
+qplot.electrophoresis(
+	libqc,
+	facets = NULL,
+	xlim = c(350, 1000),
+	normalize = "total",
+	title = "Molarity normalized by total, window of interest"
+)
+qplot.electrophoresis(
+	libqc,
+	facets = NULL,
+	xlim = c(350, 1000),
+	normalize = "window",
+	title = "Molarity normalized within window of interest"
+)
+```
+
+In other words, when `normalize = "total"`, the area under each sample's entire curve (between markers) is equal, no matter how much of the curve is actually shown in the plot; when `normalize = "window"`, the area under each curve in the plot is equal and data outside the limits of the plot are ignored.
 
 ## Faceting vs. overlaying
 
@@ -750,7 +803,7 @@ Likewise `summarize.region` computes those statistics for regions reported by th
 
 ```{r}
 smear.dilutions <- subset(d1000, startsWith(as.character(sample.name), "270 bp smear"))
-qplot.electrophoresis(smear.dilutions, facets = NULL, normalize = T, xlim = c(50, 1000))
+qplot.electrophoresis(smear.dilutions, facets = NULL, normalize = "total", xlim = c(50, 1000))
 smear.dilutions$regions
 summarize.region(smear.dilutions)
 ```
@@ -761,7 +814,7 @@ Alternatively, the `summarize.custom` function allows us to set a custom region 
 
 ```{r}
 fragment.dilutions <- subset(d1000, startsWith(as.character(sample.name), "300bp fragment"))
-qplot.electrophoresis(fragment.dilutions, facets = NULL, normalize = T, xlim = c(100, 500))
+qplot.electrophoresis(fragment.dilutions, facets = NULL, normalize = "window", xlim = c(100, 500))
 fragment.dilutions$samples$sample.name
 integrate.custom(fragment.dilutions, 100, 500, sum.variable = "concentration")
 summarize.custom(fragment.dilutions, 100, 500)
