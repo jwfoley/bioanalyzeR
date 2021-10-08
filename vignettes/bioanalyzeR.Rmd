@@ -283,13 +283,26 @@ This produces plots analogous to the electropherograms in the Agilent software. 
 
 ## Data, peaks, and regions
 
-`qplot.electrophoresis` displays the software-reported peaks as filled area under the curve. You can stop displaying peaks by setting `show.peaks = FALSE`:
+`qplot.electrophoresis` displays the software-reported peaks as filled area under the curve. You can stop displaying peaks by setting `show.peaks = "none"`:
 
 ```{r}
 qplot.electrophoresis(
 	d1000,
-	show.peaks = FALSE,
+	show.peaks = "none",
 	title = "TapeStation D1000 with no peaks"
+)
+```
+
+Or you can include the markers with `include.markers = TRUE` and fill only the marker peaks with `show.peaks = "markers"`, though it's difficult to see them without changing the axis variables (explained later):
+
+```{r}
+qplot.electrophoresis(
+	d1000,
+	x = "relative.distance",
+	y = "fluorescence",
+	include.markers = TRUE,
+	show.peaks = "markers",
+	title = "TapeStation D1000 with marker peaks"
 )
 ```
 
@@ -572,7 +585,7 @@ Now that we've added new variables, we can facet on them:
 qplot.electrophoresis(
 	dilutions,
 	facets = sample.type ~ dilution,
-	show.peaks = FALSE,
+	show.peaks = "none",
 	region.alpha = NA,
 	scales = "free_y",
 	title = "Faceting on sample vs. dilution"
@@ -586,7 +599,7 @@ qplot.electrophoresis(
 	dilutions,
 	facets = ~ sample.type,
 	color = dilution,
-	show.peaks = FALSE,
+	show.peaks = "none",
 	region.alpha = NA,
 	scales = "free_y",
 	title = "Faceting on sample with dilutions color-coded"
