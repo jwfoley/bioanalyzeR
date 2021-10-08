@@ -80,7 +80,7 @@ labeller.electrophoresis <- function(electrophoresis) function(factor.frame) {
 #' @param y The name of the variable to use as the y-value of each point in the graph, as a character vector. Usually one of \code{"fluorescence"}, \code{"concentration"}, or \code{"molarity"}.
 #' @param ... Additional aesthetics passed to the geom for the main data (not the peaks or regions). Unlike the previous variables that are specified by character vectors, these use the normal aesthetic syntax, e.g. \code{color = sample.name}.
 #' @param log Which variables to log-transform (\code{"x"}, \code{"y"}, or \code{"xy"}).
-#' @param normalize Normalize the y-value in each sample with \code{\link{normalize.proportion}}.
+#' @param normalize Normalize the y-values in each sample with \code{\link{normalize.proportion}}. \code{"total"} normalizes by the entire sample (between markers), or \code{"window"} normalizes only within the x-limits of the plot specified by \code{xlim}. \code{"none"} doesn't normalize.
 #' @param facets Faceting formula to use. Picks \code{\link[ggplot2]{facet_wrap}} or \code{\link[ggplot2]{facet_grid}} depending on whether the formula is one- or two-sided. If \code{NULL}, overlay all samples in one color-coded graph.
 #' @param margins Display marginal facets (via \code{\link[ggplot2]{facet_grid}}) if using a two-side faceting formula.
 #' @param scales Scaling rules for the facets, passed to \code{\link[ggplot2]{facet_wrap}}.
@@ -105,8 +105,8 @@ qplot.electrophoresis <- function(
 	x = "length",
 	y = "molarity",
 	...,
-	log = c("", "x", "y", "xy"),
-	normalize = FALSE,
+	log = "",
+	normalize = c("none", "total", "window"),
 	facets = ~ sample.index,
 	margins = FALSE,
 	scales = "fixed",
@@ -123,7 +123,7 @@ qplot.electrophoresis <- function(
 	xlab = NULL,
 	ylab = NULL
 ) {
-	log <- match.arg(log)
+	normalize <- match.arg(normalize)
 	geom <- match.arg(geom)
 
 	# remove ladders
@@ -137,19 +137,32 @@ qplot.electrophoresis <- function(
 	if (! is.null(electrophoresis$peaks)) electrophoresis$peaks <- cbind(electrophoresis$peaks, electrophoresis$samples[electrophoresis$peaks$sample.index,])
 	if (! is.null(electrophoresis$regions)) electrophoresis$regions <- cbind(electrophoresis$regions, electrophoresis$samples[electrophoresis$regions$sample.index,])
 	
-	# normalize and scale y-values
-	electrophoresis$data$y.normalized <- if (normalize) normalize.proportion(electrophoresis, y, lower.marker.spread) else electrophoresis$data[[y]]
-	electrophoresis$data$y.scaled <- if (y == "fluorescence") electrophoresis$data$y.normalized else differential.scale(electrophoresis, x, "y.normalized") # don't scale fluorescence by differentials
-	
 	# rename x-variable so aesthetics are easy
 	electrophoresis$data$x.value <- electrophoresis$data[[x]]
 	
-	# remove data outside limits (after normalization so that's not distorted)
-	# keep data outside y-limits so the area is still filled in if appropriate
-	electrophoresis$data <- electrophoresis$data[which(
+	# remove data outside the x-limits if normalizing to window or not normalizing
+	# (must then remove them before normalizing)
+	if (normalize %in% c("none", "window")) electrophoresis$data <- electrophoresis$data <- electrophoresis$data[which(
 		(! is.na(electrophoresis$data$x.value)) &
 		(is.na(xlim[1]) | electrophoresis$data$x.value >= xlim[1]) &
-		(is.na(xlim[2]) | electrophoresis$data$x.value <= xlim[2]) &
+		(is.na(xlim[2]) | electrophoresis$data$x.value <= xlim[2])
+	),]
+	
+	# normalize and scale y-values
+	electrophoresis$data$y.normalized <- if (normalize %in% c("total", "window")) normalize.proportion(electrophoresis, y, lower.marker.spread) else electrophoresis$data[[y]]
+	electrophoresis$data$y.scaled <- if (y == "fluorescence") electrophoresis$data$y.normalized else differential.scale(electrophoresis, x, "y.normalized") # don't scale fluorescence by differentials
+	
+	# remove data outside the x-limits if normalizing to total
+	# (must then normalize everything before removing them)
+	if (normalize == "total") electrophoresis$data <- electrophoresis$data <- electrophoresis$data[which(
+		(! is.na(electrophoresis$data$x.value)) &
+		(is.na(xlim[1]) | electrophoresis$data$x.value >= xlim[1]) &
+		(is.na(xlim[2]) | electrophoresis$data$x.value <= xlim[2])
+	),]
+	
+	# remove data with y < 0
+	# keep data outside y-limits so the area is still filled in if appropriate
+	electrophoresis$data <- electrophoresis$data[which(
 		(! is.na(electrophoresis$data$y.scaled)) &
 		((! log %in% c("x", "xy")) | electrophoresis$data$x.value > 0) &
 		((! log %in% c("y", "xy")) | electrophoresis$data$y.scaled > 0)
@@ -202,7 +215,7 @@ qplot.electrophoresis <- function(
 	# set labels and other settings for specific x & y variables
 	this.plot <- this.plot + labs(
 		x = if (! is.null(xlab)) xlab else variable.label(electrophoresis, x),
-		y = if (! is.null(ylab)) ylab else variable.label(electrophoresis, (if (normalize) paste("proportion of", y) else y), if (y == "fluorescence") NULL else x),
+		y = if (! is.null(ylab)) ylab else variable.label(electrophoresis, (if (normalize != "none") paste("proportion of", normalize, y) else y), if (y == "fluorescence") NULL else x),
 		title = title
 	)
 	if (x %in% c("distance", "relative.distance")) this.plot <- this.plot + scale_x_reverse()

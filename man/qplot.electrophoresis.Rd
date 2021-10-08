@@ -9,8 +9,8 @@ qplot.electrophoresis(
   x = "length",
   y = "molarity",
   ...,
-  log = c("", "x", "y", "xy"),
-  normalize = FALSE,
+  log = "",
+  normalize = c("none", "total", "window"),
   facets = ~sample.index,
   margins = FALSE,
   scales = "fixed",
@@ -39,7 +39,7 @@ qplot.electrophoresis(
 
 \item{log}{Which variables to log-transform (\code{"x"}, \code{"y"}, or \code{"xy"}).}
 
-\item{normalize}{Normalize the y-value in each sample with \code{\link{normalize.proportion}}.}
+\item{normalize}{Normalize the y-values in each sample with \code{\link{normalize.proportion}}. \code{"total"} normalizes by the entire sample (between markers), or \code{"window"} normalizes only within the x-limits of the plot specified by \code{xlim}. \code{"none"} doesn't normalize.}
 
 \item{facets}{Faceting formula to use. Picks \code{\link[ggplot2]{facet_wrap}} or \code{\link[ggplot2]{facet_grid}} depending on whether the formula is one- or two-sided. If \code{NULL}, overlay all samples in one color-coded graph.}
 
