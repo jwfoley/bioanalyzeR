@@ -89,7 +89,7 @@ labeller.electrophoresis <- function(electrophoresis) function(factor.frame) {
 #' @param include.markers If \code{FALSE}, graph only data between the marker peaks.
 #' @param lower.marker.spread If normalizing the totals or excluding marker peaks, extend the lower marker peak by this amount (via \code{\link{between.markers}}).
 #' @param xlim,ylim Limits of x- and y-axes 
-#' @param show.peaks Whether to fill the areas under reported peaks.
+#' @param show.peaks Whether to fill the areas under reported peaks. \code{"all"}: fill all peaks. \code{"markers"}: fill only the marker peak(s). \code{"none"}: don't fill any peaks.
 #' @param region.alpha Alpha-transparency of the highlight in the reported regions of interested. Set to \code{NA} to skip plotting the regions.
 #' @param area.alpha Alpha-transparency of the filled areas under the curves, if \code{geom = "area"}, to make them visible through one another.
 #' @param title,xlab,ylab Plot title, x-axis label, and y-axis label.
@@ -116,7 +116,7 @@ qplot.electrophoresis <- function(
 	lower.marker.spread = 10,
 	xlim = c(NA, NA),
 	ylim = c(NA, NA),
-	show.peaks = TRUE,
+	show.peaks = c("all", "markers", "none"),
 	region.alpha = 0.2,
 	area.alpha = 0.2,
 	title = NULL,
@@ -125,6 +125,7 @@ qplot.electrophoresis <- function(
 ) {
 	normalize <- match.arg(normalize)
 	geom <- match.arg(geom)
+	show.peaks <- match.arg(show.peaks)
 
 	# remove ladders
 	if (! include.ladder) electrophoresis <- subset(electrophoresis, well.number != ladder.well)
@@ -188,9 +189,10 @@ qplot.electrophoresis <- function(
 	)
 	
 	# add peaks
-	if (! is.null(facets) & show.peaks & ! is.null(electrophoresis$peaks)) {
+	if (! is.null(facets) & show.peaks != "none" & ! is.null(electrophoresis$peaks)) {
 		peak.data <- subset(cbind(electrophoresis$data, peak = in.peaks(electrophoresis)), ! is.na(peak))
 		peak.data$peak.observations <- electrophoresis$peaks$peak.observations[peak.data$peak]
+		if (show.peaks == "markers") peak.data <- subset(peak.data, peak.observations %in% union(LOWER.MARKER.NAMES, UPPER.MARKER.NAMES))
 		this.plot <- this.plot + if (length(unique(peak.data$peak.observations)) > 1)
 			geom_area(aes(x = x.value, y = y.scaled, group = peak, fill = peak.observations), data = peak.data)
 		else
