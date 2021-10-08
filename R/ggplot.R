@@ -255,7 +255,7 @@ sparkline.electrophoresis <- function(
 	facets = sample.index ~ .,
 	scales = "free_y",
 	geom = "line",
-	show.peaks = FALSE
+	show.peaks = "none"
 ) qplot.electrophoresis(..., facets = facets, scales = scales, geom = geom, show.peaks = show.peaks) + theme(
 	axis.text.y = element_blank(),
 	axis.ticks.y = element_blank(),

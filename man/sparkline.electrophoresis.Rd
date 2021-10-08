@@ -9,7 +9,7 @@ sparkline.electrophoresis(
   facets = sample.index ~ .,
   scales = "free_y",
   geom = "line",
-  show.peaks = FALSE
+  show.peaks = "none"
 )
 }
 \arguments{
