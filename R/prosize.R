@@ -107,7 +107,7 @@ read.prosize.peaks <- function(peaks.csv) {
 	colnames(peaks.raw)[unlist(cols)] <- names(cols)
 	
 	# handle bad values
-	peaks.raw <- subset(peaks.raw, ! is.na(conc))
+	peaks.raw <- subset(peaks.raw, ! is.na(conc) & ! is.nan(percent)) # ProSize writes empty (NA) concentration or sometimes NaN percent for its bad peaks
 	for (field in c("length", "lower.length", "upper.length")) if (class(peaks.raw[,field]) == "character") { # unparsed because of bad values
 		peaks.raw[startsWith(peaks.raw[,field], ">"),field] <- NA
 		peaks.raw[,field] <- as.integer(peaks.raw[,field])
