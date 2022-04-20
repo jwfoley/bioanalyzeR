@@ -37,11 +37,11 @@ read.tapestation(
 )
 }
 \arguments{
-\item{xml.file}{The filename of an XML file exported from the Bioanalyzer or TapeStation software. The XML file may be compressed with `gzip` and the filename can be a remote URL. The filename is expected to end in \code{.xml} or \code{.xml.gz} and the name before that extension is used as the name of the batch. TapeStation XML files must have corresponding CSV or PNG files with matching names.}
+\item{xml.file}{The filename of an XML file exported from the Bioanalyzer or TapeStation software. The XML file may be compressed with `gzip` and the filename can be a remote URL. The filename is expected to end in \code{.xml} or \code{.xml.gz} and the name before that extension is used as the name of the batch. A TapeStation XML file must be accompanied by a CSV or PNG file, whose path is inferred from the XML file's if its name is in the expected format.}
 
 \item{method}{The method used to fit the mobility model of molecule length vs. migration distance, either \code{"interpolation"} (linear interpolation via \code{\link{approxfun}}), \code{"loglinear"} (log-linear regression via \code{\link{lm}} with the model \code{relative.distance ~ log(length)}), or one of the methods of \code{\link{splinefun}} (monotone methods recommended). Can be abbreviated.}
 
-\item{...}{One or more XML, CSV, or ZIP files exported from the Bioanalyzer, TapeStation, or ProSize software.}
+\item{...}{One or more XML files exported from the Bioanalyzer or TapeStation software, or CSV or ZIP files exported from the ProSize software.}
 
 \item{mc.cores}{Maximum number of CPU cores to use (passed to \code{\link[parallel]{mclapply}}). Only one core is used per input file.}
 
@@ -64,10 +64,7 @@ read.tapestation(
 \item{gel.image.file}{The filename of a TapeStation gel image with blue highlight, in PNG format. The filename can be a URL.}
 }
 \description{
-These functions read one or more XML, CSV, or ZIP files exported from the Agilent software (and accompanying unaligned electropherogram CSV or PNG files if from a TapeStation) and calls the appropriate function to read them into an \code{\link{electrophoresis}} object, which is filled out with estimates of molecule length, concentration, and molarity. \code{read.electrophoresis} is the easiest to use as it automatically infers the correct file type.
-}
-\details{
-Spline fitting seems to perform reasonably well on all data. Agilent appears to use linear interpolation with DNA data and log-linear regression on RNA data, so you could choose those options if you want to reproduce the results of the software more precisely. However, linear interpolation creates sudden spikes in the derivative that make the concentration and molarity estimates unstable; spline fitting is basically a smoother version of that. Log-linear regression is the standard theoretical approach but does not actually fit the data very well; more sophisticated parametric models may be added in the future.
+These functions read one or more XML, CSV, or ZIP files exported from the Agilent software (and accompanying unaligned electropherogram CSV or PNG files if from a TapeStation) and calls the appropriate function to read them into an \code{\link{electrophoresis}} object, which is filled out with estimates of molecule length, concentration, and molarity (see \code{\link{calibrate.electrophoresis}}). \code{read.electrophoresis} is the easiest to use as it automatically infers the correct file type.
 }
 \section{Functions}{
 \itemize{
