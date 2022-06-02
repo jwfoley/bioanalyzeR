@@ -13,7 +13,7 @@ read.prosize.peaks(peaks.csv)
 A list containing a list of assay metadata and a data frame of peaks (a partial \code{\link{electrophoresis}} object).
 }
 \description{
-This function reads a peak table from the ProSize software saved in CSV format. The peak table must have been exported in the "alternate" format and it must include the "From" and "To" columns.
+This function reads a peak table from the ProSize software saved in CSV format. The peak table must have been exported in the "Alternate" format and it must include the "From" and "To" columns.
 }
 \seealso{
 \code{\link{read.prosize}}, \code{\link{read.prosize.electropherogram}}, \code{\link{read.prosize.regions}}

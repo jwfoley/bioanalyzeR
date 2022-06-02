@@ -72,7 +72,7 @@ read.prosize.electropherogram <- function(electropherogram.csv) {
 
 #' Read a ProSize peak table
 #'
-#' This function reads a peak table from the ProSize software saved in CSV format. The peak table must have been exported in the "alternate" format and it must include the "From" and "To" columns.
+#' This function reads a peak table from the ProSize software saved in CSV format. The peak table must have been exported in the "Alternate" format and it must include the "From" and "To" columns.
 #'
 #' @param peaks.csv A peak table CSV exported by ProSize.
 #'
@@ -83,6 +83,7 @@ read.prosize.electropherogram <- function(electropherogram.csv) {
 #' @export
 read.prosize.peaks <- function(peaks.csv) {
 	peaks.raw <- read.csv(peaks.csv, check.names = F)
+	if ("" %in% names(peaks.raw)) stop("bad peak table CSV; it must be exported in \"Alternate\" format")
 	
 	# parse units and rename columns for easy reference later
 	cols <- list(
