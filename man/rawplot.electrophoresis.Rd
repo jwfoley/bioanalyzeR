@@ -4,8 +4,27 @@
 \alias{rawplot.electrophoresis}
 \title{Plots of raw electrophoresis data}
 \usage{
-rawplot.electrophoresis(electrophoresis, include.markers = TRUE, ...)
+rawplot.electrophoresis(
+  electrophoresis,
+  include.markers = TRUE,
+  xlab = NULL,
+  ...
+)
+}
+\arguments{
+\item{include.markers}{Passed to \code{\link{qplot.electrophoresis}} but the default is \code{TRUE}.}
+
+\item{...}{Arguments passed to \code{\link{qplot.electrophoresis}}.}
 }
 \description{
 This function is a shortcut that calls \code{\link{qplot.electrophoresis}} with customized settings to show the raw data analogously to the Agilent software.
+}
+\details{
+The x-variable is set to the aligned migration time or relative migration distance, depending on platform. The y-variable is set to fluorescence. In addition to the hardcoded default arguments for \code{\link{qplot.electrophoresis}}, the x-axis scale is marked with the positions of the ladder peaks and labeled by their lengths, and the following settings are added with \code{\link[ggplot2]{theme}}: \preformatted{
+panel.grid.minor.x = element_blank(),
+axis.text.x = element_text(angle = 45, hjust = 1)
+}
+}
+\seealso{
+\code{\link{qplot.electrophoresis}}
 }

@@ -96,7 +96,7 @@ labeller.electrophoresis <- function(electrophoresis) function(factor.frame) {
 #'
 #' @return A ggplot object containing several layers. You can draw it directly or customize it like any other ggplot object by adding more layers.
 #'
-#' @seealso \code{\link{sparkline.electrophoresis}}, \code{\link{violin.electrophoresis}}
+#' @seealso \code{\link{rawplot.electrophoresis}}, \code{\link{sparkline.electrophoresis}}, \code{\link{violin.electrophoresis}}
 #'
 #' @export
 #' @import ggplot2
@@ -230,9 +230,18 @@ qplot.electrophoresis <- function(
 #'
 #' This function is a shortcut that calls \code{\link{qplot.electrophoresis}} with customized settings to show the raw data analogously to the Agilent software.
 #'
+#' The x-variable is set to the aligned migration time or relative migration distance, depending on platform. The y-variable is set to fluorescence. In addition to the hardcoded default arguments for \code{\link{qplot.electrophoresis}}, the x-axis scale is marked with the positions of the ladder peaks and labeled by their lengths, and the following settings are added with \code{\link[ggplot2]{theme}}: \preformatted{
+#'	panel.grid.minor.x = element_blank(),
+#'	axis.text.x = element_text(angle = 45, hjust = 1)
+#'}
+#'
+#' @param ... Arguments passed to \code{\link{qplot.electrophoresis}}.
+#' @param include.markers Passed to \code{\link{qplot.electrophoresis}} but the default is \code{TRUE}.
+#'
+#' @seealso \code{\link{qplot.electrophoresis}}
+#'
 #' @export
 #' @import ggplot2
-
 rawplot.electrophoresis <- function(
 	electrophoresis,
 	include.markers = TRUE,
