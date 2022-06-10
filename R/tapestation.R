@@ -267,7 +267,7 @@ read.tapestation.xml <- function(xml.file) {
 #' @inheritParams calibrate.electrophoresis
 #'
 #' @export
-read.tapestation <- function(xml.file, csv.file = NULL, gel.image.file = NULL, method = "hyman") {
+read.tapestation <- function(xml.file, csv.file = NULL, gel.image.file = NULL, method = "hyman", extrapolate = FALSE) {
 	# find the raw data file
 	if (is.null(csv.file) && is.null(gel.image.file)) { # none provided
 		# note the use of file.exists breaks the promise of using remote URLs; removing PNG support may resolve this
@@ -339,7 +339,7 @@ read.tapestation <- function(xml.file, csv.file = NULL, gel.image.file = NULL, m
 	}
 	
 	# perform calibrations
-	result <- calculate.molarity(calculate.concentration(calculate.length(result, method)))
+	result <- calculate.molarity(calculate.concentration(calculate.length(result, method, extrapolate)))
 	
 	# convert inferred relative distance of regions back to raw distance
 	if (! is.null(result$regions)) {

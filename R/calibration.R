@@ -37,7 +37,7 @@ NULL
 
 #' @rdname calibrate.electrophoresis
 #' @export
-calculate.length <- function(electrophoresis, method = union(c("hyman", "interpolation", "loglinear"), eval(formals(splinefun)$method))) {
+calculate.length <- function(electrophoresis, method = union(c("hyman", "interpolation", "loglinear"), eval(formals(splinefun)$method)), extrapolate = FALSE) {
 	method <- match.arg(method)
 	x.name <- get.x.name(electrophoresis)
 	lower.name <- paste0("lower.", x.name)
@@ -96,10 +96,17 @@ calculate.length <- function(electrophoresis, method = union(c("hyman", "interpo
 			
 			# apply model to raw data
 			electrophoresis$data$length[which.rows] <- standard.curve.function(electrophoresis$data[[x.name]][which.rows])
-			electrophoresis$data$length[! (
-				in.custom.region(electrophoresis$data, min(peaks.ladder$length), max(peaks.ladder$length)) &
-				in.custom.region(electrophoresis$data, min(peaks.ladder$x), max(peaks.ladder$x), bound.variable = x.name)
-			)] <- NA # avoid extrapolation
+			if (! extrapolate) { # don't extrapolate outside ladder range
+				electrophoresis$data$length[! (
+					in.custom.region(electrophoresis$data, min(peaks.ladder$length), max(peaks.ladder$length)) &
+					in.custom.region(electrophoresis$data, min(peaks.ladder$x), max(peaks.ladder$x), bound.variable = x.name)
+				)] <- NA
+			} else { # just don't extrapolate below zero length (sometimes the function will have weird non-monotonic behavior there so we have to discard everything up to the last estimate below 0)
+				for (i in unique(electrophoresis$data$sample.index)) electrophoresis$data$length[seq(
+					which(electrophoresis$data$sample.index == i)[1],
+					tail(which(electrophoresis$data$sample.index == i & electrophoresis$data$length < 0), 1)
+				)] <- NA
+			}
 			
 			# before applying model to other annotations, lower and upper depend on the x.name (inverse directions)
 			if (x.name == "relative.distance") {

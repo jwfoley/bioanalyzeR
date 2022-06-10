@@ -5,7 +5,7 @@
 #' @export
 #' @importFrom XML xmlRoot xmlParse xmlValue xmlToDataFrame xmlApply
 #' @importFrom base64enc base64decode
-read.bioanalyzer <- function(xml.file, method = "hyman") {
+read.bioanalyzer <- function(xml.file, method = "hyman", extrapolate = FALSE) {
 	batch <- sub("\\.xml(\\.gz)?$", "", basename(xml.file))
 	xml.root <- xmlRoot(xmlParse(xml.file))
 	chip.root <- xml.root[["Chips"]][["Chip"]]
@@ -118,7 +118,7 @@ read.bioanalyzer <- function(xml.file, method = "hyman") {
 	result$samples$ladder.well <- factor(which.ladder, levels = levels(result$samples$well.number))
 	
 	# perform calibrations
-	result <- calculate.molarity(calculate.concentration(calculate.length(result, method), defined.ladder.peaks$Concentration))
+	result <- calculate.molarity(calculate.concentration(calculate.length(result, method, extrapolate), defined.ladder.peaks$Concentration))
 	
 	# convert inferred aligned times of regions back to raw times
 	if (! is.null(result$regions)) {

@@ -9,11 +9,12 @@
 \alias{read.tapestation}
 \title{Read files into an electrophoresis object}
 \usage{
-read.bioanalyzer(xml.file, method = "hyman")
+read.bioanalyzer(xml.file, method = "hyman", extrapolate = FALSE)
 
 read.electrophoresis(
   ...,
   method = "hyman",
+  extrapolate = FALSE,
   mc.cores = if (.Platform$OS.type == "windows") 1 else detectCores()
 )
 
@@ -24,16 +25,18 @@ read.prosize(
   smear.csv = NULL,
   quality.csv = NULL,
   method = "hyman",
+  extrapolate = FALSE,
   batch = NULL
 )
 
-read.prosize.zip(prosize.zip, method = "hyman")
+read.prosize.zip(prosize.zip, method = "hyman", extrapolate = FALSE)
 
 read.tapestation(
   xml.file,
   csv.file = NULL,
   gel.image.file = NULL,
-  method = "hyman"
+  method = "hyman",
+  extrapolate = FALSE
 )
 }
 \arguments{

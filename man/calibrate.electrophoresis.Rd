@@ -10,7 +10,8 @@
 calculate.length(
   electrophoresis,
   method = union(c("hyman", "interpolation", "loglinear"),
-    eval(formals(splinefun)$method))
+    eval(formals(splinefun)$method)),
+  extrapolate = FALSE
 )
 
 calculate.concentration(electrophoresis, ladder.concentrations = NULL)

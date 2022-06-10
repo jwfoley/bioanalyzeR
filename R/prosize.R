@@ -208,6 +208,7 @@ read.prosize <- function(
 	smear.csv = NULL,
 	quality.csv = NULL,
 	method = "hyman",
+	extrapolate = FALSE,
 	batch = NULL
 ) {
 	if ("character" %in% class(electropherogram.csv)) { # character or subclass
@@ -288,7 +289,7 @@ read.prosize <- function(
 	# convert other text into factors without those restrictions
 	result$peaks$peak.observations <- factor(result$peaks$peak.observations)
 	
-	calculate.molarity(calculate.concentration(calculate.length(result, method)))
+	calculate.molarity(calculate.concentration(calculate.length(result, method, extrapolate)))
 }
 
 #' @describeIn read.electrophoresis Read a ProSize ZIP file
@@ -296,7 +297,7 @@ read.prosize <- function(
 #' @param prosize.zip Path of a ZIP file containing the required CSVs exported by ProSize.
 #'
 #' @export
-read.prosize.zip <- function(prosize.zip, method = "hyman") {
+read.prosize.zip <- function(prosize.zip, method = "hyman", extrapolate = FALSE) {
 	all.files <- unzip(prosize.zip, list = T)$Name
 	electropherogram.csv.name <- grep(SUFFIX$ELECTROPHEROGRAM, all.files, value = T)
 	stopifnot("missing or duplicated electropherogram" = length(electropherogram.csv.name) == 1)
@@ -315,6 +316,7 @@ read.prosize.zip <- function(prosize.zip, method = "hyman") {
 		if (filenames$regions %in% all.files) unz(prosize.zip, filenames$regions) else NULL,
 		if (filenames$quality %in% all.files) unz(prosize.zip, filenames$quality) else NULL,
 		method,
+		extrapolate,
 		sub("\\.zip$", "", basename(prosize.zip))
 	)
 }
