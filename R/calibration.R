@@ -103,10 +103,13 @@ calculate.length <- function(electrophoresis, method = union(c("hyman", "interpo
 				)] <- NA
 			} else { # just don't extrapolate below zero length (sometimes the function will have weird non-monotonic behavior there so we have to discard everything up to the last estimate below 0)
 				if (method != "loglinear") warning("mobility model was fit by interpolation so there is no expectation of accuracy outside the ladder range")
-				for (i in unique(electrophoresis$data$sample.index)) electrophoresis$data$length[seq(
-					which(electrophoresis$data$sample.index == i)[1],
-					tail(which(electrophoresis$data$sample.index == i & electrophoresis$data$length < 0), 1)
-				)] <- NA
+				for (i in unique(electrophoresis$data$sample.index)) {
+					which.negative <- which(electrophoresis$data$sample.index == i & electrophoresis$data$length < 0)
+					if (any(which.negative, na.rm = T)) electrophoresis$data$length[seq(
+						which(electrophoresis$data$sample.index == i)[1],
+						tail(which.negative, 1)
+					)] <- NA
+				}
 			}
 			
 			# before applying model to other annotations, lower and upper depend on the x.name (inverse directions)
