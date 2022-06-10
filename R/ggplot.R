@@ -226,6 +226,45 @@ qplot.electrophoresis <- function(
 }
 
 
+#' Plots of raw electrophoresis data
+#'
+#' This function is a shortcut that calls \code{\link{qplot.electrophoresis}} with customized settings to show the raw data analogously to the Agilent software.
+#'
+#' @export
+#' @import ggplot2
+
+rawplot.electrophoresis <- function(
+	electrophoresis,
+	include.markers = TRUE,
+	xlab = NULL,
+	...
+) {
+	ladder.index <- which(electrophoresis$samples$well.number == electrophoresis$samples$ladder.well)
+	stopifnot("multiple ladder calibrations in dataset; cannot be plotted as x-scale breaks" = (length(ladder.index) == 1))
+	
+	x <- get.x.name(electrophoresis)
+	ladder.lengths <- subset(electrophoresis$peaks, sample.index == ladder.index)$length
+	ladder.positions <- subset(electrophoresis$peaks, sample.index == ladder.index)[,x]
+	
+	scalefun <- if (x == "relative.distance") scale_x_reverse else scale_x_continuous
+	
+	qplot.electrophoresis(
+		electrophoresis,
+		include.markers = include.markers,
+		x = x,
+		y = "fluorescence",
+		...
+	) + scalefun(
+		breaks = ladder.positions,
+		labels = ladder.lengths,
+		name = if (! is.null(xlab)) xlab else paste0(sub(" \\(.+", "", variable.label(electrophoresis, x)), ", labeled by ", variable.label(electrophoresis, "length")) # cut off the automatic unit for x-variable if present because the actual labels will be in a different unit
+	) + theme(
+		panel.grid.minor.x = element_blank(),
+		axis.text.x = element_text(angle = 45, hjust = 1)
+	)
+}
+
+
 #' Sparklines of electrophoresis data
 #'
 #' This function is a shortcut that calls \code{\link{qplot.electrophoresis}} with customized settings to generate sparklines.
