@@ -453,7 +453,7 @@ stdcrv.mobility <- function(electrophoresis, n.simulate = 100, line.color = "red
 		batch <- as.character(electrophoresis$samples$batch[ladder.index])
 		well.number <- as.character(electrophoresis$samples$well.number[ladder.index])
 		result <- data.frame(batch, well.number, x = x.range[1] + x.diff * (0:(n.simulate - 1) / (n.simulate - 1)))
-		result$estimated.length <- electrophoresis$mobility.functions[[batch]][[well.number]](result$x)
+		result$estimated.length <- electrophoresis$calibration[[batch]][[well.number]]$mobility.function(result$x)
 		result
 	}))
 	this.plot <- ggplot(ladder.data, aes_(x = as.name("true.length"), y = as.name(x.name), color = as.name("fluorescence"))) +
@@ -494,7 +494,7 @@ qc.electrophoresis <- function(electrophoresis, variable, log = TRUE) {
 			result <- rep(NA, nrow(electrophoresis$peaks))
 			for (i in seq(nrow(electrophoresis$samples))) {
 				which.peaks <- electrophoresis$peaks$sample.index == i
-				result[which.peaks] <- electrophoresis$mobility.functions[[as.character(electrophoresis$samples$batch[i])]][[as.character(electrophoresis$samples$ladder.well[i])]](electrophoresis$peaks[[x.name]][which.peaks])
+				result[which.peaks] <- electrophoresis$calibration[[as.character(electrophoresis$samples$batch[i])]][[as.character(electrophoresis$samples$ladder.well[i])]]$mobility.function(electrophoresis$peaks[[x.name]][which.peaks])
 			}
 			result
 		},
