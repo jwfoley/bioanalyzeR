@@ -34,11 +34,11 @@ This package imports data from Agilent automated electrophoresis systems (Bioana
 
 ## Features
 
-* Reads the output of various DNA and RNA assays into a single unified data structure, even data from multiple batches.
-* Automatically estimates the molecule length, concentration, and molarity for every data point.
-* Provides a simple but powerful function (based on `ggplot2`) to draw professional-quality electropherograms with any combination of variables, faceting, and aesthetics, including elegant sparklines.
-* Provides functions to automatically compute and compare any variable of interest within all samples, peaks, or regions, as well as shortcuts to calculate the DV200 of fragmented RNA and the insert:dimer ratio of Illumina libraries.
-* Provides a powerful command-line script to automate these analyses.
+* A single unified data to contain various DNA and RNA assays, even from different batches.
+* Automatic estimation of molecule length, concentration, and molarity for every data point.
+* A simple but powerful interface (based on `ggplot2`) to draw professional-quality electropherograms with any combination of variables, faceting, and aesthetics, including elegant sparklines.
+* Functions to automatically compute and compare any variable of interest within all samples, peaks, or regions, as well as shortcuts to calculate the DV200 of fragmented RNA and the insert:dimer ratio of Illumina libraries.
+* A powerful command-line script to automate these analyses.
 
 ## Why is this useful?
 
