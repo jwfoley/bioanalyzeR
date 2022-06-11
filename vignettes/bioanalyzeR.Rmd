@@ -897,7 +897,7 @@ compare.estimates <- function(title, sample.names, ...) {
 	x.name <- get.x.name(data)
 	ladder.comparison$estimate <- c(
 		data$peaks$length[which.rerun.peaks],
-		data$mobility.functions[[1]][[1]](data$peaks[[x.name]][which.rerun.peaks]),
+		data$calibration[[1]][[1]]$mobility.function(data$peaks[[x.name]][which.rerun.peaks]),
 		data$peaks$concentration[which.rerun.peaks],
 		integrate.peak(data, which.rerun.peaks, "concentration"),
 		data$peaks$molarity[which.rerun.peaks],
