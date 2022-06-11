@@ -34,13 +34,12 @@ read.prosize.zip(prosize.zip, method = "hyman", extrapolate = FALSE)
 read.tapestation(
   xml.file,
   csv.file = NULL,
-  gel.image.file = NULL,
   method = "hyman",
   extrapolate = FALSE
 )
 }
 \arguments{
-\item{xml.file}{The filename of an XML file exported from the Bioanalyzer or TapeStation software. The XML file may be compressed with `gzip` and the filename can be a remote URL. The filename is expected to end in \code{.xml} or \code{.xml.gz} and the name before that extension is used as the name of the batch. A TapeStation XML file must be accompanied by a CSV or PNG file, whose path is inferred from the XML file's if its name is in the expected format.}
+\item{xml.file}{The filename of an XML file exported from the Bioanalyzer or TapeStation software. The XML file may be compressed with `gzip` and the filename can be a remote URL. The filename is expected to end in \code{.xml} or \code{.xml.gz} and the name before that extension is used as the name of the batch. A TapeStation XML file must be accompanied by a CSV file, whose path is inferred from the XML file's if its name is in the expected format.}
 
 \item{method}{The method used to fit the mobility model of molecule length vs. migration distance, either \code{"interpolation"} (linear interpolation via \code{\link{approxfun}}), \code{"loglinear"} (log-linear regression via \code{\link{lm}} with the model \code{relative.distance ~ log(length)}), or one of the methods of \code{\link{splinefun}} (monotone methods recommended). Can be abbreviated.}
 
@@ -63,11 +62,9 @@ read.tapestation(
 \item{prosize.zip}{Path of a ZIP file containing the required CSVs exported by ProSize.}
 
 \item{csv.file}{The filename of an electropherogram CSV file exported from the TapeStation software. The file may be compressed with \code{gzip} and the filename is expected to end in \code{_Electropherogram.csv} or \code{_Electropherogram.csv.gz}. The filename can be a remote URL. The electropherogram is expected to be unaligned.}
-
-\item{gel.image.file}{The filename of a TapeStation gel image with blue highlight, in PNG format. The filename can be a URL.}
 }
 \description{
-These functions read one or more XML, CSV, or ZIP files exported from the Agilent software (and accompanying unaligned electropherogram CSV or PNG files if from a TapeStation) and calls the appropriate function to read them into an \code{\link{electrophoresis}} object, which is filled out with estimates of molecule length, concentration, and molarity (see \code{\link{calibrate.electrophoresis}}). \code{read.electrophoresis} is the easiest to use as it automatically infers the correct file type.
+These functions read one or more XML, CSV, or ZIP files exported from the Agilent software (and accompanying unaligned electropherogram CSV files if from a TapeStation) and calls the appropriate function to read them into an \code{\link{electrophoresis}} object, which is filled out with estimates of molecule length, concentration, and molarity (see \code{\link{calibrate.electrophoresis}}). \code{read.electrophoresis} is the easiest to use as it automatically infers the correct file type.
 }
 \section{Functions}{
 \itemize{
@@ -77,6 +74,6 @@ These functions read one or more XML, CSV, or ZIP files exported from the Agilen
 
 \item \code{read.prosize.zip}: Read a ProSize ZIP file
 
-\item \code{read.tapestation}: Read a TapeStation XML and PNG file pair
+\item \code{read.tapestation}: Read a TapeStation XML and CSV file pair
 }}
 

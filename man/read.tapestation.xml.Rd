@@ -19,5 +19,5 @@ This function reads an XML file exported from the TapeStation software.
 Because the XML file contains only metadata and not the raw fluorescence data, this function is less useful by itself than when it is called inside \code{\link{read.tapestation}}.
 }
 \seealso{
-\code{\link{read.tapestation}}, \code{\link{read.tapestation.gel.image}}
+\code{\link{read.tapestation}}
 }

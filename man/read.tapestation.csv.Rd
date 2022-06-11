@@ -19,5 +19,5 @@ This function reads a CSV file of electrophoresis data exported from the TapeSta
 Because the CSV file contains only the raw fluorescence data and not the metadata, this function is less useful by itself than when it is called inside \code{\link{read.tapestation}}.
 }
 \seealso{
-\code{\link{read.tapestation}}, \code{\link{read.tapestation.xml}}, \code{\link{read.tapestation.gel.image}}
+\code{\link{read.tapestation}}, \code{\link{read.tapestation.xml}}
 }

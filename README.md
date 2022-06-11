@@ -4,7 +4,7 @@ Simple R functions for importing and analyzing electrophoresis data from Agilent
 
 Install the required dependencies:
 
-    > install.packages(c("XML", "base64enc", "png", "plyr", "ggplot2"))
+    > install.packages(c("XML", "base64enc", "plyr", "ggplot2"))
 
 Install the newest release (includes 22 MB of demo data):
 

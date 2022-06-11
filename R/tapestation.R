@@ -1,98 +1,5 @@
-# hardcoded colors
-RGB.HIGHLIGHT <-  c(209, 228, 250)  # highlight around selected lane is light blue
-RGB.GOOD <-       c(138, 208, 160)  # label for high RIN is green
-RGB.MEDIUM <-     c(255, 237, 101)  # label for medium RIN is yellow
-RGB.BAD <-        c(255, 106,  71)  # label for low RIN is red
-RGB.EMPTY <-      c(255, 255, 255)  # image gets pasted into all-white background, probably
-
-# hardcoded margin widths, in pixels
-WARNING.PAD <- 10 # extra pixels to discard on both sides of a warning label in a gel lane
-
-# harcoded row number of aligned data CSVs
+# hardcoded row number of aligned data CSVs
 NROW.ALIGNED <- 760
-
-
-# find all pixels in an RGB array from readPNG, with values in [0,1], that match a given RGB trio, with values in [0, 255]
-find.matching.pixels.mat <- function(rgb.mat, rgb.values) {
-	rgb.fractions <- rgb.values / 255
-	return(rgb.mat[,,1] == rgb.fractions[1] & rgb.mat[,,2] == rgb.fractions[2] & rgb.mat[,,3] == rgb.fractions[3])
-}
-
-# version for a "vector" (actually a matrix with one spatial dimension and one RGB channel dimension)
-find.matching.pixels.vec <- function(rgb.vec, rgb.values) {
-	rgb.fractions <- rgb.values / 255
-	return(rgb.vec[,1] == rgb.fractions[1] & rgb.vec[,2] == rgb.fractions[2] & rgb.vec[,3] == rgb.fractions[3])
-}
-
-
-#' Read a TapeStation gel image
-#'
-#' (DEPRECATED) This function reads a gel image exported from the TapeStation software and saved in PNG format. The gel image must include a blue highlight around one lane in order for the function to identify the boundaries of the gel area.
-#'
-#' DEPRECATED: Reading raw data from gel images is deprecated and produces noisy results. Please reopen your data in version 4.1 or higher of the TapeStation Analysis software and export a CSV instead: \url{https://explore.agilent.com/Software-Download-TapeStation-Systems}
-#'
-#' Because the gel image alone contains little metadata, this function returns only a simple data frame containing the fluorescence intensity vs. migration distance at every point in every lane of the gel (numbered from left to right). It is less useful by itself than when it is called inside \code{\link{read.tapestation}}.
-#'
-#' Note: Fluorescence is reported only for one column of pixels down the center of each lane. If there are annotations on the gel image, such as the yellow warning symbol, those pixels are reported as NA, but usually they are at the top of the image outside the reportable range anyway.
-#'
-#' @param gel.image.file The filename of a TapeStation gel image with blue highlight, in PNG format. The filename can be a URL.
-#' @param n.lanes The number of lanes in the gel image.
-#'
-#' @return A data frame with one row for each vertical pixel of each gel lane.
-#' 
-#' @seealso \code{\link{read.tapestation}}, \code{\link{read.tapestation.xml}}, \code{\link{read.tapestation.csv}}
-#'
-#' @export
-#' @importFrom png readPNG
-read.tapestation.gel.image <- function(gel.image.file, n.lanes) {
-	warning("Reading gel images is deprecated; export CSV instead")
-	
-	gel.image.con <- file(gel.image.file, "rb", raw = T) # workaround to allow URLs 
-	gel.image.rgb <- readPNG(readBin(gel.image.con, what = "raw", n = 25E6)) # safe overestimate of the maximum size (slightly above 4K resolution @ 24 bits uncompressed)
-	close(gel.image.con) # if not explicitly closed, R gives a warning
-	# note: this is in the form (y, x, channel); [1,1,] is the upper left corner
-	
-	# find gel boundaries
-	highlight.cols <- which(find.matching.pixels.vec(gel.image.rgb[1,,], RGB.HIGHLIGHT)) # use only the first pixel row to find the highlight
-	stopifnot("highlight is not continuous in first pixel row" = all(diff(highlight.cols) == 1))
-	highlighted.lane.width <- length(highlight.cols)
-	highlighted.subset <- gel.image.rgb[,highlight.cols,]
-	highlight.rows <- which(rowSums(find.matching.pixels.mat(highlighted.subset, RGB.HIGHLIGHT)) == highlighted.lane.width) # find all pixel rows with full highlight (will miss ones with annotation text over them)
-	top.highlight.rows <- highlight.rows[highlight.rows < nrow(gel.image.rgb) / 2]
-	end.of.top.highlight <- top.highlight.rows[length(top.highlight.rows)] # assume it's the last row in the top half
-	subposition.is.quality.label <- find.matching.pixels.mat(highlighted.subset, RGB.GOOD) | find.matching.pixels.mat(highlighted.subset, RGB.MEDIUM) | find.matching.pixels.mat(highlighted.subset, RGB.BAD)
-	start.of.bottom.highlight <- if (any(subposition.is.quality.label)) which(rowSums(subposition.is.quality.label) > 0)[1] else highlight.rows[length(top.highlight.rows) + 1] # quality label supersedes any blue highlight
-	highlight.border.offsets <- which(find.matching.pixels.vec(highlighted.subset[end.of.top.highlight + 1,,], RGB.HIGHLIGHT)) # sometimes will be empty if there's only one pixel of border and the color is off because of antialiasing, but we can live with that much error
-	stopifnot(
-		"border is not contiguous" = length(highlight.border.offsets < 2) || all(diff(highlight.border.offsets) == 1),
-		"border is not on edge" = length(highlight.border.offsets) == 0 || (highlight.border.offsets[1] %in% 0:1 || highlight.border.offsets[length(highlight.border.offsets)] %in% (highlighted.lane.width - 1:0)) # assume the border is on one edge or the other, allowing one pixel column of error due to antialiasing
-	)
-	lane.center <- ((if (1 %in% highlight.border.offsets) highlight.border.offsets[length(highlight.border.offsets)] else 0) +(highlighted.lane.width - length(highlight.border.offsets)) / 2) / highlighted.lane.width # approximate x-position of the center of the lane, from the left, as a proportion of the total width
-	
-	# identify empty left and right margins
-	margin.columns <- colSums((! find.matching.pixels.mat(gel.image.rgb, RGB.EMPTY))) == 0
-	left.margin <- if (head(margin.columns, 1)) head(which(diff(margin.columns) == -1), 1) else 0
-	right.margin <- if (tail(margin.columns, 1)) ncol(gel.image.rgb) - tail(which(diff(margin.columns) == 1), 1) else 0
-	
-	# extract fluorescence values by lane
-	average.lane.width <- (ncol(gel.image.rgb) - left.margin - right.margin) / n.lanes
-	lane.pixels <- gel.image.rgb[
-		(start.of.bottom.highlight - 1):(end.of.top.highlight + 1), # reverse rows to put fastest migration first like Bioanalyzer
-		left.margin + 1 + round(average.lane.width * (seq(n.lanes) - 1 + lane.center)),
-	]
-	n.readings <- nrow(lane.pixels)
-	bad.pixels <- ! (lane.pixels[,,1] == lane.pixels[,,2] & lane.pixels[,,1] == lane.pixels[,,3]) # find non-grayscale pixels, indicating annotations that block the data
-	for (col in which(colSums(bad.pixels) > 0)) {
-		bad.rows <- which(bad.pixels[,col])
-		lane.pixels[max((min(bad.rows) - WARNING.PAD), 1):min((max(bad.rows) + WARNING.PAD), n.readings), col,] <- NA # set bad pixels and pad around them to NA (don't let pad go outside the range)
-	}
-	
-	data.frame(
-		sample.index =  rep(seq(n.lanes), each = n.readings),
-		distance =      n.readings:1 / n.readings,
-		fluorescence =  as.vector(1 - lane.pixels[,,1]) # subtract from 1 because it's a negative; use only red channel
-	)
-}
 
 
 #' Read a TapeStation CSV file
@@ -105,7 +12,7 @@ read.tapestation.gel.image <- function(gel.image.file, n.lanes) {
 #'
 #' @return A data frame with one row for each reading of each gel lane.
 #'
-#' @seealso \code{\link{read.tapestation}}, \code{\link{read.tapestation.xml}}, \code{\link{read.tapestation.gel.image}}
+#' @seealso \code{\link{read.tapestation}}, \code{\link{read.tapestation.xml}}
 #'
 #' @export
 read.tapestation.csv <- function(csv.file) {
@@ -130,7 +37,7 @@ read.tapestation.csv <- function(csv.file) {
 #'
 #' @return A list of some of the components of an \code{\link{electrophoresis}} object
 #' 
-#' @seealso \code{\link{read.tapestation}}, \code{\link{read.tapestation.gel.image}}
+#' @seealso \code{\link{read.tapestation}}
 #'
 #' @export
 #' @importFrom XML xmlRoot xmlParse xmlValue xmlApply xmlChildren xmlToDataFrame
@@ -259,35 +166,32 @@ read.tapestation.xml <- function(xml.file) {
 }
 
 
-#' @describeIn read.electrophoresis Read a TapeStation XML and PNG file pair
+#' @describeIn read.electrophoresis Read a TapeStation XML and CSV file pair
 #'
 #' @inheritParams read.tapestation.xml
 #' @inheritParams read.tapestation.csv
-#' @inheritParams read.tapestation.gel.image
 #' @inheritParams calibrate.electrophoresis
 #'
 #' @export
-read.tapestation <- function(xml.file, csv.file = NULL, gel.image.file = NULL, method = "hyman", extrapolate = FALSE) {
+read.tapestation <- function(xml.file, csv.file = NULL, method = "hyman", extrapolate = FALSE) {
 	# find the raw data file
-	if (is.null(csv.file) && is.null(gel.image.file)) { # none provided
-		# note the use of file.exists breaks the promise of using remote URLs; removing PNG support may resolve this
+	if (is.null(csv.file)) { # none provided
+		# note the use of file.exists breaks the promise of using remote URLs
 		candidate.files <- sapply(c(
-			gel.image = ".png",
 			csv1 = "_Electropherogram.csv",
 			csv2 = "_Electropherogram.csv.gz"
 		), function(suffix) sub("\\.xml(\\.gz)?$", suffix, xml.file))
 		found.files <- sapply(candidate.files, file.exists)
-		stopifnot("found conflicting CSV or PNG files" = sum(found.files) <= 1)
-		stopifnot("couldn't find CSV or PNG file" = sum(found.files) > 0)
-		if (found.files[1]) gel.image.file <- candidate.files[1] else csv.file <- candidate.files[found.files]
+		stopifnot("found conflicting CSV files" = sum(found.files) <= 1)
+		stopifnot("couldn't find CSV file" = sum(found.files) > 0)
+		csv.file <- candidate.files[found.files]
 	} 
-	stopifnot("conflicting CSV and PNG files provided" = is.null(csv.file) || is.null(gel.image.file))
 	
 	parsed.data <- read.tapestation.xml(xml.file)
 	stopifnot("multiple batches provided" = length(unique(parsed.data$samples$batch)) == 1)
 	batch <- parsed.data$samples$batch[1]
 	result <- electrophoresis(
-		data = if (is.null(gel.image.file)) read.tapestation.csv(csv.file) else read.tapestation.gel.image(gel.image.file, nrow(parsed.data$samples)),
+		data = read.tapestation.csv(csv.file),
 		assay.info = setNames(list(parsed.data$assay.info), batch),
 		samples = parsed.data$samples,
 		peaks = parsed.data$peaks,

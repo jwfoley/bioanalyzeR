@@ -90,9 +90,9 @@ rbind.electrophoresis <- function(...) {
 
 #' Read files into an electrophoresis object
 #'
-#' These functions read one or more XML, CSV, or ZIP files exported from the Agilent software (and accompanying unaligned electropherogram CSV or PNG files if from a TapeStation) and calls the appropriate function to read them into an \code{\link{electrophoresis}} object, which is filled out with estimates of molecule length, concentration, and molarity (see \code{\link{calibrate.electrophoresis}}). \code{read.electrophoresis} is the easiest to use as it automatically infers the correct file type.
+#' These functions read one or more XML, CSV, or ZIP files exported from the Agilent software (and accompanying unaligned electropherogram CSV files if from a TapeStation) and calls the appropriate function to read them into an \code{\link{electrophoresis}} object, which is filled out with estimates of molecule length, concentration, and molarity (see \code{\link{calibrate.electrophoresis}}). \code{read.electrophoresis} is the easiest to use as it automatically infers the correct file type.
 #'
-#' @param xml.file The filename of an XML file exported from the Bioanalyzer or TapeStation software. The XML file may be compressed with `gzip` and the filename can be a remote URL. The filename is expected to end in \code{.xml} or \code{.xml.gz} and the name before that extension is used as the name of the batch. A TapeStation XML file must be accompanied by a CSV or PNG file, whose path is inferred from the XML file's if its name is in the expected format.
+#' @param xml.file The filename of an XML file exported from the Bioanalyzer or TapeStation software. The XML file may be compressed with `gzip` and the filename can be a remote URL. The filename is expected to end in \code{.xml} or \code{.xml.gz} and the name before that extension is used as the name of the batch. A TapeStation XML file must be accompanied by a CSV file, whose path is inferred from the XML file's if its name is in the expected format.
 #' @param ... One or more XML files exported from the Bioanalyzer or TapeStation software, or CSV or ZIP files exported from the ProSize software.
 #' @param mc.cores Maximum number of CPU cores to use (passed to \code{\link[parallel]{mclapply}}). Only one core is used per input file.
 #'
