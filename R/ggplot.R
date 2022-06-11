@@ -248,13 +248,11 @@ rawplot.electrophoresis <- function(
 	xlab = NULL,
 	...
 ) {
-	ladder.index <- which(electrophoresis$samples$well.number == electrophoresis$samples$ladder.well)
-	stopifnot("multiple ladder calibrations in dataset; cannot be plotted as x-scale breaks" = (length(ladder.index) == 1))
+	ladder.index <- as.character(which(electrophoresis$samples$well.number == electrophoresis$samples$ladder.well))
+	batch <- as.character(unique(electrophoresis$samples$batch))
+	stopifnot("multiple ladder calibrations in dataset; cannot be plotted as x-scale breaks" = (length(batch) == 1 && length(ladder.index) == 1))
 	
 	x <- get.x.name(electrophoresis)
-	ladder.lengths <- subset(electrophoresis$peaks, sample.index == ladder.index)$length
-	ladder.positions <- subset(electrophoresis$peaks, sample.index == ladder.index)[,x]
-	
 	scalefun <- if (x == "relative.distance") scale_x_reverse else scale_x_continuous
 	
 	qplot.electrophoresis(
@@ -264,8 +262,8 @@ rawplot.electrophoresis <- function(
 		y = "fluorescence",
 		...
 	) + scalefun(
-		breaks = ladder.positions,
-		labels = ladder.lengths,
+		breaks = electrophoresis$calibration[[batch]][[ladder.index]]$ladder.peaks[,x],
+		labels = electrophoresis$calibration[[batch]][[ladder.index]]$ladder.peaks$length,
 		name = if (! is.null(xlab)) xlab else paste0(sub(" \\(.+", "", variable.label(electrophoresis, x)), ", labeled by ", variable.label(electrophoresis, "length")) # cut off the automatic unit for x-variable if present because the actual labels will be in a different unit
 	) + theme(
 		panel.grid.minor.x = element_blank(),
