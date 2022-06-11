@@ -51,11 +51,11 @@ calculate.length <- function(electrophoresis, method = union(c("hyman", "interpo
 		electrophoresis$regions[[lower.name]] <- NA
 		electrophoresis$regions[[upper.name]] <- NA
 	}
-	electrophoresis$mobility.functions <- list()
+	electrophoresis$calibration <- list()
 	
 	# fit a mobility model for each ladder and apply it to the appropriate samples
 	for (batch in unique(electrophoresis$samples$batch)) {
-		electrophoresis$mobility.functions[[batch]] <- list()
+		electrophoresis$calibration[[batch]] <- list()
 		in.this.batch <- electrophoresis$samples$batch == batch
 		for (ladder.well in unique(electrophoresis$samples$ladder.well[which(in.this.batch)])) {
 			which.ladder.index <- which(in.this.batch & electrophoresis$samples$well.number == ladder.well)
@@ -92,7 +92,11 @@ calculate.length <- function(electrophoresis, method = union(c("hyman", "interpo
 				standard.curve.function <- splinefun(peaks.ladder$x, peaks.ladder$length, method = method)
 				standard.curve.inverse <- splinefun(peaks.ladder$length, peaks.ladder$x, method = method)
 			}
-			electrophoresis$mobility.functions[[batch]][[ladder.well]] <- standard.curve.function
+			electrophoresis$calibration[[batch]][[ladder.well]] <- list(
+				mobility.function = standard.curve.function,
+				mobility.inverse = standard.curve.inverse,
+				ladder.peaks = setNames(data.frame(peaks.ladder$length, peaks.ladder$x), c("length", x.name))
+			)
 			
 			# apply model to raw data
 			electrophoresis$data$length[which.rows] <- standard.curve.function(electrophoresis$data[[x.name]][which.rows])

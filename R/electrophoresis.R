@@ -32,7 +32,10 @@ UPPER.MARKER.NAMES <- c("Upper Marker", "edited Upper Marker")
 #' * `RIN`, `DIN`, `RQN`, `28S/18S`, etc. - sample quality metrics reported by the Agilent software
 #' @param peaks A data frame of peaks reported by the Agilent software, annotated with their lower and upper boundaries in various scales.
 #' @param regions A data frame of regions of interest reported by the Agilent software, annotated with their lower and upper boundaries in varous scales.
-#' @param mobility.functions A list of model functions, one per ladder used for calibration, to convert migration speed measurements (aligned time or relative distance) into estimated molecule lengths.
+#' @param calibration A list of mobility functions to convert migration speed measurements (aligned time or relative distance) into estimated molecule lengths. For each ladder in each batch, there is a list containing:
+#' * `mobility.function` - the function that estimates molecule lengths from migration speed measurements
+#' * `mobility.inverse` - a function fit by the same method for estimating the migration speed measurement of a given molecule length
+#' * `ladder.peaks` - the known lengths and migration speed measurements of this ladder's peaks used for calibration
 #'
 #' @export electrophoresis
 #' @exportClass electrophoresis
@@ -43,14 +46,14 @@ electrophoresis <- function(
 	samples = NULL,
 	peaks = NULL,
 	regions = NULL,
-	mobility.functions = NULL
+	calibration = NULL
 ) structure(list(
 	data = data,
 	assay.info = assay.info,
 	samples = samples,
 	peaks = peaks,
 	regions = regions,
-	mobility.functions = mobility.functions
+	calibration = calibration
 ), class = "electrophoresis") 
 
 
@@ -83,7 +86,7 @@ rbind.electrophoresis <- function(...) {
 		samples = do.call(rbind.fill, lapply(arg.list, function(x) x$samples)),
 		peaks = do.call(rbind.fill, lapply(arg.list, function(x) x$peaks)),
 		regions = do.call(rbind.fill, lapply(arg.list, function(x) x$regions)),
-		mobility.functions = do.call(c, lapply(arg.list, function(x) x$mobility.functions))
+		calibration = do.call(c, lapply(arg.list, function(x) x$calibration))
 	)
 }
 
@@ -191,7 +194,7 @@ annotate.electrophoresis <- function(
 #' @param electrophoresis An \code{\link{electrophoresis}} object.
 #' @param ... A logical expression indicating samples to keep, and any other arguments passed to \code{\link{subset}}.
 #'
-#' @return A new \code{\link{electrophoresis}} object containing only the data from the subset of samples that match the given expression, with sample indices renumbered and factors releveled.
+#' @return A new \code{\link{electrophoresis}} object containing only the data from the subset of samples that match the given expression, with sample indices renumbered and factors releveled. Note: mobility calibrations from unused samples are kept.
 #'
 #' @export
 subset.electrophoresis <- function(electrophoresis, ...) {
@@ -216,14 +219,12 @@ subset.electrophoresis <- function(electrophoresis, ...) {
 		electrophoresis$regions <- subset(electrophoresis$regions, sample.index %in% remaining.samples)
 		if (nrow(electrophoresis$regions) == 0) electrophoresis$regions <- NULL
 	}
-#	electrophoresis$mobility.functions <- 
 	
 	# renumber sample indices
 	new.indices <- setNames(seq(nrow(electrophoresis$samples)), rownames(electrophoresis$samples))
 	electrophoresis$data$sample.index <- new.indices[as.character(electrophoresis$data$sample.index)]
 	if (! is.null(electrophoresis$peaks)) electrophoresis$peaks$sample.index <- new.indices[as.character(electrophoresis$peaks$sample.index)]
 	if (! is.null(electrophoresis$regions)) electrophoresis$regions$sample.index <- new.indices[as.character(electrophoresis$regions$sample.index)]
-#	electrophoresis$mobility.functions <-
 	
 	# rename rows
 	rownames(electrophoresis$data) <- seq(nrow(electrophoresis$data))
