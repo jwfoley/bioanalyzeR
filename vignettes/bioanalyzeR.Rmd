@@ -609,6 +609,25 @@ qplot.electrophoresis(
 Notice that replicates of the same combination of conditions are still plotted separately (the function automatically adds the aesthetic `group = sample.index`).
 
 
+## Raw data plots
+
+The Agilent software lacks the ability to change the graphing variables to estimated length, concentration, molarity, etc., so if we want to compare our electropherograms between bioanalyzeR and the Agilent software, we can use the `rawplot.electrophoresis` function to graph the raw data in the same form, fluorescence vs. aligned migration with the ladder lengths marked:
+
+```{r, fig.width = 11}
+dna1000 <- read.electrophoresis(system.file(
+	"extdata",
+	"bioanalyzer",
+	"Demo DNA 1000 Series II.xml.gz",
+	package = "bioanalyzeR"
+))
+rawplot.electrophoresis(dna1000, scales = "free_y") + theme(legend.position = "none")
+```
+
+![](agilent_electropherogram_screenshot.png)
+
+These graphs are unintuitive because the y-variable is fluorescence rather than a variable of interest such as concentration or molarity, which are not directly proportional, and the x-variable shows migration rather than molecule length, which is neither directly proportional nor exactly log-proportional. The ladder peak positions are shown accurately in the (aligned) raw migration dimension, but they are unevenly spaced and visually interpolating positions between them is not straightforward. However, they can be a useful safety check to make sure the imported data match the data in the Agilent software.
+
+
 ## Electric sparklines
 
 Because the output of `qplot.electrophoresis` is a `ggplot` object, you can add additonal layers or themes to customize it. One additional configuration is already provided: sparklines, a minimalist line graph. The `sparkline.electrophoresis` function simply hardcodes some appropriate settings and additions to the defaults of `qplot.electrophoresis` and passes the rest of the arguments to it, so usage is the same.
