@@ -8,21 +8,31 @@
 #'
 #' @export
 summarize.subset <- function(sample.frame) {
-	total.molarity <- sum(sample.frame$molarity)
-	sample.median <- round(sample.frame$length[min(which(cumsum(sample.frame$molarity) >= total.molarity / 2))])
-	sample.mean <- sum(sample.frame$molarity * sample.frame$length) / total.molarity
-	length.residuals <- sample.frame$length - sample.mean
-	sample.sd <- sqrt(sum(sample.frame$molarity * length.residuals^2) / total.molarity)
-	sample.skewness <- sum(sample.frame$molarity * length.residuals^3) / total.molarity / sample.sd^3
-	sample.kurtosis <- sum(sample.frame$molarity * length.residuals^4) / total.molarity / sample.sd^4
-	
-	c(
-		Median = sample.median,
-		Mean = sample.mean,
-		SD = sample.sd,
-		Skewness = sample.skewness,
-		Kurtosis = sample.kurtosis
-	)
+	if (nrow(sample.frame) < 2) {
+		c(
+			Median = NA,
+			Mean = NA,
+			SD = NA,
+			Skewness = NA,
+			Kurtosis = NA
+		)
+	} else {
+		total.molarity <- sum(sample.frame$molarity)
+		sample.median <- round(sample.frame$length[min(which(cumsum(sample.frame$molarity) >= total.molarity / 2))])
+		sample.mean <- sum(sample.frame$molarity * sample.frame$length) / total.molarity
+		length.residuals <- sample.frame$length - sample.mean
+		sample.sd <- sqrt(sum(sample.frame$molarity * length.residuals^2) / total.molarity)
+		sample.skewness <- sum(sample.frame$molarity * length.residuals^3) / total.molarity / sample.sd^3
+		sample.kurtosis <- sum(sample.frame$molarity * length.residuals^4) / total.molarity / sample.sd^4
+		
+		c(
+			Median = sample.median,
+			Mean = sample.mean,
+			SD = sample.sd,
+			Skewness = sample.skewness,
+			Kurtosis = sample.kurtosis
+		)
+	}
 }
 
 
@@ -73,7 +83,7 @@ summarize.custom <- function(
 ) {
 	stopifnot("upper bound must be greater than lower bound" = upper.bound > lower.bound)
 	in.this.region <- in.custom.region(electrophoresis$data, lower.bound, upper.bound, "length")
-	result <- as.data.frame(t(simplify2array(by(electrophoresis$data[in.this.region,], electrophoresis$data$sample.index[in.this.region], summarize.subset))))
+	result <- as.data.frame(t(simplify2array(lapply(unique(electrophoresis$data$sample.index), function(index) summarize.subset(subset(electrophoresis$data, in.this.region & sample.index == index))))))
 	
 	if (lower.bound == -Inf) {
 		if (upper.bound != Inf) { # bounded only on right

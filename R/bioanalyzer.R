@@ -63,15 +63,25 @@ read.bioanalyzer <- function(xml.file, method = "hyman", extrapolate = FALSE) {
 				stringsAsFactors = F
 			)
 			
-			# align the observation times according to the markers in this sample		
+			# align the observation times according to the markers in this sample
+			alignment.coefficient <- NA
+			alignment.offset <- NA
 			which.lower.marker <- which(peaks$peak.observations == "Lower Marker" & peaks$concentration == defined.ladder.peaks$Concentration[1]) # check the concentration too because sometimes the software annotates more than one as the same marker with no consequences, and sometimes the size is off by a tiny bit, but the concentration is hardcoded
-			stopifnot("conflicting lower markers" = length(which.lower.marker) == 1)
-			if (has.upper.marker) {
+			if (length(which.lower.marker) > 1) {
+				warning(paste0("conflicting lower markers in ", batch, " well ", well.number), call. = F)
+			} else if (length(which.lower.marker) == 0) {
+				warning(paste0("no lower marker in ", batch, " well ", well.number), call. = F)
+			} else if (has.upper.marker) { # assay design has lower and upper marker
 				which.upper.marker <- which(peaks$peak.observations == "Upper Marker" & peaks$concentration == defined.ladder.peaks$Concentration[nrow(defined.ladder.peaks)])
-				stopifnot("conflicting upper markers" = length(which.upper.marker) == 1)
-				alignment.coefficient <- diff(peaks$aligned.time[c(which.lower.marker, which.upper.marker)]) / diff(peaks$time[c(which.lower.marker, which.upper.marker)])
-				alignment.offset <- peaks$aligned.time[which.lower.marker] - alignment.coefficient * peaks$time[which.lower.marker]
-			} else {
+				if (length(which.upper.marker) > 1) {
+					warning(paste0("conflicting upper markers in ", batch, " well ", well.number), call. = F)
+				} else if (length(which.upper.marker) == 0) {
+					warning(paste0("no upper marker in ", batch, " well ", well.number), call. = F)
+				} else {
+					alignment.coefficient <- diff(peaks$aligned.time[c(which.lower.marker, which.upper.marker)]) / diff(peaks$time[c(which.lower.marker, which.upper.marker)])
+					alignment.offset <- peaks$aligned.time[which.lower.marker] - alignment.coefficient * peaks$time[which.lower.marker]
+				}
+			} else { # assay design has only lower marker not upper
 				alignment.coefficient <- peaks$aligned.time[which.lower.marker] / peaks$time[which.lower.marker]
 				alignment.offset <- 0
 			}
@@ -80,7 +90,7 @@ read.bioanalyzer <- function(xml.file, method = "hyman", extrapolate = FALSE) {
 			list(
 				data = raw.data,
 				samples = data.frame(batch, well.number, sample.name, sample.observations, sample.comment, RIN, is.ladder, stringsAsFactors = F),
-				peaks = peaks,
+				peaks = if (nrow(peaks) > 0) peaks else NULL,
 				alignment.values = c(alignment.coefficient, alignment.offset)
 			)
 		}
