@@ -1,14 +1,33 @@
-#' @describeIn read.electrophoresis Read a Bioanalyzer XML file
+#' @describeIn read.electrophoresis Read a Bioanalyzer XAD/XML file
 #'
 #' @inheritParams calibrate.electrophoresis
 #'
 #' @export
 #' @importFrom XML xmlRoot xmlParse xmlValue xmlToDataFrame xmlApply
 #' @importFrom base64enc base64decode
+
+# XAD compressed data parsing: contains DEFLATE'd data wrapped in an unknown format, so remove the header and footer and add a gzip header (missing footer doesn't cause errors), then it can be read directly by xmlParse
+OLD.HEADER <- 76 # length in bytes of unwanted header in the XAD file's compressed data (after base64 decoding)
+OLD.FOOTER <- 9 # length of unwanted footer 
+NEW.HEADER <- as.raw(c(0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00)) # simplest gzip header
+
+
 read.bioanalyzer <- function(xml.file, method = "hyman", extrapolate = FALSE) {
-	batch <- sub("\\.xml(\\.gz)?$", "", basename(xml.file))
+	batch <- sub("\\.xml(\\.gz)?$|\\.xad$", "", basename(xml.file))
 	xml.root <- xmlRoot(xmlParse(xml.file))
-	chip.root <- xml.root[["Chips"]][["Chip"]]
+	
+	# determine whether XAD or exported XML then extract the "Chip" root accordingly
+	# actually XAD is an XML wrapper for another compressed XML so we're already halfway there
+	if ("Chips" %in% names(xml.root)) { # exported XML
+		chip.root <- xml.root[["Chips"]][["Chip"]]
+	} else { # XAD
+		compressed.data <- base64decode(xmlValue(xml.root))
+		temp <- tempfile("bioanalyzer_", fileext = ".xml.gz") # xmlParse requires a filename, can't parse from memory, but at least it decompresses gzip and doesn't complain about the missing footer
+		writeBin(c(NEW.HEADER, compressed.data[(OLD.HEADER + 1):(length(compressed.data) - OLD.FOOTER)]), temp)
+		chip.root <- xmlRoot(xmlParse(temp, encoding = "UTF-16LE"))[["Chips"]][["Chip"]]
+		file.remove(temp)
+	}
+	
 	assay.info <- list(
 		file.name =           xmlValue(chip.root[["Files"]][["File"]][["FileInformation"]][["FileName"]]),
 		creation.date =       xmlValue(chip.root[["ChipInformation"]][["CreationDate"]]),
