@@ -17,7 +17,7 @@ or, install the newest release without the demo data:
 
 # Documentation
 
-See the vignette [online](https://stanford.edu/~jwfoley/bioanalyzeR.html) or in R:
+See the vignette [online](https://jwfoley.com/bioanalyzeR.html) or in R:
 
     > vignette("bioanalyzeR")
 
